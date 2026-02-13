@@ -45,7 +45,7 @@ Memory 是獨立於任何特定 AI 工具的檔案，放在專案根目錄。內
 
 以 Given / When / Then 格式描述使用者行為與預期結果。對 agent 特別有用，因為它同時是需求規格和驗收標準——agent 寫完 code 可以直接對照 BDD 場景自我驗證。
 
-粒度較粗，對應的是使用者場景。BDD 場景應加上測試層級標記（`@unit`、`@integration`、`@component`、`@e2e`、`@perf`、`@load`），詳見 [Lifecycle 文件](Agentic_Coding_Lifecycle.md)的測試策略段落。
+粒度較粗，對應的是使用者場景。BDD 場景應加上測試層級標記（`@unit`、`@integration`、`@component`、`@e2e`、`@perf`、`@load`）。效能與安全標記支援帶 NFR ID 的語法（如 `@perf(PERF-01)`、`@secure(SEC-01)`），agent 在 Test Scaffolding 時查 NFR 表格取得閾值。詳見 [Lifecycle 文件](Agentic_Coding_Lifecycle.md)的測試策略段落與 [Templates 文件](Agentic_Coding_Templates.md)的 NFR 模板。
 
 ### 第三層：SDD（Software Design Document）
 
@@ -91,11 +91,13 @@ SDD 記錄「現在的架構長怎樣」，ADR 記錄「為什麼選 A 不選 B�
 
 觸發條件：專案出現跨領域名詞衝突、單一 Context Window 塞不下整個 codebase、或需要多個 agent 各負責一個模組時。單一領域的專案可跳過。
 
+DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中大型專案獨立成 `docs/ddd/` 目錄。具體格式與模板詳見 [Templates 文件](Agentic_Coding_Templates.md)的 DDD 格式指南。
+
 ### NFR（Non-Functional Requirements）
 
 效能、安全性、可用性等約束。Agent 預設會寫出「功能正確」的 code，但不會主動考慮這些非功能性約束。
 
-建議在開發中實際碰到問題時再補進去，不用一開始就追求完備。效能測試的具體基準定義在 NFR 文件中，由 BDD 場景的 `@perf` / `@load` 標記觸發。
+建議在開發中實際碰到問題時再補進去，不用一開始就追求完備。每條 NFR 都有唯一 ID（如 `PERF-01`、`SEC-01`），BDD 場景透過 `@perf(PERF-01)` 語法引用，agent 在 Test Scaffolding 時查 NFR 表格取得閾值。NFR 表格是閾值的單一真相來源。具體模板詳見 [Templates 文件](Agentic_Coding_Templates.md)的 NFR 模板。
 
 ---
 
@@ -197,3 +199,4 @@ SDD 記錄「現在的架構長怎樣」，ADR 記錄「為什麼選 A 不選 B�
 | v0.9 | 2026-02-13 | 新增可選擴充「DDD Strategic Design」：輕量級三層（Bounded Context / Ubiquitous Language / Aggregate Root），定位為條件觸發，專案涉及多業務領域時啟用 |
 | v0.10 | 2026-02-13 | 打包為 Cowork Skill（中文版）：SKILL.md + references/framework.md + references/lifecycle.md（待 Templates 完成後重新打包） |
 | v0.11 | 2026-02-13 | 新增「動態狀態層：PROJECT_MEMORY.md」：定位為獨立於特定 AI 工具的跨工具狀態追蹤文件，含 git commit 校驗機制；更新相關文件表格 |
+| v0.12 | 2026-02-13 | BDD 標記擴充支援帶 NFR ID 語法；NFR 加入 ID 系統說明；DDD 加入漸進式分裂策略與 Templates 引用；介面層更名為 OpenAPI / AsyncAPI |

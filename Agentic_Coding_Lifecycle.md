@@ -67,22 +67,35 @@ Memory 的更新嵌入微觀瀑布流程，由 agent 在特定時機自動執行
 
 **Story 完成時（微觀瀑布最後一步）：**
 
-| Memory 區塊 | 更新內容 |
-|-------------|----------|
-| Git 狀態 | 更新為當前 commit hash |
-| 已完成功能 | 追加本次 Story 的功能與測試狀態 |
-| 當前任務 | 清除或更新為下一個 Story |
-| 最近變更記錄 | 追加本次 commit（保留最近 5 筆） |
-| 測試狀態 | 更新各層級的通過數與執行時間 |
-| 下一步 | 根據完成情況重新排列優先順序 |
+| Memory Section | 更新內容 |
+|----------------|----------|
+| `<!-- -->` | 更新為當前 commit hash |
+| `DONE` | 追加本次 Story 的功能與測試覆蓋摘要 |
+| `NOW` | 清除或更新為下一個 Story |
+| `LOG` | 追加本次 commit（保留最近 5 筆） |
+| `TESTS` | 更新各層級的通過數 |
+| `NEXT` | 根據完成情況重新排列優先順序 |
 
 **中途中斷時（Session 異常結束或手動停止）：**
 
 Agent 應盡可能在中斷前更新 Memory 的「當前任務」區塊，記錄進行到哪一步、卡在什麼問題，讓下次接手的 agent（可能是不同工具）能繼續。
 
-**人類手動編輯時：**
+**人類手動編輯時（衝突處理策略）：**
 
-Agent 在下次啟動時讀取 Memory，應辨識並尊重人類的手動修改（如優先級調整、新增待辦事項、策略變更等），不自行覆蓋。
+Agent 在下次啟動時讀取 Memory，可能面對兩個差異來源同時存在：git hash 不一致（code 有新 commit）+ Memory 內容被人類改過。處理策略按「區塊權威來源」區分：
+
+| Section | 權威來源 | 衝突策略 |
+|---------|----------|----------|
+| `<!-- -->` | git（事實） | Agent 以 `git log` 為準，直接更新 |
+| `DONE` | git + 測試（事實） | Agent 根據 git diff 補充，不刪除人類手動加的條目 |
+| `NOW` | 人類意圖 | **人類優先** — 人類改了就照人類的 |
+| `ISSUES` | 混合 | Agent 可追加新發現的問題，不刪除人類標記的 |
+| `LOG` | git（事實） | Agent 根據 git log 補充缺漏的 commit |
+| `TESTS` | CI / 測試結果（事實） | Agent 重跑測試後更新 |
+| `SYNC` | 人類知識 | **人類優先** — agent 只追加，不修改不刪除 |
+| `NEXT` | 人類意圖 | **人類優先** — 人類改了排序就照人類的 |
+
+核心原則：**事實性區塊以 git / 測試為準，意圖性區塊以人類為準。** Agent 永遠可以「追加」，但對人類手動編輯的內容只能「追加」不能「覆蓋」或「刪除」。
 
 ### 為什麼是「增量更新」而非「重寫」
 
@@ -101,6 +114,11 @@ SDD 和 API 契約是**活文件**（living documents），每個 Story 只動�
 
 BDD 場景應加上測試層級標記（tag），讓 agent 在 Test Scaffolding 階段根據標記自動產出對應層級的測試骨架。一個場景可以有多個標記，代表它需要在不同層級被驗證。
 
+標記分兩種語法：
+
+- **簡單標記**（`@unit`、`@e2e`）：定義測試層級，agent 依層級產出測試骨架。
+- **帶 ID 標記**（`@perf(PERF-01)`、`@secure(SEC-01)`）：同時定義測試層級並引用 NFR 表格的具體閾值。Agent 在 Test Scaffolding 時查 NFR 表格取得閾值、工具、範圍，直接填入測試腳本。
+
 ```gherkin
 @unit @component
 Scenario: 使用者輸入無效 email 時顯示錯誤訊息
@@ -117,14 +135,14 @@ Scenario: 使用者完成完整註冊流程
   Then 導向歡迎頁面
   And 收到確認信
 
-@perf
+@perf(PERF-02) @secure(SEC-01)
 Scenario: 商品搜尋在高併發下維持回應時間
   Given 系統承受 1000 併發使用者
   When 同時發送搜尋請求
-  Then 95th percentile 回應時間 < 200ms
+  Then 搜尋結果正常回傳，無錯誤
 ```
 
-可用標記：`@unit`、`@integration`、`@component`、`@e2e`、`@perf`、`@load`。效能相關標記的具體基準定義在 NFR 文件中。
+可用標記：`@unit`、`@integration`、`@component`、`@e2e`、`@perf(<NFR-ID>)`、`@load(<NFR-ID>)`、`@secure(<NFR-ID>)`。帶 ID 標記的具體閾值定義在 NFR 文件中，NFR 表格是單一真相來源（詳見 [Templates 文件](Agentic_Coding_Templates.md)的 NFR 模板）。
 
 ### 測試金字塔
 
