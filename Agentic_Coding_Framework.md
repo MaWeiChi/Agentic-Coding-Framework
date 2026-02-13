@@ -228,7 +228,39 @@ Scenario: 商品搜尋在高併發下維持回應時間
 
 ### 測試與其他文件的關係
 
-功能測試的標準來自 BDD 場景，效能測試的標準來自 NFR 文件。隨著 Story 累積，之前通過的測試持續作為迴歸保護——這是 CI 的職責，在 CI/CD 段落中進一步說明。
+功能測試的標準來自 BDD 場景，效能測試的標準來自 NFR 文件。隨著 Story 累積，之前通過的測試持續作為迴歸保護——這是 CI 的職責，在下方 CI/CD 段落中進一步說明。
+
+---
+
+## CI/CD 與框架的接口
+
+本段落定義 CI/CD 與框架其他部分的關係，不涉及具體 pipeline 實作或部署目標的配置。
+
+### CI：BDD 標記驅動的自動化測試
+
+CI 是測試策略的執行引擎。BDD 場景的 tag 同時驅動兩件事：agent 在 Test Scaffolding 時產出哪些測試，以及 CI 在什麼時機跑哪些測試。
+
+| 觸發時機 | 執行的測試標記 | 對應的框架階段 |
+|----------|---------------|---------------|
+| PR / Push | `@unit` + `@integration` + `@component` | 微觀瀑布 TDD + Component Test |
+| Merge 到主分支 | 上述 + `@e2e` | 跨 Story 里程碑驗證 |
+| 定期 / 手動 | `@perf` + `@load` | NFR 驗證 |
+
+CI 同時負責迴歸保護：隨著 Story 累積，先前通過的測試在每次 PR 時重跑，確保新 Story 沒有破壞舊功能。這是 agent self-correction loop 的延伸——agent 在本地跑一輪，CI 在合併前再跑一輪確保沒有環境差異。
+
+### CD：Agent 的信任邊界
+
+在這套框架裡，CD 的關鍵不是「怎麼部署」（那是 infrastructure 層的配置），而是 agent 的職責到哪裡結束。
+
+**Agent 負責到：** CI 全綠 + Container image build 成功 + push 到 registry。
+
+**Agent 不介入：** 從 registry 到目標環境的部署。不論目標是 IoT 上的 Docker、未來的 K8s、或 cloud service，都是 infrastructure 層的事。
+
+這條邊界的好處是：部署目標怎麼變，框架本身不需要修改。Agent 的產出物永遠是一個通過所有測試的 container image，部署方式是 infrastructure 的配置問題。
+
+### 不同專案型態的 CD 差異
+
+不同專案型態（Go container 服務、WordPress CMS、Astro + WordPress headless 等）的部署方式差異大，不適合在框架層級統一。建議在 SDD 中標注專案的部署類型，由專案層級的 CI/CD 配置處理差異。框架的前半段（BDD → SDD → TDD → CI 測試）對所有專案型態是通用的。
 
 ---
 
@@ -260,9 +292,12 @@ Scenario: 商品搜尋在高併發下維持回應時間
 - ~~巨觀敏捷 vs. 微觀瀑布的運作方式~~（v0.5 已納入）
 - ~~Story 相依性處理策略~~（v0.5 已納入）
 - ~~E2E 測試策略~~（v0.6 已納入）
-- CI/CD pipeline 設計
-- DevOps 與部署流程
+- ~~CI/CD 與框架的接口~~（v0.7 已納入）
+- ~~DevOps 信任邊界~~（v0.7 已納入）
 - 如何將上述流程與本框架串接成完整的開發生命週期
+
+**專案層級（不納入框架，由各專案 SDD 自行記錄）：**
+- 具體 CI/CD pipeline 配置（GitHub Actions YAML、Dockerfile 等）
 
 ---
 
@@ -276,3 +311,4 @@ Scenario: 商品搜尋在高併發下維持回應時間
 | v0.4 | 2026-02-13 | 新增「執行粒度與迭代模型」：定義 Bootstrap 一次性 + User Story 微觀瀑布循環，明確 SDD 與 API 契約為增量更新而非重寫 |
 | v0.5 | 2026-02-13 | 擴充「執行粒度與迭代模型」：加入巨觀敏捷 × 微觀瀑布兩層結構說明、Story 相依性處理策略（技術相依 / 功能相依 / 動態發現）、Bootstrap 階段 internal interface 定義、垂直切片啟發式規則 |
 | v0.6 | 2026-02-13 | 新增「測試策略」：BDD 場景標記（@unit / @integration / @component / @e2e / @perf）、測試金字塔五層定義、測試時機與微觀瀑布整合、Go 後端 + Playwright 前端工具鏈 |
+| v0.7 | 2026-02-13 | 新增「CI/CD 與框架的接口」：BDD 標記驅動 CI 觸發時機、Agent 信任邊界（負責到 image push，不介入部署）、不同專案型態的 CD 差異處理原則 |
