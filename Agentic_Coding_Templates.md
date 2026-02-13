@@ -13,6 +13,7 @@
 | [Agentic_Coding_Framework.md](Agentic_Coding_Framework.md) | 框架本體：分層定義、核心原則、流程 | 每次對話必讀 |
 | [Agentic_Coding_Lifecycle.md](Agentic_Coding_Lifecycle.md) | 運作機制：迭代模型、測試策略、CI/CD 接口 | 規劃迭代或設定 CI 時載入 |
 | 本文件 | 框架細節：各層文件模板、撰寫指南、範例 | 撰寫 BDD/SDD/契約/Memory 時載入 |
+| [Agentic_Coding_Protocol.md](Agentic_Coding_Protocol.md) | 通訊協議：orchestrator ↔ executor 的狀態管理與自動化 | 設定自動化流程或整合 orchestrator 時載入 |
 
 ---
 
@@ -245,6 +246,35 @@ Agent 處理規則：
 
 **使用領域語言**：場景描述用業務語言，不用技術術語。「使用者提交訂單」而非「POST /api/orders」。
 
+**宣告式優先**：優先使用宣告式 Given/When/Then，描述「什麼狀態」和「什麼結果」，避免描述 UI 操作細節（點擊哪個按鈕、在哪個欄位輸入）。宣告式場景不會因為 UI 改版而失效。好的例子：「When 使用者提交包含無效 email 的表單」；壞的例子：「When 使用者點擊 email 欄位並輸入 abc 然後按送出按鈕」。
+
+**Scenario Outline（參數化場景）**：當同一個行為需要驗證多組輸入輸出時，使用 Scenario Outline 搭配 Examples 表格，而非複製多個 Scenario。一個 Outline 取代 N 個重複場景，省 token 且覆蓋更多邊界條件。
+
+```gherkin
+@unit
+Scenario Outline: 密碼強度驗證
+  Given 使用者在註冊頁面
+  When 輸入密碼 "<password>"
+  Then 顯示驗證結果 "<result>"
+
+  Examples:
+    | password     | result           |
+    | abc          | 至少 8 字元       |
+    | abcdefgh     | 需要包含數字      |
+    | Abcdefg1     | 通過             |
+```
+
+**Non-Goals（可選但建議）**：在 BDD 檔案開頭或對應 Delta Spec 中列出本 Story 明確不做的事。Agent 在 Implementation 時檢查變更是否觸及 Non-Goals，觸及時標記 `[SCOPE WARNING]`。
+
+**Agent 常犯的 BDD 反模式**：
+
+| 反模式 | 問題 | 正確做法 |
+|--------|------|---------|
+| 命令式場景 | 寫成 UI 操作步驟，UI 改版就壞 | 用宣告式描述行為結果 |
+| 場景間資料傳遞 | Scenario A 建立的資料在 Scenario B 使用 | 每個場景獨立，Given 自行建立前置條件 |
+| Incidental Details | Given 塞了與驗證無關的細節 | Given 只描述影響 Then 結果的最小前置條件 |
+| 多重 Then | 一個場景驗證太多事 | 一個場景驗證一件事，Then 不超過三條 |
+
 ---
 
 ## SDD 模板
@@ -299,6 +329,11 @@ Agent 處理規則：
 ```markdown
 ## Delta: US-007 購物車折扣功能
 
+### Non-Goals (可選但建議)
+- 本 Story 不處理優惠券的批量匯入功能
+- 不考慮多幣種折扣計算
+- 不修改現有的 CartService.AddItem() 介面
+
 ### ADDED
 - 模組：`DiscountEngine`（職責：計算折扣邏輯）
 - 資料模型：`Coupon` 表（code, type, value, expires_at）
@@ -310,6 +345,8 @@ Agent 處理規則：
 ### REMOVED
 - （無）
 ```
+
+**Non-Goals 段落**：列出本 Story 明確不做的事。Agent 在 Implementation 時應檢查自己的變更是否觸及 Non-Goals 範圍，觸及時標記 `[SCOPE WARNING]` 暫停。Non-Goals 是防止 scope creep 最高效的策略——比起事後修正，事前排除能省下大量 token。
 
 Delta Spec 的生命週期：
 1. **產出**：每個 Story 的 SDD 增量更新同時產出 Delta Spec
@@ -337,6 +374,12 @@ SDD 中同樣支援 `[NEEDS CLARIFICATION]` 標記。當 agent 在 SDD 增量更
 **增量友善**：新 Story 只追加或修改受影響的模組段落，不需重寫整份文件。建議在每個模組段落開頭標註「由哪些 Story 引入/修改」以追蹤來源。
 
 **RFC 2119 用語**：SDD 中的約束描述同樣使用 RFC 2119 關鍵字。例如「模組間通訊 SHALL 使用事件驅動」表示不可違反，「MAY 使用 Redis 快取」表示可選。
+
+**資料模型是唯一 Source of Truth**：SDD 的資料模型段落是所有資料結構定義的權威來源。API 契約的 `components/schemas` 從 SDD 推導，DDD Glossary 的類型約束從 SDD 推導。三者出現矛盾時，以 SDD 資料模型為準。Agent 在更新資料模型時，應同步檢查契約和 Glossary 是否需要連動修改。
+
+**System Context 描述**：系統架構段落除了內部模組劃分，也應描述系統與外部系統的關係（第三方 API、外部資料庫、訊息佇列等）。建議使用 Mermaid `graph` 視覺化。
+
+**Mermaid 圖表指引**：建議依場景選用適當的圖表類型——系統架構用 `graph`、資料模型用 `erDiagram`、複雜互動流程用 `sequenceDiagram`。圖表應搭配文字說明，不單獨依賴圖表傳遞資訊。
 
 ---
 
@@ -599,6 +642,72 @@ test('<從 BDD 場景複製的行為描述>', async ({ mount }) => {
 });
 ```
 
+### testify 模式對接（Go 後端）
+
+Go 後端的測試骨架應明確區分 `require`（前置條件）和 `assert`（驗證）：
+
+```go
+func TestCart_GivenEmptyCart_WhenAddItem_ThenHasOneItem(t *testing.T) {
+    // Given — 用 require（前置條件，失敗立即停止）
+    cart, err := NewCart(userID)
+    require.NoError(t, err)
+    require.NotNil(t, cart)
+
+    // When
+    err = cart.AddItem(productID, 1)
+
+    // Then — 用 assert（驗證，全部檢查完再報告）
+    assert.NoError(t, err)
+    assert.Equal(t, 1, cart.ItemCount())
+}
+```
+
+**Table-Driven Tests**（對應 BDD Scenario Outline）：
+
+```go
+func TestPasswordStrength(t *testing.T) {
+    // Generated from: BDD US-002 — Scenario Outline: 密碼強度驗證
+    tests := []struct {
+        name     string
+        password string
+        expected string
+    }{
+        {"too short", "abc", "至少 8 字元"},
+        {"no digits", "abcdefgh", "需要包含數字"},
+        {"valid", "Abcdefg1", "通過"},
+    }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := ValidatePassword(tt.password)
+            assert.Equal(t, tt.expected, result)
+        })
+    }
+}
+```
+
+**Suite Pattern**（對應 BDD Background 共用前置條件）：
+
+```go
+type CartTestSuite struct {
+    suite.Suite
+    cart *Cart
+    db   *TestDB
+}
+
+func (s *CartTestSuite) SetupTest() {
+    s.db = NewTestDB(s.T())
+    s.cart, _ = NewCart(s.db, testUserID)
+}
+
+func (s *CartTestSuite) TearDownTest() {
+    s.db.Cleanup()
+}
+
+func TestCartSuite(t *testing.T) {
+    suite.Run(t, new(CartTestSuite))
+}
+```
+
 ### 撰寫原則
 
 **BDD 場景可追溯**：每個測試檔案開頭標註來源 BDD 場景編號和標記，建立雙向追蹤。
@@ -606,6 +715,10 @@ test('<從 BDD 場景複製的行為描述>', async ({ mount }) => {
 **命名來自場景**：測試函式名用 Given/When/Then 組合，不自行發明測試名稱。
 
 **全部紅燈**：骨架產出後所有測試必須失敗。如果有測試意外通過，說明測試寫得不夠精確。
+
+**require vs assert**：Given 區塊的前置條件用 `require`（失敗立即停止，不浪費時間跑後續），Then 區塊的驗證用 `assert`（全部檢查完再一次報告所有失敗）。
+
+**Helper Function 提取**：當兩個以上測試共用相同的 Given setup，應提取為 `setupXxx(t *testing.T)` helper。當三個以上測試共用相同的 assertion pattern，應提取為 `assertXxx(t *testing.T, ...)` helper。Helper 命名從 BDD 場景的 Given/Then 描述推導（如 `setupCartWithItems`、`assertOrderTotal`）。
 
 ---
 
@@ -652,11 +765,20 @@ graph TD
 
 ## 上下文定義
 
-| Context | 職責 | 路徑 | 對外契約 | 備註 |
-|---------|------|------|----------|------|
-| Sales | 商品目錄、購物車、結帳 | `/src/sales/` | `docs/api/sales-openapi.yaml` | 核心業務，變動頻率高 |
-| Shipping | 庫存扣減、物流單生成 | `/src/shipping/` | `docs/api/shipping-openapi.yaml` | 接收 Sales 事件觸發 |
-| Billing | 付款處理、發票 | `/src/billing/` | `docs/api/billing-openapi.yaml` | 接收 Sales 事件觸發 |
+| Context | 職責 | 類型 | 路徑 | 對外契約 | 備註 |
+|---------|------|------|------|----------|------|
+| Sales | 商品目錄、購物車、結帳 | **Core** | `/src/sales/` | `docs/api/sales-openapi.yaml` | 核心業務，變動頻率高 |
+| Shipping | 庫存扣減、物流單生成 | **Supporting** | `/src/shipping/` | `docs/api/shipping-openapi.yaml` | 接收 Sales 事件觸發 |
+| Billing | 付款處理、發票 | **Supporting** | `/src/billing/` | `docs/api/billing-openapi.yaml` | 接收 Sales 事件觸發 |
+| Auth | 認證、授權 | **Generic** | `/src/auth/` | `docs/api/auth-openapi.yaml` | 優先使用現成方案 |
+
+### Subdomain 類型與 Agent 行為規則
+
+| 類型 | 說明 | Agent 行為 |
+|------|------|-----------|
+| **Core** | 專案的核心競爭力，高變動 | 最高測試覆蓋，Delta Spec + ADR 必填，深度 Review |
+| **Supporting** | 支援核心業務，中等變動 | 標準測試覆蓋，Delta Spec 必填 |
+| **Generic** | 通用功能，低變動 | 優先使用現成方案（library / service），最小測試覆蓋即可 |
 
 ## 互動模式（Integration Patterns）
 
@@ -709,6 +831,22 @@ Aggregate Root 屬於戰術設計，直接嵌入 SDD 的模組段落。用 `[DDD
 #### OrderItem（Local Entity）
 - **Access:** 只能透過 `Order` 存取，禁止單獨 Repository 查詢。
 ```
+
+### Domain Event Registry（可選，事件驅動架構適用）
+
+當專案採用事件驅動的跨 Context 通訊時，建議在 DDD 文件中集中維護一份 Domain Event 清單。這讓 agent 不需要跨多份文件搜尋就能知道系統中有哪些事件、誰發誰收。
+
+```markdown
+## Domain Event Registry
+
+| Event | 發送方 | 接收方 | Payload | 觸發時機 |
+|-------|--------|--------|---------|---------|
+| `OrderPlaced` | Sales | Shipping, Billing | `{orderId, items, totalAmount}` | 訂單確認後 |
+| `PaymentAuthorized` | Billing | Sales | `{orderId, transactionId}` | 付款成功後 |
+| `ShipmentCreated` | Shipping | Sales | `{orderId, trackingNumber}` | 物流單建立後 |
+```
+
+Event Registry 是 AsyncAPI 契約的高層摘要。Agent 在 SDD 增量更新時，如果新增或修改了跨 Context 的事件，應同步更新此表。
 
 ### 撰寫原則
 
@@ -854,3 +992,4 @@ Task #2 和 #3 標記 `[P]`，代表它們互不依賴、可同時進行。Task 
 | v0.4 | 2026-02-13 | 新增 DDD 格式指南（漸進式分裂策略、Level 1 Context Map 含 Mermaid、Level 2 Glossary 含型別約束、Level 3 Aggregate Root 嵌入 SDD）；Memory 衝突處理策略引用 Lifecycle |
 | v0.5 | 2026-02-13 | Memory 模板重新設計：壓縮格式（省 62% token）、HTML 註解機器標記、三段式分層載入、英文大寫 Section 名稱；新增 Section 說明表（含權威來源與更新頻率） |
 | v0.6 | 2026-02-13 | 吸收 OpenSpec / Spec Kit 設計：BDD 新增 RFC 2119 用語強度 + [NEEDS CLARIFICATION] 標記；SDD 新增 Delta Spec 增量更新格式 + [NEEDS CLARIFICATION] 標記 + RFC 2119 用語；新增 Constitution 模板（專案憲法）；新增 [P] 並行標記 + Complexity Tracking（Story 任務格式指南） |
+| v0.7 | 2026-02-13 | 套用精進清單 13 條：BDD 新增 Scenario Outline 模板、宣告式風格指引、Non-Goals 段落、Anti-Pattern 清單；SDD 新增 Source of Truth 原則、System Context 描述、Mermaid 圖表指引、Delta Spec Non-Goals；Test 新增 testify require/assert 區分、Table-Driven 模板、Suite 模板、Helper Function 提取原則；DDD 新增 Subdomain 類型分類（Core/Supporting/Generic）+ Agent 行為規則、Domain Event Registry |

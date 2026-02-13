@@ -13,6 +13,7 @@ Discussion Summary | February 2026
 | 本文件 | 框架本體：分層定義、核心原則、流程 | 每次對話必讀 |
 | [Agentic_Coding_Lifecycle.md](Agentic_Coding_Lifecycle.md) | 運作機制：迭代模型、測試策略、CI/CD 接口 | 規劃迭代或設定 CI 時載入 |
 | [Agentic_Coding_Templates.md](Agentic_Coding_Templates.md) | 框架細節：各層文件模板、撰寫指南、範例 | 撰寫 BDD/SDD/契約/Memory 時載入 |
+| [Agentic_Coding_Protocol.md](Agentic_Coding_Protocol.md) | 通訊協議：orchestrator ↔ executor 的狀態管理與自動化 | 設定自動化流程或整合 orchestrator 時載入 |
 | PROJECT_MEMORY.md（專案層級） | 動態狀態追蹤：進度、任務、測試狀態、git 校驗 | 每次對話必讀（與專案摘要搭配） |
 
 ---
@@ -193,12 +194,12 @@ DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中
 - ~~DevOps 信任邊界~~（v0.7）
 - 如何將上述流程與本框架串接成完整的開發生命週期
 
-**Agent Protocol（下一個討論主題：「Agentic Coding：Agent Protocol 與團隊協作」）：**
-- 載入規則：agent 在不同階段只准載入哪些層級的文件（抽象金字塔 L1-L4），禁止載入非當前 Context 的 implementation（空心專案原則）
+**Agent Protocol（已納入 [Protocol 文件](Agentic_Coding_Protocol.md)）：**
+- ~~載入規則：agent 在不同階段只准載入哪些層級的文件~~（v0.14，Step 轉換規則表的 `claude_reads`）
+- ~~交接規則：agent 之間的狀態傳遞與交接~~（v0.14，STATE.json + HANDOFF.md 三檔案協議）
+- ~~參考實作：OpenClaw × Claude Code~~（v0.14，含 Dispatch 邏輯、Hook 機制、Reason-Based Routing）
 - 輸出規則：Diff-Only Output（只輸出變更，不重複輸出整份檔案）、結構化格式優先
-- 交接規則：agent 之間用 YAML 傳遞中間產物、用 NFR ID / Story ID 引用而非重複內容（Reference by ID）
-- Agent Teams 角色定義與分工
-- 參考實作：Aider Repo Map（AST 解析壓縮 context）、MetaGPT Message Pool（context 過濾）、GPT-Pilot Dev Loop（錯誤處理精細度）
+- Agent Teams 角色定義與分工（多 executor 協作）
 
 **專案層級（不納入框架，由各專案 SDD 自行記錄）：**
 - 具體 CI/CD pipeline 配置（GitHub Actions YAML、Dockerfile 等）
@@ -222,3 +223,4 @@ DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中
 | v0.11 | 2026-02-13 | 新增「動態狀態層：PROJECT_MEMORY.md」：定位為獨立於特定 AI 工具的跨工具狀態追蹤文件，含 git commit 校驗機制；更新相關文件表格 |
 | v0.12 | 2026-02-13 | BDD 標記擴充支援帶 NFR ID 語法；NFR 加入 ID 系統說明；DDD 加入漸進式分裂策略與 Templates 引用；介面層更名為 OpenAPI / AsyncAPI |
 | v0.13 | 2026-02-13 | 吸收 OpenSpec / Spec Kit 設計：BDD 加入 RFC 2119 用語強度 + [NEEDS CLARIFICATION] 標記；SDD 加入 Delta Spec 增量更新格式；TDD 加入 Verify 品質關卡；新增可選擴充 Constitution（專案憲法）+ Complexity Tracking（Story 複雜度追蹤） |
+| v0.14 | 2026-02-13 | 新增第四份核心文件 [Agentic_Coding_Protocol.md](Agentic_Coding_Protocol.md)：Orchestrator × Executor 通訊協議、三檔案協議（STATE.json / HANDOFF.md / PROJECT_MEMORY.md）、Step 轉換規則表、Dispatch 邏輯、Hook 機制、Reason-Based Routing、OpenClaw × Claude Code 參考實作 |

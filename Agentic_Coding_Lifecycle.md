@@ -6,6 +6,17 @@
 
 ---
 
+## 相關文件
+
+| 文件 | 內容 | Agent 載入時機 |
+|------|------|---------------|
+| [Agentic_Coding_Framework.md](Agentic_Coding_Framework.md) | 框架本體：分層定義、核心原則、流程 | 每次對話必讀 |
+| 本文件 | 運作機制：迭代模型、測試策略、CI/CD 接口 | 規劃迭代或設定 CI 時載入 |
+| [Agentic_Coding_Templates.md](Agentic_Coding_Templates.md) | 框架細節：各層文件模板、撰寫指南、範例 | 撰寫 BDD/SDD/契約/Memory 時載入 |
+| [Agentic_Coding_Protocol.md](Agentic_Coding_Protocol.md) | 通訊協議：orchestrator ↔ executor 的狀態管理與自動化 | 設定自動化流程或整合 orchestrator 時載入 |
+
+---
+
 ## 執行粒度與迭代模型
 
 框架分層描述了「需要哪些文件、什麼順序產出」，但沒有說明跨多個 User Story 時如何運作。這裡補充框架的時間軸維度。
@@ -39,7 +50,8 @@ Bootstrap 完成後，每個 User Story 進入一次獨立的微觀瀑布循環�
 | API 契約增量更新 | 新增或調整受影響的 endpoint / event，不重寫整份契約 |
 | **Review Checkpoint** | **人類確認本輪 BDD + Delta Spec + 契約差異 + 釐清所有 `[NEEDS CLARIFICATION]`** |
 | Test Scaffolding | 根據本輪 BDD 場景標記產出對應層級的測試骨架（紅燈） |
-| Implementation | 實作讓測試通過 → Refactor |
+| Implementation | 實作讓測試通過 → Refactor（含 self-correction loop，詳見下方） |
+| AST Linting | 每次 Implementation 迭代後跑 syntax-level 檢查，失敗不進入 Verify |
 | Component Test | 驗證前端元件行為（Playwright component testing） |
 | **Verify** | **完整性/正確性/一致性三重驗證（詳見下方 Verify 步驟）** |
 | **Update Memory** | **更新 PROJECT_MEMORY.md（詳見下方規則）** |
@@ -67,6 +79,29 @@ Verify 是每個 Story 微觀瀑布的品質關卡，在所有測試通過後、
 | **Coherence**（一致性） | SDD 主文件是否已合併 Delta Spec？API 契約是否與實作一致？Constitution 原則是否被違反？ | 修復不一致處 |
 
 Verify 是 agent 的自動檢查，不是人類 Review。如果三項全通過，進入 Update Memory；如果有任何一項失敗，回到對應步驟修復後重新 Verify。
+
+### Implementation Self-Correction Loop 與遞迴上限
+
+Implementation 階段的 self-correction loop（寫 code → 跑測試 → 修 code → 再跑測試）最多迭代 **N 次**（建議 3-5 次，由專案在 [Protocol 文件](Agentic_Coding_Protocol.md) 的 Step 規則表中設定 `max_attempts`）。超過上限時，agent 必須：
+
+1. 標記 blocker 到 MEMORY 的 `ISSUES` 區塊
+2. 記錄失敗的測試名稱和已嘗試的修復方向（寫入 HANDOFF.md）
+3. 暫停當前 Story，等待人類介入
+
+這個限制防止 agent 無限打轉。如果 3 次修不好，通常意味著設計有問題（應回到 SDD）或需求不清（應回到 Review），而非 code 寫得不夠好。
+
+### AST Linting 關卡
+
+每次 Implementation 迭代後、進入 Verify 前，先跑 syntax-level 檢查：
+
+| 技術棧 | Linting 工具 |
+|--------|-------------|
+| Go 後端 | `go vet` + `golangci-lint` |
+| TypeScript 前端 | `eslint` + `tsc --noEmit` |
+
+Linting 失敗不進入 Verify，直接回到 Implementation 修復。這比 Verify 發現再回頭省一整輪——syntax error 是最便宜的錯誤，應該在最早的階段攔截。
+
+Linting 工具由各專案在 [Protocol 文件](Agentic_Coding_Protocol.md) 的 Step 規則表中透過 `post_check` 欄位配置。
 
 ### Delta Spec 生命週期
 
@@ -225,3 +260,12 @@ CI 同時負責迴歸保護：隨著 Story 累積，先前通過的測試在每�
 ### 不同專案型態的 CD 差異
 
 不同專案型態（Go container 服務、WordPress CMS、Astro + WordPress headless 等）的部署方式差異大，不適合在框架層級統一。建議在 SDD 中標注專案的部署類型，由專案層級的 CI/CD 配置處理差異。框架的前半段（BDD → SDD → TDD → CI 測試）對所有專案型態是通用的。
+
+---
+
+## Changelog
+
+| 版本 | 日期 | 變更 |
+|------|------|------|
+| v0.1 | 2026-02-13 | 初版：從 Framework 拆分出迭代模型、測試策略、CI/CD 接口 |
+| v0.2 | 2026-02-13 | 新增 Implementation Self-Correction Loop 遞迴上限（3-5 次，超限標記 blocker）；新增 AST Linting 關卡（Implementation 後 Verify 前，含技術棧對應工具表）；迭代表格加入 AST Linting 步驟 |
