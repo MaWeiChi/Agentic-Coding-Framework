@@ -176,13 +176,13 @@ DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中
 
 以下主題可在後續討論中深入探討：
 
-**框架細節（納入 [Templates 文件](Agentic_Coding_Templates.md)）：**
-- 各層文件的具體模板與範例
-- BDD 場景的撰寫最佳實踐
-- SDD 應包含哪些最小必要資訊
-- CLAUDE.md 的結構設計
-- 既有專案的反向工程實作流程
-- 如何讓 agent 根據 BDD 和 SDD 自動推導 TDD 測試案例
+**框架細節（已納入 [Templates 文件](Agentic_Coding_Templates.md)）：**
+- ~~各層文件的具體模板與範例~~（v0.8，Templates 全部模板）
+- ~~BDD 場景的撰寫最佳實踐~~（v0.8，含 RFC 2119、Scenario Outline、Anti-Pattern）
+- ~~SDD 應包含哪些最小必要資訊~~（v0.8，含 Delta Spec、Source of Truth、Mermaid 指引）
+- ~~CLAUDE.md 的結構設計~~（v0.8，PROJECT_CONTEXT.md 模板）
+- ~~既有專案的反向工程實作流程~~（v0.8，反向工程六步驟）
+- ~~如何讓 agent 根據 BDD 和 SDD 自動推導 TDD 測試案例~~（v0.8，Test Scaffolding 模板 + 標記驅動）
 
 **迭代機制與開發生命週期（已納入 [Lifecycle 文件](Agentic_Coding_Lifecycle.md)）：**
 - ~~執行粒度：以 User Story 為單位的微觀瀑布循環~~（v0.4）
@@ -192,14 +192,14 @@ DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中
 - ~~E2E 測試策略~~（v0.6）
 - ~~CI/CD 與框架的接口~~（v0.7）
 - ~~DevOps 信任邊界~~（v0.7）
-- 如何將上述流程與本框架串接成完整的開發生命週期
+- ~~如何將上述流程與本框架串接成完整的開發生命週期~~（v0.8，Lifecycle 文件定義完整微觀瀑布循環）
 
 **Agent Protocol（已納入 [Protocol 文件](Agentic_Coding_Protocol.md)）：**
 - ~~載入規則：agent 在不同階段只准載入哪些層級的文件~~（v0.14，Step 轉換規則表的 `claude_reads`）
 - ~~交接規則：agent 之間的狀態傳遞與交接~~（v0.14，STATE.json + HANDOFF.md 三檔案協議）
 - ~~參考實作：OpenClaw × Claude Code~~（v0.14，含 Dispatch 邏輯、Hook 機制、Reason-Based Routing）
-- 輸出規則：Diff-Only Output（只輸出變更，不重複輸出整份檔案）、結構化格式優先
-- Agent Teams 角色定義與分工（多 executor 協作）
+- ~~輸出規則：Diff-Only Output（只輸出變更，不重複輸出整份檔案）、結構化格式優先~~（v0.16，Executor 輸出規則 + HANDOFF.md 混合格式）
+- ~~Agent Teams 角色定義與分工（多 executor 協作）~~（v0.15，Multi-Executor 協作模式 + Agent Teams 實驗性參考實作）
 
 **專案層級（不納入框架，由各專案 SDD 自行記錄）：**
 - 具體 CI/CD pipeline 配置（GitHub Actions YAML、Dockerfile 等）
@@ -224,3 +224,6 @@ DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中
 | v0.12 | 2026-02-13 | BDD 標記擴充支援帶 NFR ID 語法；NFR 加入 ID 系統說明；DDD 加入漸進式分裂策略與 Templates 引用；介面層更名為 OpenAPI / AsyncAPI |
 | v0.13 | 2026-02-13 | 吸收 OpenSpec / Spec Kit 設計：BDD 加入 RFC 2119 用語強度 + [NEEDS CLARIFICATION] 標記；SDD 加入 Delta Spec 增量更新格式；TDD 加入 Verify 品質關卡；新增可選擴充 Constitution（專案憲法）+ Complexity Tracking（Story 複雜度追蹤） |
 | v0.14 | 2026-02-13 | 新增第四份核心文件 [Agentic_Coding_Protocol.md](Agentic_Coding_Protocol.md)：Orchestrator × Executor 通訊協議、三檔案協議（STATE.json / HANDOFF.md / PROJECT_MEMORY.md）、Step 轉換規則表、Dispatch 邏輯、Hook 機制、Reason-Based Routing、OpenClaw × Claude Code 參考實作 |
+| v0.15 | 2026-02-14 | Protocol 新增 Multi-Executor 協作模式（三層架構、Complexity-Based Dispatch、Scoped Context、Role-Based 隔離、Per-Task HANDOFF）+ Claude Code Agent Teams 實驗性參考實作；四個 Refinement 項目正式納入（動態 context 載入、Test/Impl 隔離、Agent 訂閱機制、交接格式） |
+| v0.16 | 2026-02-14 | Protocol 新增 Executor 輸出規則（Diff-Only 原則、結構化格式優先、per-step 輸出策略）；HANDOFF.md 升級為混合格式（YAML front matter + Markdown body） |
+| v0.17 | 2026-02-14 | 套用 Windsurf Round 2 Review：「待探討事項」全部劃線完成（框架細節 6 條 + Lifecycle 串接）；Protocol 升級為 v0.6（Hook YAML 解析、Dispatch Prompt 混合格式、team_roles 補齊、STATE.json schema 更新） |

@@ -387,12 +387,12 @@ SDD 中同樣支援 `[NEEDS CLARIFICATION]` 標記。當 agent 在 SDD 增量更
 
 ### 定位
 
-前後端分離專案的介面定義。REST API 使用 OpenAPI 3.0+ 格式，放在 `docs/api/openapi.yaml`；事件驅動介面（WebSocket、MQTT 等）使用 AsyncAPI 3.0 格式，放在 `docs/api/asyncapi.yaml`。
+前後端分離專案的介面定義。REST API 使用 OpenAPI 3.0+ 格式（建議 3.1，支援完整 JSON Schema 2020-12 相容性），放在 `docs/api/openapi.yaml`；事件驅動介面（WebSocket、MQTT 等）使用 AsyncAPI 3.0 格式，放在 `docs/api/asyncapi.yaml`。
 
 ### REST API（OpenAPI 摘要）
 
 ```yaml
-openapi: 3.0.3
+openapi: "3.1.0"   # 建議 3.1；3.0.3 亦可
 info:
   title: <專案名稱> API
   version: 0.1.0
@@ -708,6 +708,38 @@ func TestCartSuite(t *testing.T) {
 }
 ```
 
+### 模板（Playwright Full E2E Test）
+
+```typescript
+// e2e/<flow-name>.spec.ts
+// Generated from: BDD US-XXX — <完整使用者流程描述>
+// Tags: @e2e
+// Milestone: <里程碑名稱>
+
+import { test, expect } from '@playwright/test';
+
+test.describe('<使用者流程名稱>', () => {
+  test.beforeEach(async ({ page }) => {
+    // Given: 共用前置條件（如登入、導航到起始頁）
+    // TODO: setup
+  });
+
+  test('<從 BDD 場景複製的行為描述>', async ({ page }) => {
+    // Given: <前置條件>
+    // TODO: navigate to starting page
+
+    // When: <一連串操作步驟>
+    // TODO: simulate user journey
+
+    // Then: <最終預期結果>
+    // TODO: add assertions
+    test.fail(); // RED phase
+  });
+});
+```
+
+E2E 測試在跨 Story 里程碑時執行（非每個 Story），覆蓋完整使用者流程。與 Component Test 的差異：E2E 需要前後端都就緒，走真實的 API 和 DB。
+
 ### 撰寫原則
 
 **BDD 場景可追溯**：每個測試檔案開頭標註來源 BDD 場景編號和標記，建立雙向追蹤。
@@ -904,6 +936,52 @@ Constitution 定義專案中**不可違反的架構原則**。與 ADR 的差異�
 
 ---
 
+## Review Checkpoint 模板
+
+### 定位
+
+Review Checkpoint 是微觀瀑布中進入實作前的人類審查點。Orchestrator（或 agent）在此步驟產出結構化的 Review 摘要，讓人類能快速判斷方向是否正確。
+
+### 模板
+
+```markdown
+# Review Checkpoint — US-XXX <Story 標題>
+
+## 變更摘要
+- **BDD 場景數**: N 個（N 個 @unit, N 個 @integration, N 個 @e2e）
+- **Delta Spec**: N 個 ADDED, N 個 MODIFIED, N 個 REMOVED
+- **契約變更**: N 個新增 endpoint, N 個修改
+
+## 待釐清項目
+| # | 來源 | 問題 | 建議 |
+|---|------|------|------|
+| 1 | BDD 場景 3 | [NEEDS CLARIFICATION] 相關性排序方式未定義 | 建議使用 TF-IDF |
+| 2 | SDD Delta | [NEEDS CLARIFICATION] 多張優惠券疊加規則 | 建議取最優 |
+
+## Non-Goals 確認
+- 本 Story 不處理：<列表>
+- 上述範圍是否正確？
+
+## 風險與注意事項
+- <識別到的風險或依賴>
+
+## 審查結論
+- [ ] BDD 場景方向正確
+- [ ] Delta Spec 範圍合理
+- [ ] 契約變更無破壞性
+- [ ] 待釐清項目已處理
+```
+
+### 撰寫原則
+
+**可掃描**：人類應能在 30 秒內掌握本次 Review 的重點。待釐清項目用表格列出，不用長篇描述。
+
+**帶建議**：每個 `[NEEDS CLARIFICATION]` 項目附上 agent 的建議方案，人類只需確認或修正，不用從零思考。
+
+**審查結論是 checklist**：人類勾選即可，降低 Review 的認知負擔。
+
+---
+
 ## Story 任務格式指南
 
 ### [P] 並行標記
@@ -993,3 +1071,4 @@ Task #2 和 #3 標記 `[P]`，代表它們互不依賴、可同時進行。Task 
 | v0.5 | 2026-02-13 | Memory 模板重新設計：壓縮格式（省 62% token）、HTML 註解機器標記、三段式分層載入、英文大寫 Section 名稱；新增 Section 說明表（含權威來源與更新頻率） |
 | v0.6 | 2026-02-13 | 吸收 OpenSpec / Spec Kit 設計：BDD 新增 RFC 2119 用語強度 + [NEEDS CLARIFICATION] 標記；SDD 新增 Delta Spec 增量更新格式 + [NEEDS CLARIFICATION] 標記 + RFC 2119 用語；新增 Constitution 模板（專案憲法）；新增 [P] 並行標記 + Complexity Tracking（Story 任務格式指南） |
 | v0.7 | 2026-02-13 | 套用精進清單 13 條：BDD 新增 Scenario Outline 模板、宣告式風格指引、Non-Goals 段落、Anti-Pattern 清單；SDD 新增 Source of Truth 原則、System Context 描述、Mermaid 圖表指引、Delta Spec Non-Goals；Test 新增 testify require/assert 區分、Table-Driven 模板、Suite 模板、Helper Function 提取原則；DDD 新增 Subdomain 類型分類（Core/Supporting/Generic）+ Agent 行為規則、Domain Event Registry |
+| v0.8 | 2026-02-13 | 套用 Windsurf Review：新增 Review Checkpoint 結構化模板（P1）；API 契約建議升級 OpenAPI 3.1（P2）；新增 Playwright Full E2E Test 模板（P2） |

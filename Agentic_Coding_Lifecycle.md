@@ -72,11 +72,13 @@ Story 之間的相依分為兩種：
 
 Verify 是每個 Story 微觀瀑布的品質關卡，在所有測試通過後、更新 Memory 前執行。Agent 自動執行三重檢查：
 
-| 檢查維度 | 內容 | 失敗時動作 |
-|----------|------|-----------|
-| **Completeness**（完整性） | BDD 場景是否全部有對應測試？Delta Spec 的 ADDED 項目是否都已實作？有無遺漏的 `[NEEDS CLARIFICATION]` 未釐清？ | 回到對應步驟補齊 |
-| **Correctness**（正確性） | 測試是否全部通過？實作是否符合 BDD 場景描述？NFR 閾值是否達標？ | 回到 Implementation 修復 |
-| **Coherence**（一致性） | SDD 主文件是否已合併 Delta Spec？API 契約是否與實作一致？Constitution 原則是否被違反？ | 修復不一致處 |
+| 檢查維度 | 內容 | 判定方式 | 失敗時動作 |
+|----------|------|---------|-----------|
+| **Completeness**（完整性） | BDD 場景是否全部有對應測試？Delta Spec 的 ADDED 項目是否都已實作？有無遺漏的 `[NEEDS CLARIFICATION]` 未釐清？ | **半確定性**：測試存在性可 grep 確認；「是否都已實作」需 LLM 判讀 | 回到對應步驟補齊 |
+| **Correctness**（正確性） | 測試是否全部通過？NFR 閾值是否達標？ | **確定性**：`go test` / `npm test` 的 exit code + NFR 工具的數值結果 | 回到 Implementation 修復 |
+| **Coherence**（一致性） | SDD 主文件是否已合併 Delta Spec？API 契約是否與實作一致？Constitution 原則是否被違反？ | **LLM 依賴**：需要 executor 讀取多份文件比對語意一致性 | 修復不一致處 |
+
+**判定方式分類的意義**：確定性檢查（Correctness）可由 hook 自動執行，零 LLM token；半確定性和 LLM 依賴的檢查（Completeness、Coherence）需要 executor session 處理，消耗 token。Orchestrator 可在 hook 階段先跑確定性檢查，全通過後才 dispatch executor 做 Coherence 檢查，節省失敗時的 token 開銷。
 
 Verify 是 agent 的自動檢查，不是人類 Review。如果三項全通過，進入 Update Memory；如果有任何一項失敗，回到對應步驟修復後重新 Verify。
 
@@ -157,6 +159,19 @@ Agent 在下次啟動時讀取 Memory，可能面對兩個差異來源同時存�
 | `NEXT` | 人類意圖 | **人類優先** — 人類改了排序就照人類的 |
 
 核心原則：**事實性區塊以 git / 測試為準，意圖性區塊以人類為準。** Agent 永遠可以「追加」，但對人類手動編輯的內容只能「追加」不能「覆蓋」或「刪除」。
+
+### Memory 清理時機
+
+PROJECT_MEMORY.md 是純追加模式運作，長期不清理會膨脹。建議的清理時機：
+
+| 觸發條件 | 清理動作 |
+|----------|---------|
+| `DONE` 超過 20 條 | 將舊條目歸檔到 `docs/history.md`，Memory 只保留最近 10 條 |
+| `LOG` 超過 5 筆 | 自動截斷，舊的靠 `git log` 查（已是設計行為） |
+| `ISSUES` 中已解決的問題 | Story 完成時清除對應 ISSUES 條目 |
+| Sprint / 里程碑結束 | 人類主導全面清理：重新評估 NEXT 優先順序、歸檔已完成內容、清除過時 SYNC 條目 |
+
+清理的原則：**事實性區塊可自動清理（按規則截斷），意圖性區塊只能人類清理**。Agent 永遠不主動刪除 `NOW`、`NEXT`、`SYNC` 中的內容。
 
 ### 為什麼是「增量更新」而非「重寫」
 
@@ -269,3 +284,4 @@ CI 同時負責迴歸保護：隨著 Story 累積，先前通過的測試在每�
 |------|------|------|
 | v0.1 | 2026-02-13 | 初版：從 Framework 拆分出迭代模型、測試策略、CI/CD 接口 |
 | v0.2 | 2026-02-13 | 新增 Implementation Self-Correction Loop 遞迴上限（3-5 次，超限標記 blocker）；新增 AST Linting 關卡（Implementation 後 Verify 前，含技術棧對應工具表）；迭代表格加入 AST Linting 步驟 |
+| v0.3 | 2026-02-13 | 套用 Windsurf Review：Verify 三重檢查表新增「判定方式」欄位，區分確定性/半確定性/LLM 依賴檢查（P0）；新增 Memory 清理時機與規則（P2） |
