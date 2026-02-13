@@ -45,13 +45,13 @@ Memory 是獨立於任何特定 AI 工具的檔案，放在專案根目錄。內
 
 以 Given / When / Then 格式描述使用者行為與預期結果。對 agent 特別有用，因為它同時是需求規格和驗收標準——agent 寫完 code 可以直接對照 BDD 場景自我驗證。
 
-粒度較粗，對應的是使用者場景。BDD 場景應加上測試層級標記（`@unit`、`@integration`、`@component`、`@e2e`、`@perf`、`@load`）。效能與安全標記支援帶 NFR ID 的語法（如 `@perf(PERF-01)`、`@secure(SEC-01)`），agent 在 Test Scaffolding 時查 NFR 表格取得閾值。詳見 [Lifecycle 文件](Agentic_Coding_Lifecycle.md)的測試策略段落與 [Templates 文件](Agentic_Coding_Templates.md)的 NFR 模板。
+粒度較粗，對應的是使用者場景。BDD 場景使用 RFC 2119 關鍵字（SHALL/MUST/SHOULD/MAY）區分需求強度，並加上測試層級標記（`@unit`、`@integration`、`@component`、`@e2e`、`@perf`、`@load`）。效能與安全標記支援帶 NFR ID 的語法（如 `@perf(PERF-01)`、`@secure(SEC-01)`），agent 在 Test Scaffolding 時查 NFR 表格取得閾值。需求不明確時 agent 標記 `[NEEDS CLARIFICATION]` 暫停該場景，等待 Review Checkpoint 釐清。詳見 [Lifecycle 文件](Agentic_Coding_Lifecycle.md)的測試策略段落與 [Templates 文件](Agentic_Coding_Templates.md)的 BDD/NFR 模板。
 
 ### 第三層：SDD（Software Design Document）
 
 定義架構決策、技術選型、模組邊界。避免 agent 每次都要「猜」你想用什麼框架、資料怎麼流動。
 
-BDD 場景拆解出需要哪些模組和介面，這些都記錄在 SDD 中。
+BDD 場景拆解出需要哪些模組和介面，這些都記錄在 SDD 中。每個 Story 的增量更新使用 **Delta Spec**（ADDED / MODIFIED / REMOVED）格式，讓變更範圍清楚可審閱。詳見 [Templates 文件](Agentic_Coding_Templates.md)的 SDD 模板。
 
 ### 介面層：OpenAPI / AsyncAPI 契約
 
@@ -68,6 +68,8 @@ BDD 場景拆解出需要哪些模組和介面，這些都記錄在 SDD 中。
 **Test Scaffolding（紅燈）**：根據 BDD 場景標記和 API 契約，先產出對應層級的測試檔案骨架。此時還沒有實作代碼，所有測試全部失敗。這一步的價值在於讓 agent 先證明它理解了需求。
 
 **Implementation（綠燈）**：agent 讀取 SDD、API 契約和失敗的測試日誌，寫最少量的 code 讓測試通過，然後 refactor。每一輪 agent 都可以自己跑測試驗證，不需要人類介入，這是最省 token 的地方。
+
+**Verify（品質關卡）**：Implementation 完成後、更新 Memory 前，agent 自動執行三重檢查——Completeness（BDD 場景全部有測試、Delta Spec 全部實作）、Correctness（測試通過、NFR 達標）、Coherence（SDD 已合併 Delta、API 契約與實作一致、Constitution 未違反）。三項全通過才進入下一步。詳見 [Lifecycle 文件](Agentic_Coding_Lifecycle.md)的 Verify 步驟。
 
 ---
 
@@ -93,11 +95,21 @@ SDD 記錄「現在的架構長怎樣」，ADR 記錄「為什麼選 A 不選 B�
 
 DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中大型專案獨立成 `docs/ddd/` 目錄。具體格式與模板詳見 [Templates 文件](Agentic_Coding_Templates.md)的 DDD 格式指南。
 
+### Constitution（專案憲法）
+
+定義專案中不可違反的架構原則——跨所有 Story、所有 agent 永遠成立的硬性約束。與 ADR 的差異：ADR 記錄歷史決策脈絡，Constitution 提取出永恆的不變規則。Agent 在做任何設計決策前都應先檢查 Constitution。
+
+適用時機：專案有明確的架構紅線（如「禁止跨模組直接 DB 存取」「所有服務必須無狀態」）時。建議 Bootstrap 時就定義 3-5 條核心原則。Constitution 中的每條原則都是 RFC 2119 的 SHALL 等級。具體模板詳見 [Templates 文件](Agentic_Coding_Templates.md)的 Constitution 模板。
+
 ### NFR（Non-Functional Requirements）
 
 效能、安全性、可用性等約束。Agent 預設會寫出「功能正確」的 code，但不會主動考慮這些非功能性約束。
 
 建議在開發中實際碰到問題時再補進去，不用一開始就追求完備。每條 NFR 都有唯一 ID（如 `PERF-01`、`SEC-01`），BDD 場景透過 `@perf(PERF-01)` 語法引用，agent 在 Test Scaffolding 時查 NFR 表格取得閾值。NFR 表格是閾值的單一真相來源。具體模板詳見 [Templates 文件](Agentic_Coding_Templates.md)的 NFR 模板。
+
+### Complexity Tracking（Story 複雜度追蹤）
+
+每個 Story 標註複雜度等級（`[S]` 簡單 / `[M]` 中等 / `[L]` 複雜），幫助 Sprint 規劃時評估工作量，也讓 agent 知道預期的實作深度和 Review 力度。複雜 Story 需要 Delta Spec + ADR + 深度 Review；簡單 Story 可直接實作。具體定義詳見 [Templates 文件](Agentic_Coding_Templates.md)的 Story 任務格式指南。
 
 ---
 
@@ -144,6 +156,8 @@ DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中
 | 雙重回報 | 同時服務 AI agent 與人類團隊成員 |
 | ADR / NFR / DDD 可迭代補充 | 不用一開始追求完備，踩到坑再補 |
 | 規模決定深度 | 小型 CRUD 四層即可，分散式系統才需要更多文件 |
+| 不猜測、標記不確定 | 遇到歧義標記 `[NEEDS CLARIFICATION]`，不自行推測需求 |
+| 增量而非重寫 | SDD 更新用 Delta Spec 格式，避免整份重寫遺失決策 |
 
 ---
 
@@ -179,6 +193,13 @@ DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中
 - ~~DevOps 信任邊界~~（v0.7）
 - 如何將上述流程與本框架串接成完整的開發生命週期
 
+**Agent Protocol（下一個討論主題：「Agentic Coding：Agent Protocol 與團隊協作」）：**
+- 載入規則：agent 在不同階段只准載入哪些層級的文件（抽象金字塔 L1-L4），禁止載入非當前 Context 的 implementation（空心專案原則）
+- 輸出規則：Diff-Only Output（只輸出變更，不重複輸出整份檔案）、結構化格式優先
+- 交接規則：agent 之間用 YAML 傳遞中間產物、用 NFR ID / Story ID 引用而非重複內容（Reference by ID）
+- Agent Teams 角色定義與分工
+- 參考實作：Aider Repo Map（AST 解析壓縮 context）、MetaGPT Message Pool（context 過濾）、GPT-Pilot Dev Loop（錯誤處理精細度）
+
 **專案層級（不納入框架，由各專案 SDD 自行記錄）：**
 - 具體 CI/CD pipeline 配置（GitHub Actions YAML、Dockerfile 等）
 
@@ -200,3 +221,4 @@ DDD 文件的存放位置採漸進式分裂策略：小型專案併入 SDD，中
 | v0.10 | 2026-02-13 | 打包為 Cowork Skill（中文版）：SKILL.md + references/framework.md + references/lifecycle.md（待 Templates 完成後重新打包） |
 | v0.11 | 2026-02-13 | 新增「動態狀態層：PROJECT_MEMORY.md」：定位為獨立於特定 AI 工具的跨工具狀態追蹤文件，含 git commit 校驗機制；更新相關文件表格 |
 | v0.12 | 2026-02-13 | BDD 標記擴充支援帶 NFR ID 語法；NFR 加入 ID 系統說明；DDD 加入漸進式分裂策略與 Templates 引用；介面層更名為 OpenAPI / AsyncAPI |
+| v0.13 | 2026-02-13 | 吸收 OpenSpec / Spec Kit 設計：BDD 加入 RFC 2119 用語強度 + [NEEDS CLARIFICATION] 標記；SDD 加入 Delta Spec 增量更新格式；TDD 加入 Verify 品質關卡；新增可選擴充 Constitution（專案憲法）+ Complexity Tracking（Story 複雜度追蹤） |

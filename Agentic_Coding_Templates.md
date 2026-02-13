@@ -207,6 +207,40 @@ Scenario: <效能或安全性相關場景>
 
 **標記必填**：每個場景至少一個測試層級標記。這是 Test Scaffolding 的驅動依據，缺標記的場景不會被自動產出測試。標記分兩種語法：簡單標記（`@unit`、`@e2e`）定義測試層級；帶 ID 標記（`@perf(PERF-01)`、`@secure(SEC-01)`）同時定義測試層級並引用 NFR 表格的具體閾值。
 
+**RFC 2119 用語強度**：BDD 場景中使用 RFC 2119 關鍵字來區分需求強度。這讓 agent 能判斷哪些是不可妥協的硬性要求、哪些是建議性的。
+
+| 關鍵字 | 語意 | Agent 行為 |
+|--------|------|-----------|
+| `SHALL` / `MUST` | 不可違反的硬性要求 | 必須實作，缺少即測試失敗 |
+| `SHOULD` | 強烈建議，除非有充分理由 | 預設實作，跳過需記錄理由到 ADR |
+| `MAY` | 可選功能 | Agent 可自行判斷是否實作 |
+
+範例：
+```gherkin
+@unit
+Scenario: 密碼強度驗證
+  Given 使用者在註冊頁面
+  When 輸入密碼
+  Then 密碼 SHALL 至少 8 字元
+  And 密碼 SHOULD 包含大小寫混合
+  And 密碼 MAY 支援特殊字元提示
+```
+
+**[NEEDS CLARIFICATION] 標記**：當需求描述存在歧義或缺乏足夠細節時，agent 必須標記 `[NEEDS CLARIFICATION]` 而非自行猜測。標記後暫停該場景的後續步驟（SDD/TDD），等待人類在下次 Review Checkpoint 時釐清。
+
+```gherkin
+@unit
+Scenario: 商品搜尋結果排序
+  Given 使用者搜尋「手機」
+  When 搜尋結果回傳
+  Then 結果 SHALL 依相關性排序 [NEEDS CLARIFICATION: 相關性的計算方式未定義——TF-IDF? 銷量加權? 人工推薦?]
+```
+
+Agent 處理規則：
+- 遇到 `[NEEDS CLARIFICATION]` 的場景，Test Scaffolding 仍產出骨架，但測試標記為 `t.Skip("NEEDS CLARIFICATION")` 而非 `t.Fatal("Not implemented")`
+- 在 Memory 的 `ISSUES` 區塊追加待釐清項目
+- Review Checkpoint 時人類釐清後，移除標記並補完場景
+
 **Given 描述狀態、When 描述動作、Then 描述結果**：避免在 Given 中放操作、在 When 中放預期結果。
 
 **使用領域語言**：場景描述用業務語言，不用技術術語。「使用者提交訂單」而非「POST /api/orders」。
@@ -258,6 +292,42 @@ Scenario: <效能或安全性相關場景>
 <模組間如何溝通：同步 API call、事件驅動、shared DB 等>
 ```
 
+### Delta Spec 增量更新格式
+
+當 Story 導致 SDD 變更時，使用 Delta Spec 格式記錄變更，而非直接覆寫。這讓 Review Checkpoint 時人類能快速看出「這次改了什麼」，也方便 agent 之間傳遞變更範圍。
+
+```markdown
+## Delta: US-007 購物車折扣功能
+
+### ADDED
+- 模組：`DiscountEngine`（職責：計算折扣邏輯）
+- 資料模型：`Coupon` 表（code, type, value, expires_at）
+
+### MODIFIED
+- 模組 `CartService`：新增 `applyCoupon(cartId, code)` 方法
+- 資料模型 `Order`：新增 `discount_amount` 欄位
+
+### REMOVED
+- （無）
+```
+
+Delta Spec 的生命週期：
+1. **產出**：每個 Story 的 SDD 增量更新同時產出 Delta Spec
+2. **Review**：人類在 Review Checkpoint 審閱 Delta Spec 確認變更範圍
+3. **合併**：Review 通過後，Delta 內容合併進 SDD 主文件
+4. **歸檔**：Delta 檔案移至 `docs/deltas/` 或刪除（依專案偏好）
+
+### [NEEDS CLARIFICATION] 標記（SDD 適用）
+
+SDD 中同樣支援 `[NEEDS CLARIFICATION]` 標記。當 agent 在 SDD 增量更新中遇到無法確定的設計決策時，標記後繼續其他部分的工作，不因單一不確定點阻塞整個 Story。
+
+```markdown
+### 模組：DiscountEngine
+- **職責**: 計算各類折扣
+- **折扣優先級**: [NEEDS CLARIFICATION: 多張優惠券的疊加規則——取最優? 依序套用? 互斥?]
+- **依賴**: CartService, CouponRepository
+```
+
 ### 撰寫原則
 
 **模組邊界清楚**：每個模組有明確的「職責」和「對外介面」定義，讓 Story 的增量更新範圍容易界定。
@@ -265,6 +335,8 @@ Scenario: <效能或安全性相關場景>
 **ADR 隨手記**：做了有爭議的技術決策時，當下在「技術決策」段落記一筆。不需要事後補。
 
 **增量友善**：新 Story 只追加或修改受影響的模組段落，不需重寫整份文件。建議在每個模組段落開頭標註「由哪些 Story 引入/修改」以追蹤來源。
+
+**RFC 2119 用語**：SDD 中的約束描述同樣使用 RFC 2119 關鍵字。例如「模組間通訊 SHALL 使用事件驅動」表示不可違反，「MAY 使用 Redis 快取」表示可選。
 
 ---
 
@@ -650,6 +722,82 @@ Aggregate Root 屬於戰術設計，直接嵌入 SDD 的模組段落。用 `[DDD
 
 ---
 
+## Constitution 模板（專案憲法）
+
+### 定位
+
+Constitution 定義專案中**不可違反的架構原則**。與 ADR 的差異：ADR 記錄「為什麼選 A 不選 B」的歷史脈絡，Constitution 提取出跨所有 Story 永遠成立的硬性約束。Agent 在做任何設計決策前都應先檢查 Constitution，確保不違反。
+
+放在 `docs/constitution.md` 或併入專案入口文件。建議初期 3-5 條，隨專案演進追加。
+
+### 模板
+
+```markdown
+# Project Constitution
+
+> 以下原則在所有 Story、所有 agent 中永遠成立。違反任一條即為 bug，無論功能是否正確。
+
+## 架構原則
+
+1. **API-First**: 所有模組間通訊 SHALL 透過定義好的 API 契約，禁止直接資料庫存取跨模組資料。
+2. **Stateless Services**: 後端服務 SHALL 為無狀態設計，狀態 SHALL 儲存於資料庫或 Redis。
+3. **Event-Driven Decoupling**: 跨 Bounded Context 通訊 SHALL 使用事件，禁止同步 RPC。
+
+## 安全原則
+
+4. **Auth Everywhere**: 所有非 `/public/*` 路由 SHALL 驗證 JWT Token（對應 SEC-01）。
+5. **Input Validation**: 所有外部輸入 SHALL 經過消毒處理（對應 SEC-02）。
+
+## 品質原則
+
+6. **Test Coverage Gate**: 新功能 SHALL 附帶對應層級的測試，CI 中 coverage 不得低於當前基準線。
+7. **No Silent Failures**: 所有錯誤 SHALL 被記錄（log）並回傳適當的 HTTP 狀態碼。
+```
+
+### 撰寫原則
+
+**只放不可違反的**：Constitution 不是 coding style guide。只放違反了會造成架構性問題的原則。「應該用 camelCase」不適合放這裡，「禁止跨模組直接 DB 存取」才適合。
+
+**用 SHALL / MUST**：Constitution 裡的每條原則都是 RFC 2119 的 SHALL 等級。如果一條原則是 SHOULD，它就不該在 Constitution 裡——放 SDD 的撰寫指南即可。
+
+**關聯 NFR ID**：安全和效能相關的原則應引用對應的 NFR ID，建立雙向追蹤。
+
+**可演進但不可輕易修改**：修改 Constitution 條目視同架構變更，應有對應的 ADR 記錄修改原因。
+
+---
+
+## Story 任務格式指南
+
+### [P] 並行標記
+
+當一個 Story 的實作可以拆成多個獨立子任務時，用 `[P]` 標記可並行的項目。這在多 agent 協作或人機分工時特別有用——標記了 `[P]` 的任務可以同時進行，沒標記的則需按順序執行。
+
+```markdown
+## US-007 購物車折扣功能 — Tasks
+
+1. [ ] 定義 Coupon 資料模型 + migration
+2. [P] CouponRepository CRUD 實作 + unit test
+3. [P] DiscountEngine 折扣計算邏輯 + unit test
+4. [ ] CartService.applyCoupon() 整合 + integration test
+5. [ ] 前端折扣碼輸入元件 + component test
+```
+
+Task #2 和 #3 標記 `[P]`，代表它們互不依賴、可同時進行。Task #4 依賴 #2 和 #3 的完成，因此沒有 `[P]` 標記。
+
+### Complexity Tracking
+
+每個 Story 可標註複雜度等級，幫助人類在 Sprint 規劃時評估工作量，也讓 agent 知道預期的實作深度。
+
+| 等級 | 標記 | 預期範圍 | Agent 行為 |
+|------|------|----------|-----------|
+| 簡單 | `[S]` | 單模組修改，< 3 個檔案 | 直接實作，最小 Review |
+| 中等 | `[M]` | 跨模組，3-8 個檔案 | 需 Delta Spec，標準 Review |
+| 複雜 | `[L]` | 架構變更，> 8 個檔案 | 需 Delta Spec + ADR，深度 Review |
+
+標記放在 Story 標題後方：`US-007 購物車折扣功能 [M]`
+
+---
+
 ## 既有專案反向工程流程
 
 ### 定位
@@ -705,3 +853,4 @@ Aggregate Root 屬於戰術設計，直接嵌入 SDD 的模組段落。用 `[DDD
 | v0.3 | 2026-02-13 | 新增 NFR 模板（含 ID 系統、Agent 執行流程、分層粒度）；BDD 標記擴充支援帶 ID 語法 `@perf(PERF-01)` |
 | v0.4 | 2026-02-13 | 新增 DDD 格式指南（漸進式分裂策略、Level 1 Context Map 含 Mermaid、Level 2 Glossary 含型別約束、Level 3 Aggregate Root 嵌入 SDD）；Memory 衝突處理策略引用 Lifecycle |
 | v0.5 | 2026-02-13 | Memory 模板重新設計：壓縮格式（省 62% token）、HTML 註解機器標記、三段式分層載入、英文大寫 Section 名稱；新增 Section 說明表（含權威來源與更新頻率） |
+| v0.6 | 2026-02-13 | 吸收 OpenSpec / Spec Kit 設計：BDD 新增 RFC 2119 用語強度 + [NEEDS CLARIFICATION] 標記；SDD 新增 Delta Spec 增量更新格式 + [NEEDS CLARIFICATION] 標記 + RFC 2119 用語；新增 Constitution 模板（專案憲法）；新增 [P] 並行標記 + Complexity Tracking（Story 任務格式指南） |

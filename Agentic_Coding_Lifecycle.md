@@ -34,13 +34,14 @@ Bootstrap 完成後，每個 User Story 進入一次獨立的微觀瀑布循環�
 
 | 步驟 | 說明 |
 |------|------|
-| BDD | 只撰寫**當前這個 Story** 的行為場景 |
-| SDD 增量更新 | 追加或修改受影響的模組與架構段落，不重寫整份 SDD |
+| BDD | 只撰寫**當前這個 Story** 的行為場景（使用 RFC 2119 用語、標記 `[NEEDS CLARIFICATION]`） |
+| SDD 增量更新 | 追加或修改受影響的模組與架構段落，產出 **Delta Spec**（ADDED/MODIFIED/REMOVED），不重寫整份 SDD |
 | API 契約增量更新 | 新增或調整受影響的 endpoint / event，不重寫整份契約 |
-| **Review Checkpoint** | **人類確認本輪 BDD + SDD 差異 + 契約差異** |
+| **Review Checkpoint** | **人類確認本輪 BDD + Delta Spec + 契約差異 + 釐清所有 `[NEEDS CLARIFICATION]`** |
 | Test Scaffolding | 根據本輪 BDD 場景標記產出對應層級的測試骨架（紅燈） |
 | Implementation | 實作讓測試通過 → Refactor |
 | Component Test | 驗證前端元件行為（Playwright component testing） |
+| **Verify** | **完整性/正確性/一致性三重驗證（詳見下方 Verify 步驟）** |
 | **Update Memory** | **更新 PROJECT_MEMORY.md（詳見下方規則）** |
 
 ### Story 之間的相依性處理
@@ -54,6 +55,31 @@ Story 之間的相依分為兩種：
 **開發中才發現的相依**——做 Story C 時才發現它依賴 Story A 的某個元件。此時回到 SDD 補上依賴關係，評估是暫停 C 先做 A，還是先定義 A 的元件介面（stub）讓 C 繼續。這是巨觀敏捷發揮作用的地方——Story 排序可以動態調整。
 
 **啟發式規則：** Story 的拆分應盡量採用垂直切片（vertical slice，從 UI 到 API 到 DB 一刀到底），而非水平分層，這能天然減少 Story 間的相依。若相依鏈超過兩層（A → B → C），應回頭檢視 Story 拆分或 SDD 的模組邊界是否合理。
+
+### Verify 步驟（Implementation 後、Update Memory 前）
+
+Verify 是每個 Story 微觀瀑布的品質關卡，在所有測試通過後、更新 Memory 前執行。Agent 自動執行三重檢查：
+
+| 檢查維度 | 內容 | 失敗時動作 |
+|----------|------|-----------|
+| **Completeness**（完整性） | BDD 場景是否全部有對應測試？Delta Spec 的 ADDED 項目是否都已實作？有無遺漏的 `[NEEDS CLARIFICATION]` 未釐清？ | 回到對應步驟補齊 |
+| **Correctness**（正確性） | 測試是否全部通過？實作是否符合 BDD 場景描述？NFR 閾值是否達標？ | 回到 Implementation 修復 |
+| **Coherence**（一致性） | SDD 主文件是否已合併 Delta Spec？API 契約是否與實作一致？Constitution 原則是否被違反？ | 修復不一致處 |
+
+Verify 是 agent 的自動檢查，不是人類 Review。如果三項全通過，進入 Update Memory；如果有任何一項失敗，回到對應步驟修復後重新 Verify。
+
+### Delta Spec 生命週期
+
+Delta Spec 是 SDD 增量更新的結構化格式（ADDED / MODIFIED / REMOVED），完整模板見 [Templates 文件](Agentic_Coding_Templates.md)的 SDD 模板。
+
+在微觀瀑布中的流程：
+
+1. **SDD 增量更新時產出**：agent 根據 BDD 場景分析受影響的模組，產出 Delta Spec
+2. **Review Checkpoint 時審閱**：人類看的是 Delta Spec（變了什麼）而非整份 SDD（現在長怎樣）
+3. **Verify 步驟時合併**：確認實作完成後，Delta 內容正式合併進 SDD 主文件
+4. **歸檔或刪除**：合併後的 Delta 檔案移至 `docs/deltas/US-XXX.md`（可追溯）或直接刪除（省空間）
+
+採用 Change Folder 隔離的專案（中大型、多 agent 協作），可將每個 Story 的 Delta Spec + 對應測試放在獨立資料夾 `changes/US-XXX/` 中，Review 通過後才合併回主文件。
 
 ### PROJECT_MEMORY 更新時機與規則
 
