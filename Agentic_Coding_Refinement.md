@@ -90,9 +90,124 @@ All three dimensions → Must-Do, two → Worth-Doing, one or fewer → Not Incl
 
 ---
 
+## Field Feedback — WebRTC Project (FB-001~006)
+
+Source: `go-webrtc/.ai/feedback.md` — Field observations after completing US-001 Room Isolation.
+
+### FB-R01: Full/Lite Mode ← FB-004
+
+**Decision: User specifies the mode in CLAUDE.md. Agent does not auto-detect.**
+
+Configuration: Add `Agentic Coding Mode: full` or `lite` in CLAUDE.md's Agent Guidelines section.
+
+| | Full Mode | Lite Mode |
+|---|---|---|
+| Use case | Multi-session handoff, high coupling, multi-agent | Short tasks, low coupling, single session |
+| CLAUDE.md | Complete | ≤10 lines |
+| PROJECT_MEMORY | Complete (NOW/NEXT/TESTS/SYNC/ISSUES) | Not used |
+| SDD / Constitution / NFR | Yes | Skip |
+| Delta Spec | Yes | Verbal or commit message |
+| BDD | Full Gherkin | Write tests directly |
+| HANDOFF | Yes | Not used |
+
+**Design rationale:**
+- Agent auto-detection is unreliable (story count ≠ complexity)
+- The real decision axes are "handoff frequency × change coupling", which require human context
+- CLAUDE.md exists in both modes, making it the most natural location for this setting
+- Persists across sessions without needing to be re-stated verbally
+
+**Status:** 🟡 Finalized, pending Skill incorporation
+
+---
+
+### FB-R02: Token Cost Optimization ← FB-001 + FB-003
+
+**Decision: Two-layer approach — slim down auto-resent files + HANDOFF as latest-entry-only.**
+
+**Layer 1: Input tokens — PROJECT_MEMORY slim-down**
+
+Design principle: Files auto-resent by system-reminder = files you pay for every turn. Only keep information the agent needs every turn.
+
+| Section | Keep/Move | Rationale |
+|---------|-----------|-----------|
+| NOW | Keep | Needed every turn |
+| NEXT | Keep | Scope guard + priority |
+| TESTS | Keep | Quick quality status check |
+| SYNC | Keep | Orientation / locator |
+| ISSUES | Keep | Scope guard reference (FB-002: saw hardcoded IP → checked TD-03 → belongs to US-002 → don't touch) |
+| DONE | Move → `.ai/history.md` | Only useful at session start, not needed every turn |
+| LOG | Move → `.ai/history.md` | git log is always available, not needed every turn |
+
+Estimated effect: PROJECT_MEMORY ~55 lines → ~35 lines, saving ~200 input tokens per turn.
+
+**Layer 2: Output tokens — HANDOFF latest-entry-only + history archive**
+
+- HANDOFF.md is latest-entry-only: each session overwrites it with current state
+- Historical session records are appended to `.ai/history.md` (shared with DONE/LOG)
+- Agent only needs to read HANDOFF (one entry) at session start; reads history only when needed
+
+Effect: HANDOFF write volume is fixed and small (one block), no more full-file rewrites.
+
+**Impact on Skill files:**
+1. workflow.md — Update Memory step: DONE and LOG write to `.ai/history.md`
+2. templates.md — PROJECT_MEMORY template slimmed down, DONE and LOG removed, new location noted
+3. SKILL.md — New principle: "Keep auto-resent files minimal"
+4. workflow.md — HANDOFF section changed to latest-entry-only + history archive
+
+**Status:** 🟡 Finalized, pending Skill incorporation
+
+---
+
+### FB-R03: Bootstrap Strategy ← FB-005 + FB-006
+
+**Decision: Characterization tests moved from Bootstrap checklist to per-Story Step 0 pre-check. "Touch it, test it" strategy.**
+
+**Scope Rule: Only test the current behavior of functions this Story will modify. Don't test the entire module.**
+
+Example: US-002 modifies `setupPeerConnection` → only add characterization tests for `setupPeerConnection`, not for `closePeerConnection` in the same module that nobody is changing.
+
+**Step 0: Safety Net Check (Full Mode only, existing codebases only)**
+```
+- List the functions/modules this Story will modify
+- Check if each has existing test coverage
+- If no coverage → add characterization test (current behavior only)
+- If covered → proceed
+```
+
+Lite Mode does not distinguish characterization vs new tests — write tests directly.
+
+**Design rationale:**
+- Writing all characterization tests at once is too expensive (entire session with zero feature output)
+- May write tests for modules that will never be modified — waste
+- Just-in-time testing: only spend cost when protection is needed
+- Cost is naturally amortized across Stories, no single session is all-testing
+
+**Impact on Skill files:**
+1. workflow.md — Bootstrap section: remove "write characterization tests for all existing features"
+2. workflow.md — Add Step 0: Safety Net Check before Per-Story Steps
+3. SKILL.md — New principle: "Touch it, test it"
+
+**Status:** 🟡 Finalized, pending Skill incorporation
+
+---
+
+### FB-R04: PROJECT_MEMORY + HANDOFF Value Assessment ← FB-002
+
+**Observation recorded, no independent action needed.** Conclusion merged into FB-R01 (Full/Lite mode applicability).
+
+Cross-session projects benefit from Memory/HANDOFF. Single-session tasks do not. This is exactly why Lite Mode exists.
+
+**Status:** ✅ Merged into FB-R01
+
+---
+
 ## Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
 | v0.1 | 2026-02-13 | Initial version: Filtered 30 comparative suggestions down to 13 (8 Must-Do + 5 Worth-Doing) using Token/Quality/Autonomy dimensions |
 | v0.2 | 2026-02-14 | Status update: All 13 items incorporated (8 Must-Do → Templates v0.7 + Lifecycle v0.2 + Protocol v0.1; 5 Worth-Doing → Templates v0.7); 4 "Not Included" items incorporated into Protocol v0.4 Multi-Executor collaboration mode |
+| v0.3 | 2026-02-16 | Field Feedback: Added FB-R01~R04 from WebRTC project (go-webrtc US-001). FB-R01 (Full/Lite mode) finalized; FB-R02 (token optimization) and FB-R03 (bootstrap strategy) pending discussion |
+| v0.4 | 2026-02-16 | FB-R02 (Token cost optimization) finalized: PROJECT_MEMORY slim-down (DONE/LOG → .ai/history.md) + HANDOFF latest-entry-only + history archive |
+| v0.5 | 2026-02-16 | FB-R03 (Bootstrap strategy) finalized: Characterization tests → Step 0 per-Story pre-check ("touch it, test it"), not one-time big-bang |
+| v0.6 | 2026-02-16 | FB-R01~R03 incorporated into Skill (SKILL.md, workflow.md, templates.md). All field feedback items translated to English |
