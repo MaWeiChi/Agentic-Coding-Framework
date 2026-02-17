@@ -90,9 +90,9 @@ All three dimensions → Must-Do, two → Worth-Doing, one or fewer → Not Incl
 
 ---
 
-## Field Feedback — WebRTC Project (FB-001~006)
+## Field Feedback — Pilot Project (FB-001~006)
 
-Source: `go-webrtc/.ai/feedback.md` — Field observations after completing US-001 Room Isolation.
+Source: Pilot project field observations after completing US-001.
 
 ### FB-R01: Full/Lite Mode ← FB-004
 
@@ -274,7 +274,7 @@ The BDD value is in the thinking process (defining scope), not in the `.feature`
 
 **Decision: Add explicit token budget numbers to the "Keep auto-resent files minimal" principle in SKILL.md.**
 
-Real-world measurement from go-webrtc project:
+Real-world measurement from pilot project:
 - Before slimming: ~1.5K input tokens/turn (PROJECT_MEMORY 85 lines + CLAUDE.md)
 - After slimming: ~0.7K input tokens/turn (PROJECT_MEMORY 33 lines + CLAUDE.md)
 - Saving: 53% per turn, ~16K tokens over a 20-turn session
@@ -485,7 +485,7 @@ Our Skill achieves similar coordination effects with more token-efficient means 
 |---------|------|---------|
 | v0.1 | 2026-02-13 | Initial version: Filtered 30 comparative suggestions down to 13 (8 Must-Do + 5 Worth-Doing) using Token/Quality/Autonomy dimensions |
 | v0.2 | 2026-02-14 | Status update: All 13 items incorporated (8 Must-Do → Templates v0.7 + Lifecycle v0.2 + Protocol v0.1; 5 Worth-Doing → Templates v0.7); 4 "Not Included" items incorporated into Protocol v0.4 Multi-Executor collaboration mode |
-| v0.3 | 2026-02-16 | Field Feedback: Added FB-R01~R04 from WebRTC project (go-webrtc US-001). FB-R01 (Full/Lite mode) finalized; FB-R02 (token optimization) and FB-R03 (bootstrap strategy) pending discussion |
+| v0.3 | 2026-02-16 | Field Feedback: Added FB-R01~R04 from pilot project (US-001). FB-R01 (Full/Lite mode) finalized; FB-R02 (token optimization) and FB-R03 (bootstrap strategy) pending discussion |
 | v0.4 | 2026-02-16 | FB-R02 (Token cost optimization) finalized: PROJECT_MEMORY slim-down (DONE/LOG → .ai/history.md) + HANDOFF latest-entry-only + history archive |
 | v0.5 | 2026-02-16 | FB-R03 (Bootstrap strategy) finalized: Characterization tests → Step 0 per-Story pre-check ("touch it, test it"), not one-time big-bang |
 | v0.6 | 2026-02-16 | FB-R01~R03 incorporated into Skill (SKILL.md, workflow.md, templates.md). All field feedback items translated to English |
