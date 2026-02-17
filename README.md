@@ -169,6 +169,15 @@ your-project/
 └── tests/                             # Layer 4: Test files
 ```
 
+## Acknowledgments
+
+This framework was designed through comparative analysis with established methodologies and AI-assisted development tools. We gratefully acknowledge the following projects and standards whose ideas informed the framework's design:
+
+**BDD:** Cucumber, SpecFlow, Behave, pytest-bdd — scenario syntax, declarative style, and tagging conventions.
+**SDD:** arc42, C4 Model, IEEE 1016 — architecture documentation structure and layered description approaches.
+**TDD:** GPT-Pilot Dev Loop, Aider Repo Map, MetaGPT Message Pool, OpenSpec / Spec Kit, testify — agent-driven development loops, context compression, and test scaffolding patterns.
+**DDD:** Eric Evans (*Domain-Driven Design*), Vaughn Vernon (*Implementing Domain-Driven Design*) — strategic design, bounded contexts, and ubiquitous language.
+
 ## Versions
 
 | Document | Version | Date |
