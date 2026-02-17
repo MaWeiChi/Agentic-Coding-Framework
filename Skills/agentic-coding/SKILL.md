@@ -1,7 +1,7 @@
 ---
-name: agentic-coding-claude
+name: agentic-coding
 description: >
-  Agentic Coding Framework executor skill for Claude Code. Guides Claude through
+  Agentic Coding Framework executor skill. Guides the agent through
   the layered micro-waterfall workflow: Bootstrap → BDD → SDD Delta → API Contract →
   Review Checkpoint → Test Scaffolding → Implementation → Verify → Update Memory.
   Use this skill whenever you are working on a project that follows the Agentic Coding
