@@ -18,6 +18,34 @@ Discussion Summary | February 2026
 
 ---
 
+## Full / Lite Mode
+
+The framework supports two modes. The user specifies the mode in CLAUDE.md's Agent Guidelines section (`Agentic Coding Mode: full` or `lite`). The agent does not auto-detect.
+
+| | Full Mode | Lite Mode |
+|---|---|---|
+| Use case | Multi-session handoff, high coupling, multi-agent | Urgent start, low coupling, short tasks |
+| CLAUDE.md | Complete | ≤10 lines |
+| PROJECT_MEMORY | Complete (NOW/NEXT/TESTS/SYNC/ISSUES) | Minimal (NOW + NEXT only, ~5 lines) |
+| SDD / Constitution / NFR | Yes | Skip |
+| Delta Spec | Yes | Verbal or commit message |
+| BDD | Full Gherkin | Write tests directly |
+| HANDOFF (Full Mode Only) | Yes | Not used |
+
+Lite mode is an **on-ramp to Full** — projects that start in Lite can upgrade later when the Bootstrap cost becomes justified. Even one-off tasks benefit from a minimal NOW + NEXT in case follow-up sessions occur.
+
+| Scenario | Mode | Rationale |
+|----------|------|-----------|
+| New project, 5+ stories planned | Full | Worth the upfront investment |
+| Existing project, full framework adoption | Full | Bootstrap once, amortize over time |
+| Existing project, urgent need to start NOW | Lite → upgrade to Full later | Ship first, build infrastructure later |
+| Full project winding down, only small fixes left | Full → downgrade to Lite | Infrastructure overhead no longer justified |
+| One-off bug fix or small feature | Lite | Will never need upgrade |
+
+Users can switch modes by editing CLAUDE.md or by verbal instruction. When the agent detects a mode change, it must confirm the switch direction, explain which scenario fits, and execute the corresponding transition (Upgrade Checklist for Lite→Full, stop maintenance for Full→Lite). See the [Lifecycle Document](Agentic_Coding_Lifecycle.md) for transition procedures.
+
+---
+
 ## Core Concept
 
 In the context of Agentic Coding, tokens are cost. Establishing good "context infrastructure" for the project early on can significantly reduce repeated explanations in each subsequent conversation, lowering overall development costs.
@@ -40,7 +68,11 @@ Use a few sentences to let agents quickly locate core project information. It's 
 
 Project Summary records stable, unchanging Why / Who / What, while PROJECT_MEMORY.md records continuously changing "where we are now, what's next." Both should be read together each conversation by agents.
 
-Memory is a file independent of any specific AI tool, placed in the project root directory. It includes a git commit verification mechanism that allows agents to detect unrecorded changes when switching between tools and automatically sync. Update timing is defined in the [Lifecycle Document](Agentic_Coding_Lifecycle.md), and template definitions are in the [Templates Document](Agentic_Coding_Templates.md).
+Memory is a file independent of any specific AI tool, placed in the project root directory. It includes a git commit verification mechanism that allows agents to detect unrecorded changes when switching between tools and automatically sync.
+
+**Key design principle: files auto-resent by system-reminder cost input tokens every conversation turn.** PROJECT_MEMORY only contains hot sections the agent needs every turn (NOW, NEXT, TESTS, SYNC, ISSUES). Historical/static data (DONE, LOG) lives in `.ai/history.md` — an append-only archive that is NOT auto-resent, read only at session start when needed.
+
+In Lite Mode, PROJECT_MEMORY contains only NOW + NEXT (~5 lines). In Full Mode, it contains all hot sections (~35 lines). Update timing is defined in the [Lifecycle Document](Agentic_Coding_Lifecycle.md), and template definitions are in the [Templates Document](Agentic_Coding_Templates.md).
 
 ### Layer Two: BDD (Behavior-Driven Development)
 
@@ -139,10 +171,11 @@ Extract backwards, reverse-engineer documents from existing codebase.
 | Step | Description |
 |------|-------------|
 | Scan Codebase | Agent reads project structure, key files |
-| Reverse-Engineer Documents | Produce project summary + BDD + SDD |
+| Reverse-Engineer Documents | Produce project summary + SDD |
 | Manual Correction | You confirm and supplement implicit knowledge |
-| Add Characterization Tests | Describe existing behavior, establish baseline |
 | Normal Flow | Subsequent new features enter BDD → SDD → TDD |
+
+**Characterization tests are NOT written all at once during Bootstrap.** Instead, use the "touch it, test it" approach: when a Story modifies a function that has no test coverage, add a characterization test for that function first — then proceed. This avoids spending an entire session on tests for modules that may never be changed. See Step 0 (Safety Net Check) in the [Lifecycle Document](Agentic_Coding_Lifecycle.md).
 
 Additional considerations for existing projects: Some implicit architectural decisions or technical debt are unreadable from code by agents and need manual addition to SDD, preventing agents from "helpfully refactoring" and breaking designs.
 
@@ -154,6 +187,8 @@ Additional considerations for existing projects: Some implicit architectural dec
 |-----------|-------------|
 | More stable information fixed earlier | Agents don't need repeated inference; each conversation only processes differences |
 | Load on demand | Frequently used information in CLAUDE.md, occasionally needed in separate files |
+| Keep auto-resent files minimal | Files re-sent every turn cost tokens every turn; only put hot data in Memory, move DONE/LOG to `.ai/history.md` |
+| Touch it, test it | For existing codebases, don't write characterization tests all at once; only add them when a Story touches uncovered code |
 | Dual reporting | Simultaneously serve AI agents and human team members |
 | ADR / NFR / DDD can be iteratively supplemented | No need to pursue completeness at start; supplement when hitting issues |
 | Scale determines depth | Small CRUD needs only four layers; distributed systems need more documents |
@@ -227,3 +262,4 @@ The following topics can be explored more deeply in subsequent discussions:
 | v0.15 | 2026-02-14 | Protocol adds Multi-Executor collaboration mode (three-layer architecture, Complexity-Based Dispatch, Scoped Context, Role-Based isolation, Per-Task HANDOFF) + Claude Code Agent Teams experimental reference implementation; four refinement items formally incorporated (dynamic context loading, Test/Impl isolation, Agent subscription mechanism, handoff format) |
 | v0.16 | 2026-02-14 | Protocol adds Executor output rules (Diff-Only principle, prioritize structured format, per-step output strategy); HANDOFF.md upgraded to hybrid format (YAML front matter + Markdown body) |
 | v0.17 | 2026-02-14 | Apply Windsurf Round 2 Review: All "topics for future discussion" items crossed off (6 framework detail items + Lifecycle integration); Protocol upgraded to v0.6 (Hook YAML parsing, Dispatch Prompt hybrid format, team_roles completion, STATE.json schema update) |
+| v0.18 | 2026-02-16 | Field feedback (WebRTC US-001): Add Full/Lite mode with scenario table and mode switching; add "keep auto-resent files minimal" and "touch it, test it" principles; DONE/LOG moved to .ai/history.md; existing project flow changed from one-time characterization tests to per-Story Step 0 |

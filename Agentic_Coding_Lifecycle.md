@@ -33,11 +33,43 @@ This combination works for Agentic Coding because: the risk of traditional water
 
 ### Bootstrap (One-Time)
 
-Project summary (Why / Who / What) and initial SDD skeleton are created once at project startup. The goal of this phase is to establish context foundations for the entire project, providing stable anchor points for subsequent User Story iterations.
+Bootstrap differs by mode:
 
-In addition to the project summary and SDD skeleton, the Bootstrap phase should also define already-known inter-module interfaces (internal interfaces)—at least to the level of function signatures and data structures. This is a contract-first approach, allowing subsequent Stories to develop against interfaces and reducing coupling between Stories.
+**Full Mode:** Project summary (Why / Who / What), initial SDD skeleton, Constitution (3-5 principles), PROJECT_MEMORY (hot sections only: NOW/NEXT/TESTS/SYNC/ISSUES), `.ai/history.md` (empty), `.ai/HANDOFF.md` (empty), and directory structure. The Bootstrap phase should also define already-known inter-module interfaces (internal interfaces)—at least to the level of function signatures and data structures. This is a contract-first approach, allowing subsequent Stories to develop against interfaces and reducing coupling between Stories.
 
-For existing projects, Bootstrap corresponds to the "scan Codebase → reverse-generate documents → manual correction" workflow.
+**Lite Mode:** CLAUDE.md (≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite`) and a minimal PROJECT_MEMORY (NOW + NEXT only, ~5 lines). That's it — no SDD, no HANDOFF, no Constitution.
+
+For existing projects (Full Mode), Bootstrap corresponds to the "scan Codebase → reverse-generate documents → manual correction" workflow. **Do NOT write characterization tests for all existing code at this stage** — use the Step 0 "touch it, test it" approach per Story instead (see below).
+
+### Step 0: Safety Net Check (Full Mode, Existing Codebases Only)
+
+Before starting each Story's micro-waterfall, check whether the code about to be modified has test coverage. If not, add a characterization test for the specific functions being changed — not the entire module.
+
+**Scope rule:** Only test the functions this Story will modify. Don't test the entire module or unrelated functions. This avoids spending an entire session on tests for modules that may never be changed.
+
+Lite Mode skips this step — tests are written directly without distinguishing characterization vs new.
+
+### Mode Switching
+
+Users can switch modes (Lite ↔ Full) by editing CLAUDE.md or by verbal instruction. When the agent detects a mode change, it must:
+
+1. Confirm the switch direction (Lite → Full or Full → Lite)
+2. Explain which scenario fits from the scenario table in the [Framework Document](Agentic_Coding_Framework.md)
+3. Execute the corresponding transition
+
+**Upgrade Checklist (Lite → Full):**
+1. Expand CLAUDE.md (add Why/Who/What, Project Structure, Development Conventions)
+2. Expand PROJECT_MEMORY.md (add TESTS/SYNC/ISSUES to existing NOW/NEXT)
+3. Create `docs/sdd/sdd.md` (scan codebase, reverse-engineer)
+4. Create `docs/constitution.md` (3-5 core principles)
+5. Create `.ai/HANDOFF.md` + `.ai/history.md`
+6. Human confirms above outputs
+
+**Downgrade (Full → Lite):**
+1. Update CLAUDE.md mode line to `lite`
+2. Slim PROJECT_MEMORY to NOW + NEXT only
+3. Stop maintaining SDD, HANDOFF, Delta Spec, BDD
+4. Existing docs remain (not deleted), just no longer actively maintained
 
 ### Iterative Execution (One Cycle per User Story)
 
@@ -45,7 +77,8 @@ After Bootstrap is complete, each User Story enters one independent micro-waterf
 
 | Step | Description |
 |------|-------------|
-| BDD | Write behavior scenarios **only for the current Story** (use RFC 2119 language, mark `[NEEDS CLARIFICATION]`) |
+| Step 0 (Full Mode, existing codebases) | Safety Net Check: verify test coverage for functions being modified; add characterization tests if missing |
+| BDD (Full Mode) / Write Tests Directly (Lite Mode) | Write behavior scenarios **only for the current Story** (use RFC 2119 language, mark `[NEEDS CLARIFICATION]`). Lite Mode: skip Gherkin, write test files directly, then skip to Implementation |
 | SDD Incremental Update | Append or modify affected modules and architecture sections, output **Delta Spec** (ADDED/MODIFIED/REMOVED), don't rewrite the entire SDD |
 | API Contract Incremental Update | Add or adjust affected endpoints / events, don't rewrite the entire contract |
 | **Review Checkpoint** | **Human confirms current BDD + Delta Spec + contract differences + clarifies all `[NEEDS CLARIFICATION]`** |
@@ -128,16 +161,30 @@ Memory updates are embedded in the micro-waterfall workflow, automatically execu
 2. Compare git commit hash (see Git Commit Verification mechanism in [Templates document](Agentic_Coding_Templates.md))
 3. If inconsistent, sync Memory first before starting work
 
-**When Story completes (last step of micro-waterfall):**
+**When Story completes (last step of micro-waterfall, Full Mode only):**
 
 | Memory Section | Update Content |
 |----------------|-----------------|
 | `<!-- -->` | Update to current commit hash |
-| `DONE` | Append feature and test coverage summary of current Story |
 | `NOW` | Clear or update to next Story |
-| `LOG` | Append current commit (retain latest 5) |
 | `TESTS` | Update pass counts per level |
 | `NEXT` | Re-rank priorities based on completion |
+| `ISSUES` | Append new issues, don't delete human-marked ones |
+| `SYNC` | Update if module relationships changed |
+
+DONE and LOG no longer live in PROJECT_MEMORY — they are appended to `.ai/history.md`:
+
+```markdown
+## US-{id} {title} — {date}
+status: complete
+tests: unit:N intg:N comp:N
+commit: {hash}
+changes: [short list of files]
+```
+
+HANDOFF.md is overwritten with the latest session state (latest-entry-only). Historical session records are preserved in `.ai/history.md`.
+
+Lite Mode: skip Memory update. Commit message serves as the record.
 
 **When interrupted mid-session (abnormal session end or manual stop):**
 
@@ -150,26 +197,25 @@ When agent starts next time and reads Memory, it may face two sources of differe
 | Section | Authority Source | Conflict Strategy |
 |---------|------------------|------------------|
 | `<!-- -->` | git (fact) | Agent follows `git log`, updates directly |
-| `DONE` | git + tests (fact) | Agent supplements based on git diff, doesn't delete human-added entries |
 | `NOW` | human intent | **Human priority** — if human changed it, follow human |
 | `ISSUES` | mixed | Agent can append newly discovered issues, doesn't delete human-marked ones |
-| `LOG` | git (fact) | Agent supplements missing commits from git log |
 | `TESTS` | CI / test results (fact) | Agent reruns tests after update |
 | `SYNC` | human knowledge | **Human priority** — agent only appends, doesn't modify or delete |
 | `NEXT` | human intent | **Human priority** — if human reordered, follow human ordering |
+
+Note: DONE and LOG now live in `.ai/history.md` (append-only) and are not subject to conflict resolution.
 
 Core principle: **Fact-based sections follow git/tests, intent-based sections follow humans.** Agent can always "append," but for human-edited content can only "append," never "overwrite" or "delete."
 
 ### Memory Cleanup Timing
 
-PROJECT_MEMORY.md operates in append-only mode; without cleanup it bloats over time. Recommended cleanup triggers:
+With DONE and LOG moved to `.ai/history.md`, PROJECT_MEMORY.md is significantly leaner. Remaining cleanup:
 
 | Trigger Condition | Cleanup Action |
 |-------------------|-----------------|
-| `DONE` exceeds 20 entries | Archive old entries to `docs/history.md`, Memory retains only latest 10 |
-| `LOG` exceeds 5 commits | Auto-truncate; older ones via `git log` (by design) |
 | Resolved issues in `ISSUES` | Clear corresponding ISSUES entries when Story completes |
-| End of sprint / milestone | Human-led full cleanup: re-evaluate NEXT priorities, archive completed content, remove stale SYNC entries |
+| End of sprint / milestone | Human-led full cleanup: re-evaluate NEXT priorities, remove stale SYNC entries |
+| `.ai/history.md` grows very large | Human decides whether to archive older entries (this file is append-only by design) |
 
 Cleanup principle: **Fact-based sections can be auto-cleaned (truncate by rule), intent-based sections can only be cleaned by humans.** Agent never proactively deletes content in `NOW`, `NEXT`, `SYNC`.
 
@@ -285,3 +331,4 @@ Different project types (Go container service, WordPress CMS, Astro + WordPress 
 | v0.1 | 2026-02-13 | Initial version: iteration model, testing strategy, CI/CD interface separated from Framework |
 | v0.2 | 2026-02-13 | Added Implementation Self-Correction Loop recursion limit (3-5 times, mark blocker if exceeded); added AST Linting gate (after Implementation before Verify, with tech stack tool correspondence table); added AST Linting step to iteration table |
 | v0.3 | 2026-02-13 | Applied Windsurf Review: added "Determination Method" column to Verify triple-check table, distinguishing deterministic/semi-deterministic/LLM-dependent checks (P0); added Memory cleanup timing and rules (P2) |
+| v0.4 | 2026-02-16 | Field feedback: Bootstrap split into Full/Lite mode; add Step 0 Safety Net Check ("touch it, test it"); add mode switching with Upgrade Checklist/Downgrade; Memory update rules changed (DONE/LOG → .ai/history.md); conflict resolution and cleanup rules updated |

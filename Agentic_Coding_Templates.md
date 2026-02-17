@@ -42,9 +42,9 @@ Memory records the git commit hash at the time of last update. The agent should 
 
 This mechanism keeps Memory consistent across tool usage. Whether a human manually modified code or another AI tool made changes, the next agent to take over can detect and synchronize with the changes.
 
-### Template
+### Full Mode Template
 
-Design principle: **minimum tokens, maximum information density**. A new version saves approximately 62% tokens compared to a table version for the same project state.
+Design principle: **minimum tokens, maximum information density.** Only hot sections that the agent needs every turn live in PROJECT_MEMORY. Historical/static data (DONE, LOG) lives in `.ai/history.md` to avoid system-reminder re-send cost.
 
 Structure uses a three-phase hierarchical loading approach:
 1. **HTML comment** (first line): machine marker, agent completes git validation in one line
@@ -66,17 +66,8 @@ US-005 Shopping Cart Feature | phase:implementation | Backend API done, frontend
 3. Safari WebP image issue
 4. US-006 Checkout flow BDD
 
-## DONE
-US-001 ✅ User registration (02-13) unit+intg+comp
-US-003 ✅ Product list (02-14) unit+intg
-
 ## TESTS
 unit:42/42 ✅ | intg:18/18 ✅ | comp:12/12 ✅ | e2e:⏸ | perf:⏸
-
-## LOG
-a1b2c3d 02-15 Shopping cart backend API (add/remove/update quantity)
-e4f5g6h 02-14 Product list component with pagination and sorting
-i7j8k9l 02-14 Fix email validation logic
 
 ## ISSUES
 - [Med] Safari WebP display anomaly (02-14)
@@ -87,18 +78,62 @@ i7j8k9l 02-14 Fix email validation logic
 - DB schema → migration + SDD data model
 ```
 
-### Section Explanation
+### Lite Mode Template
 
-| Section | Purpose | Authoritative Source | Update Frequency |
-|---------|------|----------|----------|
-| `<!-- -->` | Git status, fast machine validation | git (fact) | Every commit |
-| `NOW` | Current task, phase, blockers | Human intent priority | Every session |
-| `NEXT` | Backlog priority order | Human intent priority | When story completes |
-| `DONE` | Completed features + test coverage summary | git + tests (fact) | When story completes |
-| `TESTS` | Passing test counts by level | CI / tests (fact) | After every test run |
-| `LOG` | Most recent 5 commits (older ones via git log) | git (fact) | Every commit |
-| `ISSUES` | Unresolved problems | Mixed (agent can add, doesn't delete human's) | Anytime |
-| `SYNC` | Cross-update reminders (change A requires change B) | Human knowledge priority | Add when discovered |
+Minimal PROJECT_MEMORY for Lite mode (~5 lines). Even one-off tasks benefit from this in case follow-up sessions occur.
+
+```markdown
+# PROJECT_MEMORY
+<!-- commit:a1b2c3d | branch:main | dirty:no -->
+
+## NOW
+Fix login timeout bug | phase:implementation | blocker:none
+
+## NEXT
+1. Add retry logic for auth service
+```
+
+### .ai/history.md Template
+
+Append-only archive for DONE stories, LOG entries, and session handoff history. Agent reads this only at session start if needed — it is NOT auto-resent every turn.
+
+```markdown
+# Project History
+
+## US-001 User registration — 02-13
+status: complete
+tests: unit:12 intg:6 comp:4
+commit: f1a2b3c
+changes: [auth module, user model, registration API]
+
+## US-003 Product list — 02-14
+status: complete
+tests: unit:18 intg:8
+commit: e4f5g6h
+changes: [product module, list component]
+
+## Session: US-005 (02-15)
+status: in-progress
+step: implementation
+summary: Backend API done, frontend WIP
+unresolved: Shopping cart state management approach TBD
+next: Complete frontend cart component
+```
+
+Key rules: Append-only. Never delete or rewrite entries. Each Story completion and each session end appends one block.
+
+### Section Explanation (Full Mode)
+
+| Section | Location | Purpose | Authoritative Source | Update Frequency |
+|---------|----------|---------|----------|----------|
+| `<!-- -->` | Memory | Git status, fast machine validation | git (fact) | Every commit |
+| `NOW` | Memory | Current task, phase, blockers | Human intent priority | Every session |
+| `NEXT` | Memory | Backlog priority order | Human intent priority | When story completes |
+| `TESTS` | Memory | Passing test counts by level | CI / tests (fact) | After every test run |
+| `ISSUES` | Memory | Unresolved problems | Mixed (agent can add, doesn't delete human's) | Anytime |
+| `SYNC` | Memory | Cross-update reminders (change A requires change B) | Human knowledge priority | Add when discovered |
+| `DONE` | .ai/history.md | Completed features + test coverage summary | git + tests (fact) | When story completes |
+| `LOG` | .ai/history.md | Commit history entries | git (fact) | When story completes |
 
 ### Writing Principles
 
@@ -148,10 +183,19 @@ Place in the project root as the first document agents read for every conversati
 
 ## Agent Guidelines
 
+- Agentic Coding Mode: full
 - Read `PROJECT_MEMORY.md` before each session to understand the current project state
 - Follow the BDD → SDD → TDD development workflow (see Agentic Coding Framework for details)
 - Update `PROJECT_MEMORY.md` when each story ends
 - Don't refactor design decisions without ADR documentation of the reasoning
+```
+
+**Lite Mode variant** (≤10 lines):
+```markdown
+# <Project Name>
+- **What**: <one-line description>
+- **Stack**: <language, framework>
+- Agentic Coding Mode: lite
 ```
 
 ### Writing Principles
@@ -1036,21 +1080,18 @@ Reverse generate documents required by the framework from existing codebase, let
    - Produce module division and data model drafts
    - Human supplements implicit architectural decisions (record in ADR)
 
-4. Reverse generate BDD (Characterization Test)
-   - Describe "existing behavior" not "desired behavior"
-   - Purpose is establishing baseline, not defining new requirements
-   - Mark test levels
-
-5. Fill in Test Scaffolding
-   - Generate test skeletons per reverse-generated BDD markers
-   - Implement Characterization Tests to make them all pass
-   - These tests become regression protection for subsequent changes
-
-6. Initialize PROJECT_MEMORY.md
+4. Initialize PROJECT_MEMORY.md
    - Record current git commit hash
-   - Fill in completed feature list
-   - Set next action
+   - Set NOW and NEXT
+   - Create .ai/history.md (empty)
+
+5. Normal flow
+   - Subsequent new features enter BDD → SDD → TDD workflow
+   - Each Story uses Step 0 (Safety Net Check) to add characterization
+     tests for functions being modified, if they lack coverage
 ```
+
+**Note:** Characterization tests are NOT written all at once during Bootstrap. Use the "touch it, test it" approach — only add characterization tests when a Story touches uncovered code. See Step 0 in the [Lifecycle Document](Agentic_Coding_Lifecycle.md).
 
 ### Considerations
 
@@ -1072,3 +1113,4 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.6 | 2026-02-13 | Adopt OpenSpec / Spec Kit design: BDD adds RFC 2119 keyword strength + [NEEDS CLARIFICATION] marking; SDD adds Delta Spec incremental update format + [NEEDS CLARIFICATION] marking + RFC 2119 keywords; add Constitution template (project constitution); add [P] parallel marking + Complexity Tracking (Story task format guide) |
 | v0.7 | 2026-02-13 | Apply refinement checklist 13 items: BDD adds Scenario Outline template, declarative style guidance, Non-Goals section, anti-pattern list; SDD adds Source of Truth principle, System Context description, Mermaid diagram guidance, Delta Spec Non-Goals; Test adds testify require/assert distinction, Table-Driven template, Suite template, Helper Function extraction principle; DDD adds Subdomain type classification (Core/Supporting/Generic) + agent behavior rules, Domain Event Registry |
 | v0.8 | 2026-02-13 | Apply Windsurf Review: add Review Checkpoint structured template (P1); recommend API contract upgrade to OpenAPI 3.1 (P2); add Playwright Full E2E Test template (P2) |
+| v0.9 | 2026-02-16 | Field feedback: PROJECT_MEMORY slimmed (DONE/LOG → .ai/history.md); add Full/Lite mode templates; add .ai/history.md template; CLAUDE.md template adds mode line + Lite variant; Legacy reverse engineering removes one-time characterization tests, replaced by per-Story Step 0 |

@@ -251,9 +251,9 @@ pending → running → pass → (orchestrator advances to next step)
 
 `null` (general failure/success) · `constitution_violation` · `needs_clarification` · `nfr_missing` · `scope_warning` · `test_timeout`
 
-### 2. HANDOFF.md — Executor-to-Executor Handoff Notes
+### 2. HANDOFF.md — Executor-to-Executor Handoff Notes (Full Mode Only)
 
-Written at the end of each executor session, read at the start of the next session. **Overwritten each time, not accumulated**—this is a key difference from PROJECT_MEMORY.md.
+Written at the end of each executor session, read at the start of the next session. **Latest-entry-only: overwritten each time.** Historical session records are appended to `.ai/history.md` for archival. This keeps HANDOFF small (one block to read, one block to write) while preserving full session history.
 
 #### Hybrid Format: Structured Header + Freeform Body
 
@@ -500,6 +500,7 @@ steps:
       - .ai/STATE.json            # Test results
     claude_writes:
       - PROJECT_MEMORY.md
+      - .ai/history.md            # Append DONE + LOG entry
 ```
 
 ### Component Test Location
@@ -629,7 +630,7 @@ After completion:
 | scaffold | Based on BDD scenario tags and NFR table, produce corresponding test skeleton. All tests must fail (red) |
 | impl | Read failing tests, write minimal code to make tests pass, then refactor |
 | verify | Execute triple check: Completeness (all BDD has tests, all Delta implemented), Correctness (tests pass, NFR met), Coherence (SDD merged Delta, contracts consistent, Constitution not violated) |
-| update-memory | Read STATE.json test results, update MEMORY's DONE/TESTS/LOG/NEXT. Clear or update NOW |
+| update-memory | Read STATE.json test results, update MEMORY's NOW/TESTS/NEXT/ISSUES/SYNC. Append DONE + LOG entry to `.ai/history.md`. Overwrite HANDOFF.md with latest session state |
 
 ---
 
@@ -1206,3 +1207,4 @@ This reference implementation doesn't recommend all-in-one. Recommended experime
 | v0.4 | 2026-02-14 | Add "Multi-Executor Collaboration Mode": three-layer architecture (Orchestrator → Coordinator → Executors), Complexity-Based Dispatch Mode (S/M/L), Scoped Context Loading (team_roles extension), Role-Based Context isolation, Coordinator ↔ Executor communication events, Per-Task HANDOFF format. Add "Reference Implementation: Claude Code Agent Teams (Experimental)": three-layer architecture mapping, Lead delegate mode behavior rules, Spawn Prompt example, Hook integration (TeammateIdle / TaskCompleted), complete Dispatch flow, known limitations and mitigations, four-phase experiment path. Incorporate Refinement four items: dynamic context loading, Test/Impl isolation, Agent subscription mechanism, handoff format |
 | v0.5 | 2026-02-14 | Add "Executor Output Rules": Diff-Only principle (per-step anti-pattern table), Structure First (machine consumption vs human consumption category), Dispatch Prompt output instruction template. HANDOFF.md upgrade to hybrid format: YAML front matter (hook machine parsing) + Markdown body (executor natural language handoff), with field specs table; clarify relationship with executor-result (both approaches coexist) |
 | v0.6 | 2026-02-14 | Apply Windsurf Round 2 Review: Hook pseudocode change to parse YAML front matter instead of grep (P0); Dispatch Prompt template reflect HANDOFF hybrid format requirements (P0); team_roles supplement test/verify role examples (P1); task_assigned scoped_context structure explanation (P1); STATE.json initialization example update complete schema (P2); Token Budget add Multi-Executor cross-reference (P2) |
+| v0.7 | 2026-02-16 | Field feedback integration (FB-R01~R03): HANDOFF.md marked Full Mode Only with latest-entry-only + `.ai/history.md` archival; update-memory step instruction updated to write DONE/LOG to `.ai/history.md` and overwrite HANDOFF; update-memory `claude_writes` includes `.ai/history.md` |

@@ -100,23 +100,70 @@ Source: `go-webrtc/.ai/feedback.md` — Field observations after completing US-0
 
 Configuration: Add `Agentic Coding Mode: full` or `lite` in CLAUDE.md's Agent Guidelines section.
 
+**Lite mode also retains a minimal PROJECT_MEMORY (NOW + NEXT only, ~5 lines).** Rationale: even tasks assumed to be one-time may have follow-up sessions. The cost is negligible (~50 input tokens/turn) and provides a breakpoint for future sessions. This also makes Lite → Full upgrades smoother — NOW/NEXT already exist as a foundation.
+
 | | Full Mode | Lite Mode |
 |---|---|---|
-| Use case | Multi-session handoff, high coupling, multi-agent | Short tasks, low coupling, single session |
+| Use case | Multi-session handoff, high coupling, multi-agent | Urgent start, low coupling, short tasks |
 | CLAUDE.md | Complete | ≤10 lines |
-| PROJECT_MEMORY | Complete (NOW/NEXT/TESTS/SYNC/ISSUES) | Not used |
+| PROJECT_MEMORY | Complete (NOW/NEXT/TESTS/SYNC/ISSUES) | Minimal (NOW + NEXT only, ~5 lines) |
 | SDD / Constitution / NFR | Yes | Skip |
 | Delta Spec | Yes | Verbal or commit message |
 | BDD | Full Gherkin | Write tests directly |
 | HANDOFF | Yes | Not used |
+
+**Lite mode positioning — an on-ramp to Full:**
+
+Lite mode is not just "for small tasks." It also serves as an entry point for projects that will eventually need Full mode but can't afford the Bootstrap cost right now.
+
+| Scenario | Mode | Rationale |
+|----------|------|-----------|
+| New project, 5+ stories planned | Full | Worth the upfront investment |
+| Existing project, full framework adoption | Full | Bootstrap once, amortize over time |
+| Existing project, urgent need to start NOW | Lite → upgrade to Full later | Ship first, build infrastructure later |
+| Full project winding down, only small fixes left | Full → downgrade to Lite | Infrastructure overhead no longer justified |
+| One-off bug fix or small feature | Lite | Will never need upgrade |
+
+**Mode switching:**
+
+Users can switch modes in two equivalent ways:
+1. Directly edit the mode line in CLAUDE.md
+2. Tell the agent verbally (e.g., "switch to Full mode") — agent updates CLAUDE.md
+
+**Agent behavior on mode switch — must acknowledge and inform:**
+
+When the agent detects a mode change (either by reading CLAUDE.md or receiving a verbal instruction), it MUST:
+1. Confirm the switch direction (Lite → Full or Full → Lite)
+2. Explain which scenario this matches from the table above, and why this mode fits
+3. Execute the corresponding transition
+
+Example: User says "switch to Full mode" →
+> "Switching to Full mode. This is typically for projects needing multi-session handoff or where stories have high coupling. I'll run the Upgrade Checklist to set up the missing infrastructure..."
+
+**Upgrade Checklist (Lite → Full):**
+```
+1. ☐ Expand CLAUDE.md (add Why/Who/What, Project Structure, Development Conventions)
+2. ☐ Expand PROJECT_MEMORY.md (add TESTS/SYNC/ISSUES to existing NOW/NEXT)
+3. ☐ Create docs/sdd/sdd.md (scan codebase, reverse-engineer)
+4. ☐ Create docs/constitution.md (3-5 core principles)
+5. ☐ Create .ai/HANDOFF.md + .ai/history.md
+6. ☐ Human confirms above outputs
+```
+
+**Downgrade (Full → Lite):**
+- Update CLAUDE.md mode line
+- Agent stops maintaining SDD/HANDOFF/full Memory
+- Existing docs remain (not deleted), just no longer actively maintained
+- Slim PROJECT_MEMORY to NOW + NEXT only
 
 **Design rationale:**
 - Agent auto-detection is unreliable (story count ≠ complexity)
 - The real decision axes are "handoff frequency × change coupling", which require human context
 - CLAUDE.md exists in both modes, making it the most natural location for this setting
 - Persists across sessions without needing to be re-stated verbally
+- Mode switching via verbal instruction is natural and equivalent to manual CLAUDE.md edit
 
-**Status:** 🟡 Finalized, pending Skill incorporation
+**Status:** 🟡 Finalized, pending incorporation into Framework + Skill
 
 ---
 
@@ -211,3 +258,4 @@ Cross-session projects benefit from Memory/HANDOFF. Single-session tasks do not.
 | v0.4 | 2026-02-16 | FB-R02 (Token cost optimization) finalized: PROJECT_MEMORY slim-down (DONE/LOG → .ai/history.md) + HANDOFF latest-entry-only + history archive |
 | v0.5 | 2026-02-16 | FB-R03 (Bootstrap strategy) finalized: Characterization tests → Step 0 per-Story pre-check ("touch it, test it"), not one-time big-bang |
 | v0.6 | 2026-02-16 | FB-R01~R03 incorporated into Skill (SKILL.md, workflow.md, templates.md). All field feedback items translated to English |
+| v0.7 | 2026-02-16 | FB-R01 expanded: Lite mode retains minimal PROJECT_MEMORY (NOW+NEXT); Lite as on-ramp to Full (scenario table); mode switching mechanism (verbal + CLAUDE.md edit); Upgrade Checklist + Downgrade procedure; agent must acknowledge and inform on mode switch |
