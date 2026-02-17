@@ -311,30 +311,171 @@ Default: Team behavior (safer) when `Team Size` not specified.
 
 ---
 
-### FB-007/FB-008: Field Feedback Full Record (US-001→009 Completion Review)
+### FB-007: Full Project ROI Review (US-001→009 Completion)
 
-**FB-007** (2026-02-16): Full project ROI review after 9 US + 10 TD completion. Key findings:
+**Date:** 2026-02-16
+**Context:** End-of-project review after completing all 9 US + 10 TD. 14 commits across multiple sessions.
 
-High ROI elements: PROJECT_MEMORY (⭐⭐⭐), HANDOFF (⭐⭐⭐), SYNC (⭐⭐⭐), ISSUES scope guard (⭐⭐), BDD-driven scoping (⭐⭐), touch-it-test-it (⭐⭐).
+#### High ROI Elements (Retain)
 
-Low ROI elements: .feature files (no BDD runner in Go), Delta Spec (single-person overhead), Review Checkpoint (rubber-stamp in solo), Constitution/NFR (internalized after early phase), API Contract (overhead for small changes).
+| Element | Rating | Explanation |
+|---------|--------|-------------|
+| **PROJECT_MEMORY** | ⭐⭐⭐ | One line of NOW locates breakpoint across sessions; SYNC replaces grepping entire codebase |
+| **HANDOFF.md** | ⭐⭐⭐ | Prevents repeated decisions, preserves Key Decisions, zero-cost onboarding for new sessions |
+| **SYNC section** | ⭐⭐⭐ | Quickly locate files for each concern — 10x faster than grep |
+| **ISSUES list** | ⭐⭐ | Effective scope guard — see a problem, check if it belongs to another US first, prevents scope creep |
+| **BDD-driven scoping** | ⭐⭐ | Gherkin scenarios → Go test almost 1:1 conversion, clear definition prevents over-building |
+| **Touch-it-test-it (FB-006)** | ⭐⭐ | Avoids one-time big-bang testing, cost naturally amortized across each US |
 
-Core learning: Memory system is the biggest winner. Document layer should be minimized. BDD value is in thinking, not in file format. Solo projects should skip ceremonial steps. Framework's hidden benefit is output stability — structural constraints reduce agent variance.
+#### Low ROI Elements (Simplify or Skip)
 
-Actionable items → FB-R05 (Lite fast path), FB-R06 (token warning), FB-R07 (Team Size).
+| Element | Problem | Recommendation |
+|---------|---------|----------------|
+| **.feature files** | No BDD runner (Go doesn't use Cucumber), files are human-readable docs only | Write BDD-style function names directly in test files, skip the document layer |
+| **Delta Spec** | For solo development, implementing directly is faster than writing Delta then implementing | Solo: commit message suffices; Team: still needed |
+| **Review Checkpoint** | Every time it's manual "ok" auto-pass, no substantive review | Only pause for review on architecture-level changes |
+| **Constitution / NFR** | Written once, rarely consulted afterward — principles are internalized | Valuable initially, freeze after stabilization, no longer actively maintain |
+| **API Contract (OpenAPI)** | Adding a query param is overhead to update OpenAPI | Only write for new API design, skip for incremental changes |
 
-**FB-008** (2026-02-16): Comparison with Claude Code Agent Teams / Sub-agents.
+#### Token Consumption Analysis
 
-Key insight: Agentic Coding Skill is a "file-system implementation" of the same coordination problems Agent Teams solves at runtime. PROJECT_MEMORY ≈ persistent memory, SYNC ≈ spawn context, ISSUES ≈ shared task list, HANDOFF ≈ mailbox.
+**System-reminder per-turn hidden cost:**
+```
+Before slimming: PROJECT_MEMORY (85 lines) + CLAUDE.md ≈ ~1.5K input tokens/turn
+After slimming:  PROJECT_MEMORY (33 lines) + CLAUDE.md ≈ ~0.7K input tokens/turn
+Saving: ~53% per turn
+```
 
-Future migration path (when Agent Teams matures):
-1. PROJECT_MEMORY → sub-agent persistent memory
-2. Large-scope US → agent team, small-scope → single session + skill
-3. HANDOFF → replaced by agent team shared task list
+**Per-US Framework overhead:**
+```
+Memory update:  ~4K output tokens (Read + Edit)
+HANDOFF update: ~2K output tokens (Write)
+BDD document:   ~3K output tokens (Write .feature)
+Delta Spec:     ~2K output tokens (Write)
+─────────────────────────────────
+Framework total: ~11K tokens / US (excluding implementation)
+```
+Compared to US-009 implementation itself at ~15K tokens, Framework overhead ≈ 42%.
 
-No immediate action needed — current file-based approach is more token-efficient and stable than experimental Agent Teams.
+**Slimming measures effectiveness:**
 
-**Status:** ✅ Recorded. FB-R05~R07 incorporated. FB-008 is strategic roadmap (no immediate changes).
+| Measure | Saving | Implemented? |
+|---------|--------|-------------|
+| DONE/LOG/ISSUES moved to .ai/history.md | 61% line reduction (85→33) | ✅ |
+| SYNC entries slimmed to one line | ~15% line reduction | ✅ |
+| HANDOFF changed to latest-entry-only | ~30% output reduction | ✅ |
+
+#### Applicability Conclusions (Updates FB-004)
+
+| Scenario | Assessment | Recommended Mode |
+|----------|-----------|-----------------|
+| 5+ stories across multiple sessions | ✅ Worth it | Full (but skip .feature, Delta Spec optional) |
+| 2-3 stories medium tasks | ⚠️ Borderline | Lite (keep only NOW + NEXT + SYNC) |
+| Single bug fix | ❌ Not worth it | Don't use Framework |
+| Multi-person / multi-agent collaboration | ✅ Most valuable | Full + HANDOFF required |
+
+#### Core Learnings
+
+1. **Memory system is the biggest winner** — cross-session handoff cost approaches zero, one line of NOW locates position
+2. **Document layer should be minimized** — only put "needed every turn" information in system-reminder re-sent files
+3. **BDD's value is not in the .feature file** — value is in the thinking process (defining scope), not in the output file format
+4. **Solo projects should skip ceremonial steps** — Delta Spec, Review Checkpoint, API Contract have no substantive benefit for solo work
+5. **Touch-it-test-it > one-time catchup** — characterization test strategy (FB-006) proven effective in practice, avoids waste
+6. **Framework's biggest hidden benefit: output stability** — structural constraints eliminate agent uncertainty, reducing output variance per turn:
+   - SYNC lets agent know which files to change without re-exploration — prevents changing wrong files
+   - ISSUES acts as scope guard — see a problem, check attribution first, prevents ad-hoc fixes
+   - HANDOFF prevents cross-session design drift — prevents re-discussing already-decided decisions
+   - BDD-style naming makes test intent explicit — edge cases don't get missed
+   - Without these constraints, agents commonly exhibit scope creep, forgotten decisions, modifications in unrelated locations
+
+**Actionable items:** → FB-R05 (Lite fast path), FB-R06 (token warning), FB-R07 (Team Size)
+
+**Status:** ✅ Recorded. FB-R05~R07 incorporated.
+
+---
+
+### FB-008: Agentic Coding Skill vs Claude Code Agent Teams / Sub-agents (Strategic Roadmap)
+
+**Date:** 2026-02-16
+**Context:** Comparison analysis after reading Agent Teams + Sub-agents official documentation.
+
+#### Concept Mapping
+
+| Skill Element | Agent Teams / Sub-agents Equivalent | Difference |
+|---|---|---|
+| **PROJECT_MEMORY** | Sub-agent `memory: project` (persistent memory) | Skill version is manually maintained; sub-agent version auto-injects first 200 lines of MEMORY.md |
+| **HANDOFF.md** | Agent Teams mailbox + shared task list | Skill version persists across sessions; teams version is runtime-only, no session resumption |
+| **SYNC section** | Sub-agent spawn prompt context | Teams docs emphasize teammates don't inherit lead's history — need sufficient context in spawn prompt. SYNC solves exactly this |
+| **ISSUES scope guard** | Agent Teams task dependency | Teams support blocked tasks waiting for dependency completion; ISSUES is the static version of the same concept |
+| **BDD → Test Scaffold** | Sub-agent chaining (plan → implement → verify) | Can be split into sub-agents each executing independently |
+| **Review Checkpoint** | Agent Teams `requirePlanApproval` | Teams can require teammate plan approval from lead — more structured than our manual "ok" |
+
+#### High Alignment: Skill Solved the Same Problems Before Agent Teams Existed
+
+**1. Persistent Memory = PROJECT_MEMORY**
+Sub-agents' `memory` field lets agents save learning across sessions to `.claude/agent-memory/<name>/MEMORY.md`. Our PROJECT_MEMORY is the manual version of the same concept — implemented earlier, battle-tested.
+
+**2. Spawn Context = SYNC**
+Agent Teams docs repeatedly emphasize: teammates don't inherit lead's conversation history. Solution is giving sufficient context in spawn prompt. Our SYNC section is essentially pre-prepared spawn context — any new agent reads SYNC to know where each module lives.
+
+**3. Shared Task List = ISSUES + US Attribution**
+Agent Teams' shared task list (pending/in-progress/completed + dependency) and our ISSUES list (attributed to which US) are the same coordination mechanism.
+
+#### Upgrade Directions (When Agent Teams Matures)
+
+**1. Split Framework Steps into Sub-agents**
+```
+Current (single session):
+  BDD → Delta Spec → Test Scaffold → Implement → Verify → Update Memory
+
+Upgraded (sub-agent division):
+  plan-agent:      BDD + Delta Spec (permissionMode: plan, read-only)
+  implement-agent: Write code (tools: Edit, Write, Bash)
+  verify-agent:    Run tests + triple check (tools: Bash, Read)
+```
+Benefit: Each agent has independent context window. BDD documents don't consume implementation context.
+
+**2. Use Persistent Memory Instead of System-Reminder Re-send**
+Sub-agent's `memory: project` reads MEMORY.md once at startup (first 200 lines), not re-sent every turn like our PROJECT_MEMORY via system-reminder. If the Skill is restructured as a sub-agent, token cost drops further.
+
+**3. Agent Teams for Large-Scope US**
+Agent Teams docs recommend for:
+- Research and review (multi-angle simultaneous exploration)
+- New modules (each responsible for separate files)
+- Cross-layer coordination (frontend + backend + test each with their own agent)
+
+Example: A US spanning SFU (backend) + quality selector (frontend) + testing is ideal for an agent team.
+
+#### Not Recommended to Change
+
+**1. Single-person Single-session Doesn't Need Agent Teams**
+Agent Teams' core value is direct inter-teammate communication (mailbox). Our skill is for single-person use — no need for inter-agent messaging. Occasional sub-agent division is sufficient.
+
+**2. Agent Teams Is Currently Experimental + High Token Cost**
+Official documentation explicitly notes:
+- Experimental, disabled by default
+- No session resumption with in-process teammates
+- Token cost far higher than single session
+- Task status can lag
+
+Our Skill achieves similar coordination effects with more token-efficient means (persistent files).
+
+#### Conclusion
+
+> **Agentic Coding Skill is the "poor man's Agent Teams" — simulating shared task list + mailbox + persistent memory via the file system. Because it doesn't require runtime multi-agent overhead, token efficiency is actually higher.**
+
+#### Future Migration Path (When Agent Teams Matures)
+
+| Trigger | Migration Action |
+|---------|-----------------|
+| Agent Teams supports session resumption | Consider HANDOFF.md → shared task list |
+| Sub-agent persistent memory stabilizes | Consider PROJECT_MEMORY → `memory: project` auto-inject |
+| Token cost of multi-agent drops significantly | Large-scope US → agent team, small-scope → single session + skill |
+| `requirePlanApproval` becomes reliable | Review Checkpoint → structured lead approval |
+
+**Decision: No immediate changes. Current file-based approach is more stable and token-efficient. Record as strategic roadmap for future evaluation.**
+
+**Status:** ✅ Recorded as strategic roadmap. No immediate action.
 
 ---
 
@@ -349,4 +490,5 @@ No immediate action needed — current file-based approach is more token-efficie
 | v0.5 | 2026-02-16 | FB-R03 (Bootstrap strategy) finalized: Characterization tests → Step 0 per-Story pre-check ("touch it, test it"), not one-time big-bang |
 | v0.6 | 2026-02-16 | FB-R01~R03 incorporated into Skill (SKILL.md, workflow.md, templates.md). All field feedback items translated to English |
 | v0.7 | 2026-02-16 | FB-R01 expanded: Lite mode retains minimal PROJECT_MEMORY (NOW+NEXT); Lite as on-ramp to Full (scenario table); mode switching mechanism (verbal + CLAUDE.md edit); Upgrade Checklist + Downgrade procedure; agent must acknowledge and inform on mode switch |
-| v0.8 | 2026-02-17 | FB-007/FB-008 full project review recorded. FB-R05 (Lite fast path: skip .feature, Delta, Contract, Review, Constitution), FB-R06 (token cost warning with real numbers), FB-R07 (Team Size modifier: Solo vs Team). FB-008 Agent Teams comparison archived as strategic roadmap |
+| v0.8 | 2026-02-17 | FB-R05~R07 incorporated into Skill. FB-007/FB-008 summary recorded |
+| v0.9 | 2026-02-17 | FB-007 expanded: full ROI tables (high/low elements), token consumption analysis (53% saving, 42% overhead ratio), applicability conclusions, 6 core learnings. FB-008 expanded: full concept mapping table, upgrade directions (sub-agent split, persistent memory, agent team for large US), future migration path triggers table |
