@@ -55,10 +55,11 @@ This step is skipped in Lite Mode (tests are written directly without distinguis
 
 ### Step 1: BDD (Full Mode) / Write Tests Directly (Lite Mode)
 
-**Lite Mode shortcut:** Skip Gherkin scenarios. Write test files directly from the Story
-description. Use the same naming conventions (`Given_When_Then`) but go straight to code.
-Then skip Steps 2–4 and jump to Step 5 (Test Scaffolding) or Step 6 (Implementation) if
-tests are already written.
+**Lite Mode fast path:** Skip the `.feature` file entirely — no Gherkin, no separate BDD
+document. Write test files directly from the Story description using BDD-style function
+names (`Given_When_Then`). Then skip Steps 2–4 (Delta Spec, API Contract, Review
+Checkpoint) and jump straight to Step 5 (Test Scaffolding) or Step 6 (Implementation)
+if tests are already written. Constitution and NFR checks are also skipped in Lite Mode.
 
 **Full Mode — Read:** PROJECT_CONTEXT.md, PROJECT_MEMORY.md (NOW + NEXT), existing SDD (affected modules), HANDOFF.md (if exists)
 

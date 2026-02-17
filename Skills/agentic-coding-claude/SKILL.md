@@ -53,8 +53,10 @@ Guidelines section (`Agentic Coding Mode: full` or `lite`). The agent does not a
 | CLAUDE.md | Complete | ≤10 lines |
 | PROJECT_MEMORY | Complete (NOW/NEXT/TESTS/SYNC/ISSUES) | Minimal (NOW + NEXT only, ~5 lines) |
 | SDD / Constitution / NFR | Yes | Skip |
-| Delta Spec | Yes | Verbal or commit message |
-| BDD | Full Gherkin | Write tests directly |
+| Delta Spec | Yes | Skip — commit message or verbal description |
+| BDD | Full Gherkin `.feature` file | Skip `.feature` — write BDD-style test names directly in code |
+| API Contract (OpenAPI) | Yes | Skip — only for new API design |
+| Review Checkpoint | Every Story | Skip — only on architecture-level changes |
 | HANDOFF | Yes | Not used |
 
 Lite mode is an **on-ramp to Full** — projects that start in Lite can upgrade later
@@ -62,6 +64,22 @@ when the upfront Bootstrap cost becomes justified. Even one-off tasks benefit fr
 minimal NOW + NEXT in case follow-up sessions occur.
 
 If CLAUDE.md doesn't specify a mode, **ask the user** — don't guess.
+
+### Team Size Modifier
+
+Users can optionally declare `Team Size: 1` (solo) or `Team Size: N` (team) in CLAUDE.md.
+This is orthogonal to Full/Lite mode and adjusts ceremony level within Full mode:
+
+| Step | Solo (`Team Size: 1`) | Team (`Team Size: N`) |
+|------|----------------------|----------------------|
+| Delta Spec | Optional — commit message may suffice | Required — needed for cross-person alignment |
+| Review Checkpoint | Skip unless architecture-level change | Always — team needs shared understanding |
+| API Contract | Only for new API design | Always — contract is the team interface |
+| HANDOFF | Recommended | Required — next person needs context |
+
+Solo + Full mode is for projects that need the memory infrastructure (PROJECT_MEMORY,
+SYNC, history) but not the inter-person coordination artifacts. If `Team Size` is not
+specified, default to Team behavior (safer).
 
 **Mode switching:** Users can switch by editing CLAUDE.md or by verbal instruction
 (e.g., "switch to Full mode"). When a mode switch occurs, the agent MUST:
@@ -79,6 +97,11 @@ relevant Story.
 are re-sent every conversation turn by system-reminder. Every line in these files costs
 input tokens on every turn. Only keep information that the agent needs every turn (NOW,
 NEXT, TESTS, SYNC, ISSUES). Move historical/static data (DONE, LOG) to `.ai/history.md`.
+
+> **Token budget reference:** A slimmed PROJECT_MEMORY (~33 lines) + CLAUDE.md ≈ **~0.7K
+> input tokens per turn**. Before slimming (85 lines with DONE/LOG inline) it was ~1.5K
+> per turn — a 53% saving. Over a 20-turn session, that's ~16K tokens saved. Treat every
+> line added to auto-resent files as a recurring cost.
 
 **Incremental, not rewrite.** When updating the SDD, produce a Delta Spec (ADDED /
 MODIFIED / REMOVED). Never regenerate the entire architecture document. This saves tokens

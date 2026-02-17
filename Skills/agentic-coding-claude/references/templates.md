@@ -139,6 +139,7 @@ actionable (what's done, what's stuck, what to watch out for).
 
 ## Agent Guidelines
 - Agentic Coding Mode: full
+- Team Size: 1
 - Read PROJECT_MEMORY.md before each session
 - Follow BDD → SDD → TDD workflow
 - Update PROJECT_MEMORY.md when story ends

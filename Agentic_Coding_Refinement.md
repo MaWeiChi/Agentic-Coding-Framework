@@ -248,6 +248,96 @@ Cross-session projects benefit from Memory/HANDOFF. Single-session tasks do not.
 
 ---
 
+### FB-R05: Lite Mode Fast Path ← FB-007 Item 1
+
+**Decision: Lite mode auto-skips `.feature` file, Delta Spec, API Contract, Review Checkpoint, and Constitution/NFR checks.**
+
+The BDD value is in the thinking process (defining scope), not in the `.feature` file format. In Lite mode, write BDD-style test function names (`Given_When_Then`) directly in code. No separate document layer.
+
+| Skipped in Lite Mode | Replacement |
+|---------------------|-------------|
+| `.feature` file | BDD-style test names in code |
+| Delta Spec | Commit message or verbal description |
+| API Contract | Only for new API design |
+| Review Checkpoint | Only on architecture-level changes |
+| Constitution / NFR | Skipped (principles internalized) |
+
+**Impact on Skill files:**
+1. SKILL.md — Full/Lite comparison table expanded with API Contract and Review Checkpoint rows
+2. workflow.md — Step 1 Lite Mode shortcut rewritten as "fast path" with explicit skip list
+
+**Status:** ✅ Incorporated
+
+---
+
+### FB-R06: System-Reminder Token Cost Warning ← FB-007 Item 2
+
+**Decision: Add explicit token budget numbers to the "Keep auto-resent files minimal" principle in SKILL.md.**
+
+Real-world measurement from go-webrtc project:
+- Before slimming: ~1.5K input tokens/turn (PROJECT_MEMORY 85 lines + CLAUDE.md)
+- After slimming: ~0.7K input tokens/turn (PROJECT_MEMORY 33 lines + CLAUDE.md)
+- Saving: 53% per turn, ~16K tokens over a 20-turn session
+
+Framework overhead per US: ~11K tokens (Memory update + HANDOFF + BDD + Delta), vs ~15K tokens for implementation itself = 42% overhead ratio.
+
+**Impact on Skill files:**
+1. SKILL.md — Added token budget reference box under "Keep auto-resent files minimal"
+
+**Status:** ✅ Incorporated
+
+---
+
+### FB-R07: Team Size Modifier ← FB-007 Item 3
+
+**Decision: Add `Team Size: 1|N` as an orthogonal modifier to Full/Lite mode in CLAUDE.md.**
+
+Solo developers using Full mode need the memory infrastructure (PROJECT_MEMORY, SYNC, history) but not the inter-person coordination artifacts (Delta Spec, Review Checkpoint, API Contract for minor changes).
+
+| Step | Solo (Team Size: 1) | Team (Team Size: N) |
+|------|---------------------|---------------------|
+| Delta Spec | Optional — commit message may suffice | Required |
+| Review Checkpoint | Skip unless architecture-level | Always |
+| API Contract | Only for new API design | Always |
+| HANDOFF | Recommended | Required |
+
+Default: Team behavior (safer) when `Team Size` not specified.
+
+**Impact on Skill files:**
+1. SKILL.md — New "Team Size Modifier" subsection under Full/Lite Mode
+2. templates.md — CLAUDE.md template includes `Team Size: 1` line
+
+**Status:** ✅ Incorporated
+
+---
+
+### FB-007/FB-008: Field Feedback Full Record (US-001→009 Completion Review)
+
+**FB-007** (2026-02-16): Full project ROI review after 9 US + 10 TD completion. Key findings:
+
+High ROI elements: PROJECT_MEMORY (⭐⭐⭐), HANDOFF (⭐⭐⭐), SYNC (⭐⭐⭐), ISSUES scope guard (⭐⭐), BDD-driven scoping (⭐⭐), touch-it-test-it (⭐⭐).
+
+Low ROI elements: .feature files (no BDD runner in Go), Delta Spec (single-person overhead), Review Checkpoint (rubber-stamp in solo), Constitution/NFR (internalized after early phase), API Contract (overhead for small changes).
+
+Core learning: Memory system is the biggest winner. Document layer should be minimized. BDD value is in thinking, not in file format. Solo projects should skip ceremonial steps. Framework's hidden benefit is output stability — structural constraints reduce agent variance.
+
+Actionable items → FB-R05 (Lite fast path), FB-R06 (token warning), FB-R07 (Team Size).
+
+**FB-008** (2026-02-16): Comparison with Claude Code Agent Teams / Sub-agents.
+
+Key insight: Agentic Coding Skill is a "file-system implementation" of the same coordination problems Agent Teams solves at runtime. PROJECT_MEMORY ≈ persistent memory, SYNC ≈ spawn context, ISSUES ≈ shared task list, HANDOFF ≈ mailbox.
+
+Future migration path (when Agent Teams matures):
+1. PROJECT_MEMORY → sub-agent persistent memory
+2. Large-scope US → agent team, small-scope → single session + skill
+3. HANDOFF → replaced by agent team shared task list
+
+No immediate action needed — current file-based approach is more token-efficient and stable than experimental Agent Teams.
+
+**Status:** ✅ Recorded. FB-R05~R07 incorporated. FB-008 is strategic roadmap (no immediate changes).
+
+---
+
 ## Changelog
 
 | Version | Date | Changes |
@@ -259,3 +349,4 @@ Cross-session projects benefit from Memory/HANDOFF. Single-session tasks do not.
 | v0.5 | 2026-02-16 | FB-R03 (Bootstrap strategy) finalized: Characterization tests → Step 0 per-Story pre-check ("touch it, test it"), not one-time big-bang |
 | v0.6 | 2026-02-16 | FB-R01~R03 incorporated into Skill (SKILL.md, workflow.md, templates.md). All field feedback items translated to English |
 | v0.7 | 2026-02-16 | FB-R01 expanded: Lite mode retains minimal PROJECT_MEMORY (NOW+NEXT); Lite as on-ramp to Full (scenario table); mode switching mechanism (verbal + CLAUDE.md edit); Upgrade Checklist + Downgrade procedure; agent must acknowledge and inform on mode switch |
+| v0.8 | 2026-02-17 | FB-007/FB-008 full project review recorded. FB-R05 (Lite fast path: skip .feature, Delta, Contract, Review, Constitution), FB-R06 (token cost warning with real numbers), FB-R07 (Team Size modifier: Solo vs Team). FB-008 Agent Teams comparison archived as strategic roadmap |
