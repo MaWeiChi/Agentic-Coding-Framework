@@ -2,7 +2,7 @@
 
 **Orchestrator × Executor Communication Protocol and Automation Process**
 
-This document is the fourth core document of the [Agentic Coding Framework](Agentic_Coding_Framework.md), defining how the orchestrator and executor communicate, how state is passed, and how steps advance automatically.
+This document is the fourth core document of the [Agentic Coding Framework](Framework.md), defining how the orchestrator and executor communicate, how state is passed, and how steps advance automatically.
 
 ---
 
@@ -10,9 +10,9 @@ This document is the fourth core document of the [Agentic Coding Framework](Agen
 
 | Document | Content | When Agent Loads |
 |----------|---------|-----------------|
-| [Agentic_Coding_Framework.md](Agentic_Coding_Framework.md) | Framework core: layered definitions, core principles, processes | Required reading every conversation |
-| [Agentic_Coding_Lifecycle.md](Agentic_Coding_Lifecycle.md) | Operating mechanism: iteration model, testing strategy, CI/CD interface | Load when planning iterations or configuring CI |
-| [Agentic_Coding_Templates.md](Agentic_Coding_Templates.md) | Framework details: document templates for each layer, writing guides, examples | Load when writing BDD/SDD/contracts/Memory |
+| [Framework.md](Framework.md) | Framework core: layered definitions, core principles, processes | Required reading every conversation |
+| [Lifecycle.md](Lifecycle.md) | Operating mechanism: iteration model, testing strategy, CI/CD interface | Load when planning iterations or configuring CI |
+| [Templates.md](Templates.md) | Framework details: document templates for each layer, writing guides, examples | Load when writing BDD/SDD/contracts/Memory |
 | This document | Communication protocol: orchestrator ↔ executor state management and automation | Load when configuring automation or integrating orchestrator |
 
 ---
@@ -236,7 +236,7 @@ Orchestrator only looks at this file. **Machine parsed, zero LLM tokens.**
 
 `bdd` · `sdd-delta` · `contract` · `review` · `scaffold` · `impl` · `verify` · `update-memory` · `done`
 
-These steps correspond to the micro-waterfall loop in the [Lifecycle document](Agentic_Coding_Lifecycle.md).
+These steps correspond to the micro-waterfall loop in the [Lifecycle document](Lifecycle.md).
 
 #### status State Machine
 
@@ -323,7 +323,7 @@ Both approaches work. The hybrid format's advantage is a single file and reduced
 
 ### 3. PROJECT_MEMORY.md — Executor's World
 
-Maintains the existing design in the [Templates document](Agentic_Coding_Templates.md). Orchestrator doesn't touch this file. Only adjustment: remove state machine responsibility (handled by STATE.json), return to pure project context.
+Maintains the existing design in the [Templates document](Templates.md). Orchestrator doesn't touch this file. Only adjustment: remove state machine responsibility (handled by STATE.json), return to pure project context.
 
 ---
 
@@ -505,13 +505,13 @@ steps:
 
 ### Component Test Location
 
-Component Test (Playwright component testing) is defined in the [Lifecycle document](Agentic_Coding_Lifecycle.md) as a step after Implementation and before Verification. In the Step rules table, Component Test **is not a standalone step**—it's included in the `impl` step's `post_check` (for frontend projects) or as one of the `verify` step's Correctness checks.
+Component Test (Playwright component testing) is defined in the [Lifecycle document](Lifecycle.md) as a step after Implementation and before Verification. In the Step rules table, Component Test **is not a standalone step**—it's included in the `impl` step's `post_check` (for frontend projects) or as one of the `verify` step's Correctness checks.
 
 Reason: Component Test execution timing differs from backend unit/integration tests (requires frontend components to be ready), but in automation workflows, it naturally follows impl completion. Projects can integrate `npx playwright test --project=ct` in `impl.post_check` for frontend projects.
 
 ### Relationship Between Rules Table and Lifecycle
 
-The rule table's step sequence corresponds to the micro-waterfall loop in the [Lifecycle document](Agentic_Coding_Lifecycle.md). The `claude_reads` field defines what files the executor should load at each step, corresponding to the Framework's "load on demand" principle. `post_check` corresponds to AST Linting integration in Lifecycle (`go vet` + `golangci-lint`); frontend projects can extend it to `eslint . && tsc --noEmit && npx playwright test --project=ct`.
+The rule table's step sequence corresponds to the micro-waterfall loop in the [Lifecycle document](Lifecycle.md). The `claude_reads` field defines what files the executor should load at each step, corresponding to the Framework's "load on demand" principle. `post_check` corresponds to AST Linting integration in Lifecycle (`go vet` + `golangci-lint`); frontend projects can extend it to `eslint . && tsc --noEmit && npx playwright test --project=ct`.
 
 ### Custom Rules Table
 

@@ -30,11 +30,11 @@ Each User Story runs through Layers 2–4 as an independent micro-waterfall cycl
 
 | Document | Purpose | When to Load |
 |----------|---------|-------------|
-| [Framework](Framework/Agentic_Coding_Framework.md) | Core concepts: layered definitions, principles, workflow | Every conversation |
-| [Lifecycle](Framework/Agentic_Coding_Lifecycle.md) | Operating mechanism: iteration model, test strategy, CI/CD | When planning iterations or CI setup |
-| [Templates](Framework/Agentic_Coding_Templates.md) | Concrete templates: BDD, SDD, API contract, Memory, DDD | When writing any framework document |
-| [Protocol](Framework/Agentic_Coding_Protocol.md) | Orchestrator ↔ Executor communication: state management, dispatch, hooks | When setting up automation or multi-agent flows |
-| [Refinement](Framework/Agentic_Coding_Refinement.md) | Refinement tracking: what was evaluated, what was incorporated | Reference only |
+| [Framework](Framework/Framework.md) | Core concepts: layered definitions, principles, workflow | Every conversation |
+| [Lifecycle](Framework/Lifecycle.md) | Operating mechanism: iteration model, test strategy, CI/CD | When planning iterations or CI setup |
+| [Templates](Framework/Templates.md) | Concrete templates: BDD, SDD, API contract, Memory, DDD | When writing any framework document |
+| [Protocol](Framework/Protocol.md) | Orchestrator ↔ Executor communication: state management, dispatch, hooks | When setting up automation or multi-agent flows |
+| [Refinement](Framework/Refinement.md) | Refinement tracking: what was evaluated, what was incorporated | Reference only |
 
 ## Key Design Decisions
 
@@ -59,7 +59,7 @@ The framework starts minimal and scales up as complexity demands:
 
 ## Protocol: Multi-Agent Automation
 
-The [Protocol document](Framework/Agentic_Coding_Protocol.md) defines how an external orchestrator can automate the micro-waterfall cycle:
+The [Protocol document](Framework/Protocol.md) defines how an external orchestrator can automate the micro-waterfall cycle:
 
 - **Three-layer architecture**: External Orchestrator → Story-Level Coordinator → Executor group
 - **Three-file protocol**: `STATE.json` (machine state) + `HANDOFF.md` (context) + `PROJECT_MEMORY.md` (cross-tool state)
@@ -72,7 +72,7 @@ The [Protocol document](Framework/Agentic_Coding_Protocol.md) defines how an ext
 
 1. Write a Project Summary (Why / Who / What) in your repo root
 2. Create `PROJECT_MEMORY.md` with current state
-3. For your first User Story, write BDD scenarios using the [Templates](Framework/Agentic_Coding_Templates.md)
+3. For your first User Story, write BDD scenarios using the [Templates](Framework/Templates.md)
 4. Define affected architecture in the SDD (or SDD Delta Spec)
 5. Review. Then let the agent write test scaffolding and implement.
 

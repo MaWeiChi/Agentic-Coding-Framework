@@ -11,9 +11,9 @@ Discussion Summary | February 2026
 | Document | Content | Agent Load Timing |
 |----------|---------|------------------|
 | This Document | Framework Foundation: Layered Definition, Core Principles, Process | Read Every Conversation |
-| [Agentic_Coding_Lifecycle.md](Agentic_Coding_Lifecycle.md) | Operating Mechanism: Iteration Model, Test Strategy, CI/CD Interface | Load When Planning Iteration or Setting Up CI |
-| [Agentic_Coding_Templates.md](Agentic_Coding_Templates.md) | Framework Details: Document Templates for Each Layer, Writing Guidelines, Examples | Load When Writing BDD/SDD/Contract/Memory |
-| [Agentic_Coding_Protocol.md](Agentic_Coding_Protocol.md) | Communication Protocol: State Management and Automation Between Orchestrator ↔ Executor | Load When Setting Up Automation or Integrating Orchestrator |
+| [Lifecycle.md](Lifecycle.md) | Operating Mechanism: Iteration Model, Test Strategy, CI/CD Interface | Load When Planning Iteration or Setting Up CI |
+| [Templates.md](Templates.md) | Framework Details: Document Templates for Each Layer, Writing Guidelines, Examples | Load When Writing BDD/SDD/Contract/Memory |
+| [Protocol.md](Protocol.md) | Communication Protocol: State Management and Automation Between Orchestrator ↔ Executor | Load When Setting Up Automation or Integrating Orchestrator |
 | PROJECT_MEMORY.md (Project Level) | Dynamic State Tracking: Progress, Tasks, Test Status, Git Verification | Read Every Conversation (Paired With Project Summary) |
 
 ---
@@ -42,7 +42,7 @@ Lite mode is an **on-ramp to Full** — projects that start in Lite can upgrade 
 | Full project winding down, only small fixes left | Full → downgrade to Lite | Infrastructure overhead no longer justified |
 | One-off bug fix or small feature | Lite | Will never need upgrade |
 
-Users can switch modes by editing CLAUDE.md or by verbal instruction. When the agent detects a mode change, it must confirm the switch direction, explain which scenario fits, and execute the corresponding transition (Upgrade Checklist for Lite→Full, stop maintenance for Full→Lite). See the [Lifecycle Document](Agentic_Coding_Lifecycle.md) for transition procedures.
+Users can switch modes by editing CLAUDE.md or by verbal instruction. When the agent detects a mode change, it must confirm the switch direction, explain which scenario fits, and execute the corresponding transition (Upgrade Checklist for Lite→Full, stop maintenance for Full→Lite). See the [Lifecycle Document](Lifecycle.md) for transition procedures.
 
 ---
 
@@ -72,19 +72,19 @@ Memory is a file independent of any specific AI tool, placed in the project root
 
 **Key design principle: files auto-resent by system-reminder cost input tokens every conversation turn.** PROJECT_MEMORY only contains hot sections the agent needs every turn (NOW, NEXT, TESTS, SYNC, ISSUES). Historical/static data (DONE, LOG) lives in `.ai/history.md` — an append-only archive that is NOT auto-resent, read only at session start when needed.
 
-In Lite Mode, PROJECT_MEMORY contains only NOW + NEXT (~5 lines). In Full Mode, it contains all hot sections (~35 lines). Update timing is defined in the [Lifecycle Document](Agentic_Coding_Lifecycle.md), and template definitions are in the [Templates Document](Agentic_Coding_Templates.md).
+In Lite Mode, PROJECT_MEMORY contains only NOW + NEXT (~5 lines). In Full Mode, it contains all hot sections (~35 lines). Update timing is defined in the [Lifecycle Document](Lifecycle.md), and template definitions are in the [Templates Document](Templates.md).
 
 ### Layer Two: BDD (Behavior-Driven Development)
 
 Describes user behavior and expected results using Given / When / Then format. Particularly useful for agents because it simultaneously serves as both requirements specification and acceptance criteria—agents can directly verify their code against BDD scenarios after writing.
 
-Coarser granularity, corresponding to user scenarios. BDD scenarios use RFC 2119 keywords (SHALL/MUST/SHOULD/MAY) to distinguish requirement strength, and include test level tags (`@unit`, `@integration`, `@component`, `@e2e`, `@perf`, `@load`). Performance and security tags support NFR ID syntax (such as `@perf(PERF-01)`, `@secure(SEC-01)`), and agents look up the NFR table during Test Scaffolding to get thresholds. When requirements are unclear, agents mark `[NEEDS CLARIFICATION]` to pause that scenario pending Review Checkpoint clarification. Details see the test strategy section in the [Lifecycle Document](Agentic_Coding_Lifecycle.md) and BDD/NFR templates in the [Templates Document](Agentic_Coding_Templates.md).
+Coarser granularity, corresponding to user scenarios. BDD scenarios use RFC 2119 keywords (SHALL/MUST/SHOULD/MAY) to distinguish requirement strength, and include test level tags (`@unit`, `@integration`, `@component`, `@e2e`, `@perf`, `@load`). Performance and security tags support NFR ID syntax (such as `@perf(PERF-01)`, `@secure(SEC-01)`), and agents look up the NFR table during Test Scaffolding to get thresholds. When requirements are unclear, agents mark `[NEEDS CLARIFICATION]` to pause that scenario pending Review Checkpoint clarification. Details see the test strategy section in the [Lifecycle Document](Lifecycle.md) and BDD/NFR templates in the [Templates Document](Templates.md).
 
 ### Layer Three: SDD (Software Design Document)
 
 Defines architectural decisions, technology selection, and module boundaries. Prevents agents from having to "guess" what framework you want to use or how data flows.
 
-BDD scenarios are decomposed into required modules and interfaces, all recorded in the SDD. Incremental updates for each Story use **Delta Spec** format (ADDED / MODIFIED / REMOVED), making change scope clear for review. Details see the SDD template in the [Templates Document](Agentic_Coding_Templates.md).
+BDD scenarios are decomposed into required modules and interfaces, all recorded in the SDD. Incremental updates for each Story use **Delta Spec** format (ADDED / MODIFIED / REMOVED), making change scope clear for review. Details see the SDD template in the [Templates Document](Templates.md).
 
 ### Interface Layer: OpenAPI / AsyncAPI Contract
 
@@ -102,7 +102,7 @@ Divided into two clear steps:
 
 **Implementation (Green Light):** Agents read SDD, API contracts, and failing test logs, writing minimal code to pass tests, then refactor. Each round, agents can run tests themselves to verify without human intervention, which is the most token-efficient place.
 
-**Verify (Quality Gate):** After Implementation completes and before updating Memory, agents automatically execute three-point verification—Completeness (all BDD scenarios have tests, all Delta Specs are implemented), Correctness (tests pass, NFRs meet threshold), Coherence (SDD merged with Delta, API contracts consistent with implementation, Constitution not violated). All three must pass before proceeding. Details see the Verify step in the [Lifecycle Document](Agentic_Coding_Lifecycle.md).
+**Verify (Quality Gate):** After Implementation completes and before updating Memory, agents automatically execute three-point verification—Completeness (all BDD scenarios have tests, all Delta Specs are implemented), Correctness (tests pass, NFRs meet threshold), Coherence (SDD merged with Delta, API contracts consistent with implementation, Constitution not violated). All three must pass before proceeding. Details see the Verify step in the [Lifecycle Document](Lifecycle.md).
 
 ---
 
@@ -126,23 +126,23 @@ Recommend lightweight DDD with three levels progressing from shallow to deep:
 
 Trigger conditions: Project has cross-domain name conflicts, single Context Window can't fit the entire codebase, or multiple agents need to each handle one module. Single-domain projects can skip.
 
-DDD document location uses progressive splitting strategy: Small projects incorporated into SDD, medium/large projects separated into `docs/ddd/` directory. Specific format and templates detailed in DDD format guidelines in the [Templates Document](Agentic_Coding_Templates.md).
+DDD document location uses progressive splitting strategy: Small projects incorporated into SDD, medium/large projects separated into `docs/ddd/` directory. Specific format and templates detailed in DDD format guidelines in the [Templates Document](Templates.md).
 
 ### Constitution (Project Constitution)
 
 Defines architectural principles that cannot be violated in the project—hard constraints that hold across all Stories, all agents, always. Difference from ADR: ADR records historical decision context, Constitution extracts eternal immutable rules. Agents should check Constitution before making any design decisions.
 
-Applicable timing: When project has clear architectural red lines (such as "prohibit direct cross-module DB access" "all services must be stateless"). Recommend defining 3-5 core principles at Bootstrap. Each principle in Constitution is RFC 2119 SHALL level. Specific templates detailed in Constitution template in the [Templates Document](Agentic_Coding_Templates.md).
+Applicable timing: When project has clear architectural red lines (such as "prohibit direct cross-module DB access" "all services must be stateless"). Recommend defining 3-5 core principles at Bootstrap. Each principle in Constitution is RFC 2119 SHALL level. Specific templates detailed in Constitution template in the [Templates Document](Templates.md).
 
 ### NFR (Non-Functional Requirements)
 
 Performance, security, availability constraints. Agents by default write "functionally correct" code but won't proactively consider these non-functional constraints.
 
-Recommend adding them when actually encountering problems during development; no need to pursue completeness at the start. Each NFR has a unique ID (such as `PERF-01`, `SEC-01`), BDD scenarios reference through `@perf(PERF-01)` syntax, and agents look up the NFR table during Test Scaffolding to get thresholds. The NFR table is the single source of truth for thresholds. Specific templates detailed in NFR template in the [Templates Document](Agentic_Coding_Templates.md).
+Recommend adding them when actually encountering problems during development; no need to pursue completeness at the start. Each NFR has a unique ID (such as `PERF-01`, `SEC-01`), BDD scenarios reference through `@perf(PERF-01)` syntax, and agents look up the NFR table during Test Scaffolding to get thresholds. The NFR table is the single source of truth for thresholds. Specific templates detailed in NFR template in the [Templates Document](Templates.md).
 
 ### Complexity Tracking (Story Complexity Tracking)
 
-Each Story is marked with complexity level (`[S]` Simple / `[M]` Medium / `[L]` Complex), helping Sprint planning assess workload and letting agents know expected implementation depth and Review intensity. Complex Stories require Delta Spec + ADR + Deep Review; Simple Stories can be implemented directly. Specific definitions detailed in Story task format guidelines in the [Templates Document](Agentic_Coding_Templates.md).
+Each Story is marked with complexity level (`[S]` Simple / `[M]` Medium / `[L]` Complex), helping Sprint planning assess workload and letting agents know expected implementation depth and Review intensity. Complex Stories require Delta Spec + ADR + Deep Review; Simple Stories can be implemented directly. Specific definitions detailed in Story task format guidelines in the [Templates Document](Templates.md).
 
 ---
 
@@ -175,7 +175,7 @@ Extract backwards, reverse-engineer documents from existing codebase.
 | Manual Correction | You confirm and supplement implicit knowledge |
 | Normal Flow | Subsequent new features enter BDD → SDD → TDD |
 
-**Characterization tests are NOT written all at once during Bootstrap.** Instead, use the "touch it, test it" approach: when a Story modifies a function that has no test coverage, add a characterization test for that function first — then proceed. This avoids spending an entire session on tests for modules that may never be changed. See Step 0 (Safety Net Check) in the [Lifecycle Document](Agentic_Coding_Lifecycle.md).
+**Characterization tests are NOT written all at once during Bootstrap.** Instead, use the "touch it, test it" approach: when a Story modifies a function that has no test coverage, add a characterization test for that function first — then proceed. This avoids spending an entire session on tests for modules that may never be changed. See Step 0 (Safety Net Check) in the [Lifecycle Document](Lifecycle.md).
 
 Additional considerations for existing projects: Some implicit architectural decisions or technical debt are unreadable from code by agents and need manual addition to SDD, preventing agents from "helpfully refactoring" and breaking designs.
 
@@ -211,7 +211,7 @@ The discussion referenced Gemini's proposed role division (Product Manager Agent
 
 The following topics can be explored more deeply in subsequent discussions:
 
-**Framework Details (Incorporated into [Templates Document](Agentic_Coding_Templates.md)):**
+**Framework Details (Incorporated into [Templates Document](Templates.md)):**
 - ~~Specific templates and examples for each layer~~ (v0.8, all Templates templates)
 - ~~Best practices for writing BDD scenarios~~ (v0.8, includes RFC 2119, Scenario Outline, Anti-Pattern)
 - ~~Minimum necessary information for SDD~~ (v0.8, includes Delta Spec, Source of Truth, Mermaid guidance)
@@ -219,7 +219,7 @@ The following topics can be explored more deeply in subsequent discussions:
 - ~~Reverse engineering process for existing projects~~ (v0.8, six-step reverse engineering)
 - ~~How agents automatically derive TDD test cases from BDD and SDD~~ (v0.8, Test Scaffolding template + tag-driven)
 
-**Iteration Mechanism and Development Lifecycle (Incorporated into [Lifecycle Document](Agentic_Coding_Lifecycle.md)):**
+**Iteration Mechanism and Development Lifecycle (Incorporated into [Lifecycle Document](Lifecycle.md)):**
 - ~~Execution granularity: micro-level waterfall cycles per User Story~~ (v0.4)
 - ~~Incremental update strategy for SDD and API contracts~~ (v0.4)
 - ~~Macro agile vs. micro waterfall operation~~ (v0.5)
@@ -229,7 +229,7 @@ The following topics can be explored more deeply in subsequent discussions:
 - ~~DevOps trust boundary~~ (v0.7)
 - ~~How to connect above process with this framework into complete development lifecycle~~ (v0.8, Lifecycle document defines complete micro waterfall cycle)
 
-**Agent Protocol (Incorporated into [Protocol Document](Agentic_Coding_Protocol.md)):**
+**Agent Protocol (Incorporated into [Protocol Document](Protocol.md)):**
 - ~~Load rules: which layer files agents can load at different stages~~ (v0.14, Step conversion rule table `claude_reads`)
 - ~~Handoff rules: state passing and handoff between agents~~ (v0.14, three-file protocol STATE.json + HANDOFF.md + PROJECT_MEMORY.md)
 - ~~Reference implementation: OpenClaw × Claude Code~~ (v0.14, includes Dispatch logic, Hook mechanism, Reason-Based Routing)
@@ -258,7 +258,7 @@ The following topics can be explored more deeply in subsequent discussions:
 | v0.11 | 2026-02-13 | Add "Dynamic State Layer: PROJECT_MEMORY.md": Positioned as independent cross-tool state tracking file separate from specific AI tools, includes git commit verification mechanism; update related document tables |
 | v0.12 | 2026-02-13 | Expand BDD tags to support NFR ID syntax; Add ID system explanation to NFR; Add progressive splitting strategy and Templates reference to DDD; Rename interface layer to OpenAPI / AsyncAPI |
 | v0.13 | 2026-02-13 | Absorb OpenSpec / Spec Kit design: Add RFC 2119 keyword strength levels + [NEEDS CLARIFICATION] marking to BDD; Add Delta Spec incremental update format to SDD; Add Verify quality gate to TDD; Add optional extensions Constitution (Project Constitution) + Complexity Tracking (Story Complexity Tracking) |
-| v0.14 | 2026-02-13 | Add fourth core document [Agentic_Coding_Protocol.md](Agentic_Coding_Protocol.md): Orchestrator × Executor communication protocol, three-file protocol (STATE.json / HANDOFF.md / PROJECT_MEMORY.md), Step conversion rule table, Dispatch logic, Hook mechanism, Reason-Based Routing, OpenClaw × Claude Code reference implementation |
+| v0.14 | 2026-02-13 | Add fourth core document [Protocol.md](Protocol.md): Orchestrator × Executor communication protocol, three-file protocol (STATE.json / HANDOFF.md / PROJECT_MEMORY.md), Step conversion rule table, Dispatch logic, Hook mechanism, Reason-Based Routing, OpenClaw × Claude Code reference implementation |
 | v0.15 | 2026-02-14 | Protocol adds Multi-Executor collaboration mode (three-layer architecture, Complexity-Based Dispatch, Scoped Context, Role-Based isolation, Per-Task HANDOFF) + Claude Code Agent Teams experimental reference implementation; four refinement items formally incorporated (dynamic context loading, Test/Impl isolation, Agent subscription mechanism, handoff format) |
 | v0.16 | 2026-02-14 | Protocol adds Executor output rules (Diff-Only principle, prioritize structured format, per-step output strategy); HANDOFF.md upgraded to hybrid format (YAML front matter + Markdown body) |
 | v0.17 | 2026-02-14 | Apply Windsurf Round 2 Review: All "topics for future discussion" items crossed off (6 framework detail items + Lifecycle integration); Protocol upgraded to v0.6 (Hook YAML parsing, Dispatch Prompt hybrid format, team_roles completion, STATE.json schema update) |

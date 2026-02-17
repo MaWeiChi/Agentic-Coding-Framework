@@ -2,7 +2,7 @@
 
 **Templates, writing guidelines, and examples for each layer of documentation**
 
-This document supplements the framework details of [Agentic Coding Framework](Agentic_Coding_Framework.md). Agents load this as a reference when writing BDD, SDD, API contracts, Memory, and other documents.
+This document supplements the framework details of [Agentic Coding Framework](Framework.md). Agents load this as a reference when writing BDD, SDD, API contracts, Memory, and other documents.
 
 ---
 
@@ -10,10 +10,10 @@ This document supplements the framework details of [Agentic Coding Framework](Ag
 
 | Document | Content | When Agent Should Load |
 |------|------|---------------|
-| [Agentic_Coding_Framework.md](Agentic_Coding_Framework.md) | Framework body: layered definitions, core principles, workflow | Required reading for every session |
-| [Agentic_Coding_Lifecycle.md](Agentic_Coding_Lifecycle.md) | Operating mechanisms: iterative model, testing strategy, CI/CD interface | Load when planning iterations or setting up CI |
+| [Framework.md](Framework.md) | Framework body: layered definitions, core principles, workflow | Required reading for every session |
+| [Lifecycle.md](Lifecycle.md) | Operating mechanisms: iterative model, testing strategy, CI/CD interface | Load when planning iterations or setting up CI |
 | This document | Framework details: document templates for each layer, writing guidelines, examples | Load when writing BDD/SDD/contracts/Memory |
-| [Agentic_Coding_Protocol.md](Agentic_Coding_Protocol.md) | Communication protocol: orchestrator ↔ executor state management and automation | Load when setting up automation or integrating orchestrator |
+| [Protocol.md](Protocol.md) | Communication protocol: orchestrator ↔ executor state management and automation | Load when setting up automation or integrating orchestrator |
 
 ---
 
@@ -143,7 +143,7 @@ Key rules: Append-only. Never delete or rewrite entries. Each Story completion a
 
 **Git as anchor**: Every time Memory is updated, the current git commit hash must be recorded synchronously. This is the foundation for cross-tool validation.
 
-**Human-machine co-authoring**: Agents automatically update routine changes; humans manually edit priority adjustments, strategy changes, and other decisions agents cannot make. When conflicts occur, distinguish the authoritative source by "fact vs. intent": factual sections (git status, test status, change records) defer to git/tests; intent sections (current task, next steps, sync reminders) defer to humans. Agents can always "add" but never "override" or "delete" human edits. The complete conflict resolution strategy is defined in the [Lifecycle document](Agentic_Coding_Lifecycle.md)'s Memory update rules.
+**Human-machine co-authoring**: Agents automatically update routine changes; humans manually edit priority adjustments, strategy changes, and other decisions agents cannot make. When conflicts occur, distinguish the authoritative source by "fact vs. intent": factual sections (git status, test status, change records) defer to git/tests; intent sections (current task, next steps, sync reminders) defer to humans. Agents can always "add" but never "override" or "delete" human edits. The complete conflict resolution strategy is defined in the [Lifecycle document](Lifecycle.md)'s Memory update rules.
 
 ---
 
@@ -802,7 +802,7 @@ E2E tests run when crossing Story milestones (not per Story), covering complete 
 
 ### Positioning
 
-DDD (Domain-Driven Design) is an optional extension to the [Framework](Agentic_Coding_Framework.md), triggered when the project involves multiple business domains. This section defines concrete document formats for three levels.
+DDD (Domain-Driven Design) is an optional extension to the [Framework](Framework.md), triggered when the project involves multiple business domains. This section defines concrete document formats for three levels.
 
 ### Gradual Splitting Strategy
 
@@ -1091,7 +1091,7 @@ Reverse generate documents required by the framework from existing codebase, let
      tests for functions being modified, if they lack coverage
 ```
 
-**Note:** Characterization tests are NOT written all at once during Bootstrap. Use the "touch it, test it" approach — only add characterization tests when a Story touches uncovered code. See Step 0 in the [Lifecycle Document](Agentic_Coding_Lifecycle.md).
+**Note:** Characterization tests are NOT written all at once during Bootstrap. Use the "touch it, test it" approach — only add characterization tests when a Story touches uncovered code. See Step 0 in the [Lifecycle Document](Lifecycle.md).
 
 ### Considerations
 

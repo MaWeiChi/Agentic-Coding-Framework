@@ -2,7 +2,7 @@
 
 **Iteration Mechanism, Testing Strategy, CI/CD Interface**
 
-This document is a supplement to the [Agentic Coding Framework](Agentic_Coding_Framework.md), explaining how the framework operates along the timeline.
+This document is a supplement to the [Agentic Coding Framework](Framework.md), explaining how the framework operates along the timeline.
 
 ---
 
@@ -10,10 +10,10 @@ This document is a supplement to the [Agentic Coding Framework](Agentic_Coding_F
 
 | Document | Content | When Agent Loads |
 |----------|---------|-----------------|
-| [Agentic_Coding_Framework.md](Agentic_Coding_Framework.md) | Framework core: layered definitions, core principles, workflow | Read every conversation |
+| [Framework.md](Framework.md) | Framework core: layered definitions, core principles, workflow | Read every conversation |
 | This document | Operation mechanism: iteration model, testing strategy, CI/CD interface | Load when planning iterations or setting up CI |
-| [Agentic_Coding_Templates.md](Agentic_Coding_Templates.md) | Framework details: document templates per layer, writing guidelines, examples | Load when writing BDD/SDD/contracts/Memory |
-| [Agentic_Coding_Protocol.md](Agentic_Coding_Protocol.md) | Communication protocol: state management and automation for orchestrator ↔ executor | Load when setting up automation flows or integrating orchestrator |
+| [Templates.md](Templates.md) | Framework details: document templates per layer, writing guidelines, examples | Load when writing BDD/SDD/contracts/Memory |
+| [Protocol.md](Protocol.md) | Communication protocol: state management and automation for orchestrator ↔ executor | Load when setting up automation flows or integrating orchestrator |
 
 ---
 
@@ -54,7 +54,7 @@ Lite Mode skips this step — tests are written directly without distinguishing 
 Users can switch modes (Lite ↔ Full) by editing CLAUDE.md or by verbal instruction. When the agent detects a mode change, it must:
 
 1. Confirm the switch direction (Lite → Full or Full → Lite)
-2. Explain which scenario fits from the scenario table in the [Framework Document](Agentic_Coding_Framework.md)
+2. Explain which scenario fits from the scenario table in the [Framework Document](Framework.md)
 3. Execute the corresponding transition
 
 **Upgrade Checklist (Lite → Full):**
@@ -117,7 +117,7 @@ Verify is automatic checking by the agent, not human Review. If all three checks
 
 ### Implementation Self-Correction Loop and Recursion Limit
 
-The self-correction loop during Implementation (write code → run tests → fix code → run tests again) iterates at most **N times** (recommended 3-5 times, configured in the Step rules table of the [Protocol document](Agentic_Coding_Protocol.md) with `max_attempts`). When the limit is exceeded, the agent must:
+The self-correction loop during Implementation (write code → run tests → fix code → run tests again) iterates at most **N times** (recommended 3-5 times, configured in the Step rules table of the [Protocol document](Protocol.md) with `max_attempts`). When the limit is exceeded, the agent must:
 
 1. Mark blocker to the `ISSUES` section of MEMORY
 2. Record failed test names and attempted fix directions (write to HANDOFF.md)
@@ -136,11 +136,11 @@ After each Implementation iteration, before entering Verify, run syntax-level ch
 
 Linting failure does not enter Verify; return directly to Implementation to fix. This saves an entire round compared to discovering it during Verify—syntax errors are the cheapest errors and should be caught at the earliest stage.
 
-Linting tools are configured by each project in the Step rules table of the [Protocol document](Agentic_Coding_Protocol.md) via the `post_check` field.
+Linting tools are configured by each project in the Step rules table of the [Protocol document](Protocol.md) via the `post_check` field.
 
 ### Delta Spec Lifecycle
 
-Delta Spec is the structured format for SDD incremental updates (ADDED / MODIFIED / REMOVED), with complete template in the SDD template section of the [Templates document](Agentic_Coding_Templates.md).
+Delta Spec is the structured format for SDD incremental updates (ADDED / MODIFIED / REMOVED), with complete template in the SDD template section of the [Templates document](Templates.md).
 
 The workflow in micro-waterfall:
 
@@ -158,7 +158,7 @@ Memory updates are embedded in the micro-waterfall workflow, automatically execu
 **Session startup (every conversation begins):**
 
 1. Read PROJECT_MEMORY.md
-2. Compare git commit hash (see Git Commit Verification mechanism in [Templates document](Agentic_Coding_Templates.md))
+2. Compare git commit hash (see Git Commit Verification mechanism in [Templates document](Templates.md))
 3. If inconsistent, sync Memory first before starting work
 
 **When Story completes (last step of micro-waterfall, Full Mode only):**
@@ -264,7 +264,7 @@ Scenario: Product search maintains response time under high concurrency
   Then search results return normally without errors
 ```
 
-Available tags: `@unit`, `@integration`, `@component`, `@e2e`, `@perf(<NFR-ID>)`, `@load(<NFR-ID>)`, `@secure(<NFR-ID>)`. Specific thresholds for ID-bearing tags are defined in the NFR document; the NFR table is the single source of truth (see NFR template in [Templates document](Agentic_Coding_Templates.md)).
+Available tags: `@unit`, `@integration`, `@component`, `@e2e`, `@perf(<NFR-ID>)`, `@load(<NFR-ID>)`, `@secure(<NFR-ID>)`. Specific thresholds for ID-bearing tags are defined in the NFR document; the NFR table is the single source of truth (see NFR template in [Templates document](Templates.md)).
 
 ### Testing Pyramid
 
