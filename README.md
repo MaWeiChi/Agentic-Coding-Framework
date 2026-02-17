@@ -66,22 +66,65 @@ The [Protocol document](Framework/Protocol.md) defines how an external orchestra
 - **Progressive adoption**: Level 0 (fully manual) → Level 1 (semi-automated hooks) → Level 2 (fully automated dispatch)
 - **Complexity-based dispatch**: Simple stories get a single executor; complex stories get a coordinated team with role-based context isolation
 
-## Quick Start
+## Quick Start (5 Steps to Your First Story)
 
-### New Project
+### Step 1 — Choose Your Mode
 
-1. Write a Project Summary (Why / Who / What) in your repo root
-2. Create `PROJECT_MEMORY.md` with current state
-3. For your first User Story, write BDD scenarios using the [Templates](Framework/Templates.md)
-4. Define affected architecture in the SDD (or SDD Delta Spec)
-5. Review. Then let the agent write test scaffolding and implement.
+| Question | If yes → | If no → |
+|----------|----------|---------|
+| Will this project run for 3+ stories? | **Full Mode** | **Lite Mode** |
+| Multiple agents or team members? | Full Mode | Either |
+| Quick prototype or spike? | Lite Mode | Either |
 
-### Existing Project
+Lite Mode skips `.feature` files, Delta Spec, API Contracts, and Review Checkpoint. You can upgrade to Full Mode at any time by adding those documents.
 
-1. Have an agent scan your codebase and reverse-engineer a Project Summary + SDD
-2. Manually correct — add implicit knowledge the agent can't read from code
-3. Add characterization tests for existing behavior
-4. New features enter the normal BDD → SDD → TDD flow
+### Step 2 — Write a Project Summary
+
+Create `CLAUDE.md` (or `PROJECT_CONTEXT.md`) in your repo root. This is the one file every agent session reads first. Cover three things:
+
+```markdown
+## Why — The problem this project solves
+## Who — Target users and stakeholders
+## What — Key features and technical boundaries (language, framework, constraints)
+```
+
+This takes 10–15 minutes and saves hours of repeated explanation across future sessions.
+
+### Step 3 — Create PROJECT_MEMORY.md
+
+This is your living state file. Start with a minimal version:
+
+```markdown
+# PROJECT_MEMORY
+
+## NOW
+Working on: (first story description)
+
+## NEXT
+- (second story)
+- (third story)
+
+## ISSUES
+(none yet)
+```
+
+Agents update this file at the end of each session so the next session starts with full context.
+
+### Step 4 — Run Your First Story
+
+**Full Mode:** Write BDD scenarios → Design SDD delta → Review with human → Write tests → Implement → Verify.
+
+**Lite Mode:** Describe the story in one sentence → Let the agent propose approach → Approve → Implement → Verify.
+
+Both modes produce working, tested code. Full Mode produces additional design documents that compound in value as the project grows.
+
+### Step 5 — Update Memory and Iterate
+
+After the story is complete, update `PROJECT_MEMORY.md`: move the finished story out of NOW, pull the next one in, and note any blockers or decisions made. Each subsequent session starts from this checkpoint — no re-explanation needed.
+
+### Adopting on an Existing Project
+
+If you have an existing codebase, insert one extra step before Step 4: ask your agent to scan the repo and reverse-engineer a Project Summary + SDD from existing code. Then manually correct — add the implicit knowledge that only exists in your head (why you chose X over Y, what must never change). After that, new features enter the normal flow.
 
 ## Project Structure
 
