@@ -242,6 +242,16 @@ next: {what the next session should pick up}
 Overwrite with YAML front matter (story, step, attempt, status, reason, files_changed,
 tests) + markdown body (what was done, what's unresolved, what next session should note).
 
+**Staleness scan** (after updating Memory, before ending session):
+
+After completing the Story, scan Memory for stale content and warn the human:
+- ISSUES that reference the just-completed Story → suggest removal: "US-{id} is done, these ISSUES may be resolved: ..."
+- NEXT items that are now complete → suggest removal
+- SYNC entries pointing to files/modules deleted or renamed during this Story → suggest update
+
+This is the best moment for staleness detection — the agent has full context about what
+changed. As always, **do not auto-modify** intent-based sections; only warn.
+
 Lite Mode: skip this entire step. Commit message serves as the record.
 
 ---
@@ -295,8 +305,13 @@ Every time you start a new session:
 1. Read PROJECT_CONTEXT.md (or CLAUDE.md)
 2. Read PROJECT_MEMORY.md
 3. Compare git commit hash — if mismatch, sync Memory first
-4. Read HANDOFF.md (if exists) for previous session context
-5. Check what step you're on and continue from there
+4. **Staleness check** (Full Mode) — scan Memory for potentially outdated content:
+   - If ISSUES contains items older than 2 sprints or referencing completed Stories → warn human: "These ISSUES may be stale: ..."
+   - If NOW references a Story that is already merged to main → warn human: "NOW may be outdated"
+   - If SYNC references modules/files that no longer exist in codebase → warn human: "SYNC entry may be stale: ..."
+   - **Do not auto-modify** intent-based sections — only warn. Human decides what to clean up.
+5. Read HANDOFF.md (if exists) for previous session context
+6. Check what step you're on and continue from there
 
 ---
 
