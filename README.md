@@ -34,6 +34,7 @@ Each User Story runs through Layers 2–4 as an independent micro-waterfall cycl
 | [Lifecycle](Framework/Lifecycle.md) | Operating mechanism: iteration model, test strategy, CI/CD | When planning iterations or CI setup |
 | [Templates](Framework/Templates.md) | Concrete templates: BDD, SDD, API contract, Memory, DDD | When writing any framework document |
 | [Protocol](Framework/Protocol.md) | Orchestrator ↔ Executor communication: state management, dispatch, hooks | When setting up automation or multi-agent flows |
+| [Protocol-Advanced](Framework/Protocol-Advanced.md) | Multi-executor collaboration, OpenClaw and Agent Teams reference implementations | Only when building multi-executor or custom orchestrator |
 | [Refinement](Framework/Refinement.md) | Refinement tracking: what was evaluated, what was incorporated | Reference only |
 
 ## Key Design Decisions
@@ -126,6 +127,22 @@ After the story is complete, update `PROJECT_MEMORY.md`: move the finished story
 
 If you have an existing codebase, insert one extra step before Step 4: ask your agent to scan the repo and reverse-engineer a Project Summary + SDD from existing code. Then manually correct — add the implicit knowledge that only exists in your head (why you chose X over Y, what must never change). After that, new features enter the normal flow.
 
+## Skill Package
+
+The `Skills/agentic-coding/` directory contains a ready-to-install AI agent skill that encapsulates the framework's workflow into token-optimized reference files. Instead of loading the full framework documents (~160KB), the skill provides condensed references (~25KB) that give agents everything they need during a session.
+
+The skill includes `SKILL.md` (entry point with mode selection, project structure, and principles), `references/workflow.md` (step-by-step micro-waterfall procedure), and `references/templates.md` (condensed document templates). See the [Skill README](Skills/agentic-coding/README.md) for a third-party effectiveness assessment.
+
+## Installation
+
+**Claude Code:**
+```bash
+cp -r Skills/agentic-coding ~/.claude/skills/
+```
+
+**Other AI tools (Cursor, Windsurf, Copilot, etc.):**
+Copy the `Framework/` directory into your project and reference it in your tool's configuration file. The framework documents are tool-agnostic Markdown — any agent that can read files can use them.
+
 ## Project Structure
 
 ```
@@ -159,7 +176,8 @@ your-project/
 | Framework | v0.18 | 2026-02-16 |
 | Lifecycle | v0.4 | 2026-02-16 |
 | Templates | v0.9 | 2026-02-16 |
-| Protocol | v0.7 | 2026-02-16 |
+| Protocol | v0.8 | 2026-02-17 |
+| Protocol-Advanced | v0.8 | 2026-02-17 |
 | Refinement | v0.9 | 2026-02-17 |
 
 ## License

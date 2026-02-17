@@ -163,7 +163,7 @@ Example: User says "switch to Full mode" →
 - Persists across sessions without needing to be re-stated verbally
 - Mode switching via verbal instruction is natural and equivalent to manual CLAUDE.md edit
 
-**Status:** 🟡 Finalized, pending incorporation into Framework + Skill
+**Status:** ✅ Incorporated into Framework v0.18 + Skill
 
 ---
 
@@ -201,7 +201,7 @@ Effect: HANDOFF write volume is fixed and small (one block), no more full-file r
 3. SKILL.md — New principle: "Keep auto-resent files minimal"
 4. workflow.md — HANDOFF section changed to latest-entry-only + history archive
 
-**Status:** 🟡 Finalized, pending Skill incorporation
+**Status:** ✅ Incorporated into Skill v0.18
 
 ---
 
@@ -234,7 +234,7 @@ Lite Mode does not distinguish characterization vs new tests — write tests dir
 2. workflow.md — Add Step 0: Safety Net Check before Per-Story Steps
 3. SKILL.md — New principle: "Touch it, test it"
 
-**Status:** 🟡 Finalized, pending Skill incorporation
+**Status:** ✅ Incorporated into Skill v0.18
 
 ---
 
