@@ -28,14 +28,14 @@ Each User Story runs through Layers 2–4 as an independent micro-waterfall cycl
 
 ## Documents
 
-| Document | Purpose | When to Load |
-|----------|---------|-------------|
-| [Framework](Framework/Framework.md) | Core concepts: layered definitions, principles, workflow | Every conversation |
-| [Lifecycle](Framework/Lifecycle.md) | Operating mechanism: iteration model, test strategy, CI/CD | When planning iterations or CI setup |
-| [Templates](Framework/Templates.md) | Concrete templates: BDD, SDD, API contract, Memory, DDD | When writing any framework document |
-| [Protocol](Framework/Protocol.md) | Orchestrator ↔ Executor communication: state management, dispatch, hooks | When setting up automation or multi-agent flows |
+| Document                                         | Purpose                                                                          | When to Load                                             |
+| ------------------------------------------------ | -------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [Framework](Framework/Framework.md)                 | Core concepts: layered definitions, principles, workflow                         | Every conversation                                       |
+| [Lifecycle](Framework/Lifecycle.md)                 | Operating mechanism: iteration model, test strategy, CI/CD                       | When planning iterations or CI setup                     |
+| [Templates](Framework/Templates.md)                 | Concrete templates: BDD, SDD, API contract, Memory, DDD                          | When writing any framework document                      |
+| [Protocol](Framework/Protocol.md)                   | Orchestrator ↔ Executor communication: state management, dispatch, hooks        | When setting up automation or multi-agent flows          |
 | [Protocol-Advanced](Framework/Protocol-Advanced.md) | Multi-executor collaboration, OpenClaw and Agent Teams reference implementations | Only when building multi-executor or custom orchestrator |
-| [Refinement](Framework/Refinement.md) | Refinement tracking: what was evaluated, what was incorporated | Reference only |
+| [Refinement](Framework/Refinement.md)               | Refinement tracking: what was evaluated, what was incorporated                   | Reference only                                           |
 
 ## Key Design Decisions
 
@@ -71,11 +71,11 @@ The [Protocol document](Framework/Protocol.md) defines how an external orchestra
 
 ### Step 1 — Choose Your Mode
 
-| Question | If yes → | If no → |
-|----------|----------|---------|
+| Question                              | If yes →           | If no →            |
+| ------------------------------------- | ------------------- | ------------------- |
 | Will this project run for 3+ stories? | **Full Mode** | **Lite Mode** |
-| Multiple agents or team members? | Full Mode | Either |
-| Quick prototype or spike? | Lite Mode | Either |
+| Multiple agents or team members?      | Full Mode           | Either              |
+| Quick prototype or spike?             | Lite Mode           | Either              |
 
 Lite Mode skips `.feature` files, Delta Spec, API Contracts, and Review Checkpoint. You can upgrade to Full Mode at any time by adding those documents.
 
@@ -136,6 +136,7 @@ The skill includes `SKILL.md` (entry point with mode selection, project structur
 ## Installation
 
 **Claude Code:**
+
 ```bash
 cp -r Skills/agentic-coding ~/.claude/skills/
 ```
@@ -180,14 +181,14 @@ This framework was designed through comparative analysis with established method
 
 ## Versions
 
-| Document | Version | Date |
-|----------|---------|------|
-| Framework | v0.18 | 2026-02-16 |
-| Lifecycle | v0.4 | 2026-02-16 |
-| Templates | v0.9 | 2026-02-16 |
-| Protocol | v0.8 | 2026-02-17 |
-| Protocol-Advanced | v0.8 | 2026-02-17 |
-| Refinement | v0.9 | 2026-02-17 |
+| Document          | Version | Date       |
+| ----------------- | ------- | ---------- |
+| Framework         | v0.18   | 2026-02-16 |
+| Lifecycle         | v0.4    | 2026-02-16 |
+| Templates         | v0.9    | 2026-02-16 |
+| Protocol          | v0.8    | 2026-02-17 |
+| Protocol-Advanced | v0.8    | 2026-02-17 |
+| Refinement        | v0.9    | 2026-02-17 |
 
 ## License
 
