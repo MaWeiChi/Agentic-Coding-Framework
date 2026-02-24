@@ -124,6 +124,31 @@ implementation, Constitution not violated). All three must pass before updating 
 (check `max_attempts` if configured). If exceeded, record the blocker in HANDOFF.md and
 Memory's ISSUES section and stop. It usually means a design problem, not a code problem.
 
+## Claude Memory Integration
+
+Claude operates with three memory layers. Only `PROJECT_MEMORY.md` is managed by the
+framework workflow. The other two are managed by Claude itself based on triggers.
+
+```
+~/.claude/GLOBAL_MEMORY.md           — cross-project, machine-bound
+memory/MEMORY.md                     — project meta, auto-loaded each turn
+memory/solutions.md                  — blocker archive, load on demand
+```
+
+**Triggers — when Claude MUST write to memory:**
+
+- **Session start:** Read `~/.claude/GLOBAL_MEMORY.md` + `memory/MEMORY.md` before reading PROJECT_CONTEXT
+- **Before Step 0 (each Story):** Scan `memory/solutions.md` for relevant past blockers — mention to human if found
+- **max_attempts hit:** Append blocker + solution to `memory/solutions.md`
+- **User corrects behavior / states preference:** Append to `GLOBAL_MEMORY.md` USER_PREFS immediately
+- **Step 8 (Story complete):** Ask: "Is this pattern cross-project worthy?" → append GLOBAL_MEMORY.md PATTERNS if yes
+
+Read `references/claude-memory.md` for templates, writing rules, and the full trigger spec.
+
+**Bootstrap adds** (Full Mode): create `memory/MEMORY.md` + `memory/solutions.md` from templates in `references/claude-memory.md`.
+
+---
+
 ## Document Templates
 
 When writing any framework document (BDD scenario, SDD, Delta Spec, API contract,

@@ -13,6 +13,9 @@ when you need specifics on what to read, produce, and check at each step.
 
 **Read:** Nothing yet (you're starting fresh)
 
+**Read first:** Check `~/.claude/GLOBAL_MEMORY.md` — if it exists, use USER_PREFS and STACK_LIB
+to inform your approach before producing any documents.
+
 **Full Mode — Produce:**
 1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full`
 2. `docs/sdd/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
@@ -20,7 +23,9 @@ when you need specifics on what to read, produce, and check at each step.
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
 5. `.ai/history.md` — Empty file (will hold DONE, LOG, and session history)
 6. `.ai/HANDOFF.md` — Empty file
-7. Directory structure: `docs/bdd/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
+7. `memory/MEMORY.md` — Project meta (USER_PREFS + STACK_QUICK, use template in `references/claude-memory.md`)
+8. `memory/solutions.md` — Empty blocker archive (use template in `references/claude-memory.md`)
+9. Directory structure: `docs/bdd/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
 
 **Lite Mode — Produce:**
 1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite`
@@ -178,6 +183,8 @@ If any `[NEEDS CLARIFICATION]` items exist, the human clarifies them at this poi
 - Only modify affected files and functions (Diff-Only principle)
 - Don't refactor unrelated code
 - If stuck after max_attempts: record blocker in HANDOFF.md + Memory ISSUES, stop
+- **Also append to `memory/solutions.md`** — format: Problem / Solution / Applicable-to
+  (even if unsolved — record what was tried and what the blocker was)
 
 ### Step 7: Verify (Quality Gate)
 
@@ -249,6 +256,14 @@ tests) + markdown body (what was done, what's unresolved, what next session shou
 - `status`: `pass` / `failing` / `needs_human` (NOT `passing`, `passed`, `failed`, `fail`)
 - `reason`: `null` / `constitution_violation` / `needs_clarification` / `nfr_missing` / `scope_warning` / `test_timeout` (NOT freeform text — put details in markdown body)
 
+**Claude Memory scan** (after updating PROJECT_MEMORY, before ending session):
+
+Ask yourself:
+- Did the user correct Claude behavior or state a preference this Story? → append to `~/.claude/GLOBAL_MEMORY.md` USER_PREFS
+- Was a blocker encountered and solved in a novel way? → already in `memory/solutions.md`; also check: is this cross-project applicable? → append to `~/.claude/GLOBAL_MEMORY.md` PATTERNS
+- Was a stack-specific lesson learned (new pitfall, library quirk)? → append to `~/.claude/GLOBAL_MEMORY.md` STACK_LIB
+- Keep `~/.claude/GLOBAL_MEMORY.md` under 50 lines total
+
 **Staleness scan** (after updating Memory, before ending session):
 
 After completing the Story, scan Memory for stale content and warn the human:
@@ -309,6 +324,10 @@ When the agent detects a mode change (reading CLAUDE.md or verbal instruction), 
 
 Every time you start a new session:
 
+0. **Read Claude Memory** (before reading project files):
+   - `~/.claude/GLOBAL_MEMORY.md` — cross-project user prefs, patterns, stack lessons
+   - `memory/MEMORY.md` — project-specific meta (if exists)
+   - `memory/solutions.md` — scan for past blockers relevant to today's Story (if exists)
 1. Read PROJECT_CONTEXT.md (or CLAUDE.md)
 2. Read PROJECT_MEMORY.md
 3. Compare git commit hash — if mismatch, sync Memory first
