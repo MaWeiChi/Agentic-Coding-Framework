@@ -141,6 +141,13 @@ When your work session ends, overwrite HANDOFF.md with:
 - **YAML front matter**: story, step, attempt, status, reason, files_changed, tests
 - **Markdown body**: what you did, what's unresolved, what the next session should know
 
+**CRITICAL — YAML front matter field values:**
+
+- `status` must be exactly one of: `pass` / `failing` / `needs_human`
+  - **NOT** `passing`, `passed`, `failed`, or `fail` — the orchestrator will reject these
+- `reason` must be `null` or one of: `constitution_violation` / `needs_clarification` / `nfr_missing` / `scope_warning` / `test_timeout`
+  - **Do NOT** put freeform text or task summaries in `reason` — use the markdown body for that
+
 Then append a summary entry to `.ai/history.md` for archival.
 
 This keeps HANDOFF small (one block to read, one block to write) while preserving

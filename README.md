@@ -186,7 +186,7 @@ This framework was designed through comparative analysis with established method
 | Framework         | v0.18   | 2026-02-16 |
 | Lifecycle         | v0.4    | 2026-02-16 |
 | Templates         | v0.9    | 2026-02-16 |
-| Protocol          | v0.8    | 2026-02-17 |
+| Protocol          | v0.9    | 2026-02-24 |
 | Protocol-Advanced | v0.8    | 2026-02-17 |
 | Refinement        | v0.9    | 2026-02-17 |
 

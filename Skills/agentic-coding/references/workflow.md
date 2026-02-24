@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.18, Lifecycle v0.4, Protocol v0.8 (2026-02-17)
+> Derived from: Framework v0.18, Lifecycle v0.4, Protocol v0.9 (2026-02-24)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -243,6 +243,11 @@ next: {what the next session should pick up}
 
 Overwrite with YAML front matter (story, step, attempt, status, reason, files_changed,
 tests) + markdown body (what was done, what's unresolved, what next session should note).
+
+**Valid values (orchestrator strictly validates — wrong values break the auto pipeline):**
+
+- `status`: `pass` / `failing` / `needs_human` (NOT `passing`, `passed`, `failed`, `fail`)
+- `reason`: `null` / `constitution_violation` / `needs_clarification` / `nfr_missing` / `scope_warning` / `test_timeout` (NOT freeform text — put details in markdown body)
 
 **Staleness scan** (after updating Memory, before ending session):
 
