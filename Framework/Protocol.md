@@ -674,6 +674,26 @@ else
            "$HANDOFF_FILE" | head -1)
 fi
 
+# 3.5 Validate status and reason before writing to STATE.json
+#     CRITICAL: Orchestrator strictly validates these values.
+#     Writing an invalid value (e.g., "passing" instead of "pass") will
+#     break the entire auto pipeline.
+VALID_STATUSES="pass failing needs_human timeout"
+if [[ -n "$STATUS_FROM_HANDOFF" ]]; then
+  if ! echo "$VALID_STATUSES" | grep -qw "$STATUS_FROM_HANDOFF"; then
+    echo "⚠️  Hook: invalid status '$STATUS_FROM_HANDOFF', defaulting to 'failing'" >&2
+    STATUS_FROM_HANDOFF="failing"
+  fi
+fi
+
+VALID_REASONS="constitution_violation needs_clarification nfr_missing scope_warning test_timeout"
+if [[ -n "$REASON" && "$REASON" != "null" ]]; then
+  if ! echo "$VALID_REASONS" | grep -qw "$REASON"; then
+    echo "⚠️  Hook: invalid reason '$REASON', defaulting to null" >&2
+    REASON="null"
+  fi
+fi
+
 # 4. Update STATE.json
 #    Write status, reason, tests, failing_tests, lint_pass,
 #    files_changed, completed_at
@@ -695,9 +715,19 @@ summary: Timezone issue in ApplyCoupon fixed, now using UTC for comparison
 
 | Field | Type | Notes |
 |-------|------|-------|
-| status | enum | `pass` / `failing` / `needs_human` |
-| reason | string? | Failure reason code (same valid values as STATE.json reason) |
-| summary | string | One-sentence summary of this run |
+| status | enum | **Only**: `pass` / `failing` / `needs_human`. See common mistakes below. |
+| reason | enum? | **Only**: `null` / `constitution_violation` / `needs_clarification` / `nfr_missing` / `scope_warning` / `test_timeout`. **Must NOT be freeform text.** |
+| summary | string | One-sentence summary of this run (freeform text OK here) |
+
+> **⚠️ Common Mistakes — will break the orchestrator `auto` pipeline:**
+>
+> | Wrong value | Correct value | Why |
+> |-------------|---------------|-----|
+> | `passing` | `pass` | Orchestrator only recognizes `pass` |
+> | `passed` | `pass` | Same as above |
+> | `failed` | `failing` | Orchestrator uses present-participle `failing` |
+> | `fail` | `failing` | Same as above |
+> | Long text in `reason` | `null` or enum value | `reason` is machine-parsed for routing, not a log field. Put details in `summary` or HANDOFF.md body. |
 
 Hook read priority: `.ai/executor-result` → fallback to grepping HANDOFF.md. Projects not using executor-result still work normally, but reason extraction reliability is lower.
 
