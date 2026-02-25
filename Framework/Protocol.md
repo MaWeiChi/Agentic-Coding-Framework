@@ -784,6 +784,60 @@ Reason is extracted from HANDOFF.md or executor-result by hook, written to STATE
 
 ---
 
+## Rollback System (v0.12)
+
+When a step fails in a way that requires going back to an earlier point (rather than retrying), the orchestrator supports explicit rollback.
+
+```bash
+orchestrator rollback <project-root> <target-step> [--force]
+```
+
+**Behavior:**
+- Validates that `target-step` exists in the pipeline and is before the current step
+- Resets state: `status → pending`, `attempt → 1`, clears `reason`, `last_error`, `files_changed`
+- Blocks rollback to `bootstrap` unless `--force` (bootstrap is a one-time initialization)
+- Cannot rollback forward (target must be earlier than current)
+
+**Use cases:**
+- Pre-dispatch check suggests rollback due to missing prerequisite files
+- Human decides impl approach was wrong and wants to go back to sdd-delta
+- Verify discovers a fundamental design issue requiring re-scaffold
+
+---
+
+## Pre-Dispatch Prerequisite Checks (v0.12)
+
+Before dispatching an executor, the orchestrator verifies that the files listed in `claude_reads` actually exist. This catches situations where a previous step failed silently or files were accidentally deleted.
+
+**Behavior:**
+- Checks all concrete paths in `claude_reads` (skips wildcards like `*.go`, `**/*.ts`)
+- Skips `HANDOFF.md` on first attempt (it may not exist yet for the story's first step)
+- **Warn-only**: does not block dispatch. Missing files are appended to the dispatch prompt as a WARNING section
+- Suggests a rollback target based on heuristic file-path matching (e.g., missing `docs/bdd/` → suggest rollback to `bdd`)
+
+```bash
+orchestrator check-prereqs <project-root>
+```
+
+Output includes: `ok` (boolean), `missing` (file list), `warnings` (human-readable), `suggested_rollback` (step name or null).
+
+---
+
+## Checklist System (v0.12)
+
+Each story automatically gets a `.ai/CHECKLIST.md` file — a per-step progress tracker that the executor must update as it works.
+
+**Auto-generation:** `startStory()` calls `generateChecklist()` which writes `.ai/CHECKLIST.md` with checkbox items for every pipeline step (BDD, SDD Delta, Contract, Review, Scaffold, Impl, Verify, Commit, Update Memory).
+
+**Executor instruction:** `buildPrompt()` appends a CHECKLIST UPDATE section instructing the executor to check off (`[x]`) completed items for the current step only.
+
+**Benefits:**
+- Developers can open `.ai/CHECKLIST.md` at any time to see story progress at a glance
+- Executors have a concrete reminder of what each step requires
+- Review step can reference the checklist to verify completeness
+
+---
+
 ## Known Issues and Solutions
 
 ### Issue 1: STATE ↔ MEMORY Sync Drift
@@ -869,3 +923,4 @@ Most projects do not need these advanced features. Start with single-executor mo
 | v0.9 | 2026-02-24 | Fix status/reason validation gap: Hook pseudocode adds step 3.5 (validate status against `pass`/`failing`/`needs_human`/`timeout` and reason against enum before writing STATE.json); executor-result section adds Common Mistakes table (`passing≠pass`, `failed≠failing`, freeform reason is invalid); strengthened field type docs from `string?` to `enum?` for reason |
 | v0.10 | 2026-02-24 | Orchestrator self-describing responses: all `orchestrator auto` return values include `caller_instruction` (prevents LLM callers from hallucinating completion), `next_step` field in dispatched/query results; Step Boundary in dispatch prompt (executor must complete only current step, not advance); `startStory()` guards against restarting completed/running stories; STATE.json adds `last_error` field for executor crash/timeout diagnostics; new CLI `report-error` command for external error reporting |
 | v0.11 | 2026-02-25 | Add `commit` step between verify and update-memory (solves commit hash chicken-and-egg problem); scaffold `treat_failing_as_pass` flag (RED stubs auto-normalize failing→pass, prevents infinite scaffold retry loop); Agent Teams structured spawn prompts from `DEFAULT_TEAM_ROLES` for parallel impl (backend/frontend/test teammates); pipeline now 10 steps: bdd→sdd-delta→contract→review→scaffold→impl→verify→commit→update-memory→done |
+| v0.12 | 2026-02-25 | Rollback system: `orchestrator rollback <target-step>` resets state to earlier step (validates target is before current, blocks bootstrap unless `--force`); Pre-dispatch prerequisite checks: verify `claude_reads` files exist before dispatching, warn-only (appended to prompt as WARNING section, not blocking), suggest rollback target based on missing files; Checklist system: `startStory()` auto-generates `.ai/CHECKLIST.md` with per-step checkbox items, `buildPrompt()` instructs executor to check off completed items; new CLI commands: `rollback`, `check-prereqs`; new exports: `rollback()`, `checkPrerequisites()`, `generateChecklist()`, `PrereqCheckResult` type |
