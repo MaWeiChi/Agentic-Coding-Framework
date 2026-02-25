@@ -87,7 +87,8 @@ After Bootstrap is complete, each User Story enters one independent micro-waterf
 | AST Linting | After each Implementation iteration, run syntax-level checks; failure does not enter Verify |
 | Component Test | Validate front-end component behavior (Playwright component testing) |
 | **Verify** | **Triple verification: completeness/correctness/coherence (see Verify step below)** |
-| **Update Memory** | **Update PROJECT_MEMORY.md (see rules below)** |
+| **Commit** | **Stage and commit code changes, record commit hash in HANDOFF.md (do NOT commit Memory/history)** |
+| **Update Memory** | **Update PROJECT_MEMORY.md with correct commit hash from HANDOFF (see rules below)** |
 
 ### Handling Dependencies Between Stories
 
@@ -113,7 +114,7 @@ Verify is the quality gate for each Story's micro-waterfall, executed after all 
 
 **Significance of Determination Method Classification**: Deterministic checks (Correctness) can be automatically executed by hooks with zero LLM tokens; semi-deterministic and LLM-dependent checks (Completeness, Coherence) require executor session handling, consuming tokens. Orchestrator can run deterministic checks in the hook phase first, and only dispatch executor for Coherence checks after all pass, saving token costs on failures.
 
-Verify is automatic checking by the agent, not human Review. If all three checks pass, proceed to Update Memory; if any check fails, return to the corresponding step to fix and re-run Verify.
+Verify is automatic checking by the agent, not human Review. If all three checks pass, proceed to Commit; if any check fails, return to the corresponding step to fix and re-run Verify.
 
 ### Implementation Self-Correction Loop and Recursion Limit
 
@@ -332,3 +333,4 @@ Different project types (Go container service, WordPress CMS, Astro + WordPress 
 | v0.2 | 2026-02-13 | Added Implementation Self-Correction Loop recursion limit (3-5 times, mark blocker if exceeded); added AST Linting gate (after Implementation before Verify, with tech stack tool correspondence table); added AST Linting step to iteration table |
 | v0.3 | 2026-02-13 | Applied Windsurf Review: added "Determination Method" column to Verify triple-check table, distinguishing deterministic/semi-deterministic/LLM-dependent checks (P0); added Memory cleanup timing and rules (P2) |
 | v0.4 | 2026-02-16 | Field feedback: Bootstrap split into Full/Lite mode; add Step 0 Safety Net Check ("touch it, test it"); add mode switching with Upgrade Checklist/Downgrade; Memory update rules changed (DONE/LOG → .ai/history.md); conflict resolution and cleanup rules updated |
+| v0.5 | 2026-02-25 | Add Commit step between Verify and Update Memory; Verify pass now proceeds to Commit instead of Update Memory; aligned with Protocol v0.11 |

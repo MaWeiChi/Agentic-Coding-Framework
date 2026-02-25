@@ -159,7 +159,8 @@ The following is an estimated token budget for each step to help projects evalua
 | scaffold | ≈ 2,000-4,000 | ≈ 1,000-3,000 | Read BDD + contracts, output test skeleton |
 | impl | ≈ 4,000-10,000 | ≈ 2,000-8,000 | Highest consumption, includes iterations |
 | verify | ≈ 3,000-6,000 | ≈ 200-500 | Read multiple files, compare, output minimal |
-| update-memory | ≈ 1,000-2,000 | ≈ 200-500 | Read Memory + STATE, update Memory |
+| commit | ≈ 500-1,000 | ≈ 100-300 | Stage + commit code, record hash in HANDOFF |
+| update-memory | ≈ 1,000-2,000 | ≈ 200-500 | Read Memory + HANDOFF (commit_hash), update Memory |
 | **Single Story Total** | | | **≈ 15,000-40,000 tokens** |
 
 Orchestrator tokens (Gemini Flash or similar): approximately 100-200 tokens per interaction, about 5-10 interactions per Story, total ≈ 500-2,000 tokens.
@@ -235,7 +236,7 @@ Orchestrator only looks at this file. **Machine parsed, zero LLM tokens.**
 
 #### Valid step Values
 
-`bdd` · `sdd-delta` · `contract` · `review` · `scaffold` · `impl` · `verify` · `update-memory` · `done`
+`bdd` · `sdd-delta` · `contract` · `review` · `scaffold` · `impl` · `verify` · `commit` · `update-memory` · `done`
 
 These steps correspond to the micro-waterfall loop in the [Lifecycle document](Lifecycle.md).
 
@@ -246,6 +247,10 @@ pending → running → pass → (orchestrator advances to next step)
                   → failing → (orchestrator retries or routes)
                   → timeout → (orchestrator notifies human)
                   → needs_human → (wait for human instruction)
+
+Note: Steps with `treat_failing_as_pass: true` (scaffold) auto-normalize
+"failing" → "pass" when no error reason is present. This handles the scaffold
+semantic where RED (failing) tests are the expected, correct output.
 ```
 
 #### Valid reason Values
@@ -447,6 +452,7 @@ steps:
     max_attempts: 2
     timeout_min: 5
     requires_human: false
+    treat_failing_as_pass: true  # RED stubs are expected; "failing" auto-normalizes to "pass"
     claude_reads:
       - docs/bdd/US-{story}.md    # Current BDD (with tags)
       - docs/nfr.md               # NFR thresholds
@@ -476,7 +482,7 @@ steps:
     post_check: "go vet ./... && golangci-lint run"
 
   verify:
-    next_on_pass: update-memory
+    next_on_pass: commit
     on_fail:
       default: impl                # Back to impl
     max_attempts: 2
@@ -490,6 +496,20 @@ steps:
       - .ai/HANDOFF.md
     claude_writes: []
 
+  commit:
+    next_on_pass: update-memory
+    next_on_fail: commit
+    max_attempts: 2
+    timeout_min: 3
+    requires_human: false
+    claude_reads:
+      - PROJECT_MEMORY.md
+      - .ai/HANDOFF.md
+    claude_writes: []              # Only git operations, no file writes
+    # Stage and commit all code changes. Use conventional commit with story ID.
+    # Do NOT commit PROJECT_MEMORY.md or .ai/history.md (updated in next step).
+    # Record commit hash in HANDOFF.md front-matter as `commit_hash: <hash>`.
+
   update-memory:
     next_on_pass: done
     next_on_fail: update-memory
@@ -499,6 +519,7 @@ steps:
     claude_reads:
       - PROJECT_MEMORY.md
       - .ai/STATE.json            # Test results
+      - .ai/HANDOFF.md            # commit_hash from commit step
     claude_writes:
       - PROJECT_MEMORY.md
       - .ai/history.md            # Append DONE + LOG entry
@@ -631,7 +652,8 @@ After completion:
 | scaffold | Based on BDD scenario tags and NFR table, produce corresponding test skeleton. All tests must fail (red) |
 | impl | Read failing tests, write minimal code to make tests pass, then refactor |
 | verify | Execute triple check: Completeness (all BDD has tests, all Delta implemented), Correctness (tests pass, NFR met), Coherence (SDD merged Delta, contracts consistent, Constitution not violated) |
-| update-memory | Read STATE.json test results, update MEMORY's NOW/TESTS/NEXT/ISSUES/SYNC. Append DONE + LOG entry to `.ai/history.md`. Overwrite HANDOFF.md with latest session state |
+| commit | Stage and commit all code changes with conventional commit message including story ID. Do NOT commit PROJECT_MEMORY.md or .ai/history.md. Record commit hash in HANDOFF.md front-matter as `commit_hash: <hash>` |
+| update-memory | Read HANDOFF.md commit_hash + STATE.json test results, update MEMORY's NOW/TESTS/NEXT/ISSUES/SYNC. Append DONE + LOG entry to `.ai/history.md`. Overwrite HANDOFF.md with latest session state |
 
 ---
 
@@ -846,3 +868,4 @@ Most projects do not need these advanced features. Start with single-executor mo
 | v0.8 | 2026-02-17 | Split advanced content into Protocol-Advanced.md: Multi-Executor Collaboration Mode, OpenClaw reference implementation, Agent Teams reference implementation. Core Protocol reduced from 1210 to ~800 lines |
 | v0.9 | 2026-02-24 | Fix status/reason validation gap: Hook pseudocode adds step 3.5 (validate status against `pass`/`failing`/`needs_human`/`timeout` and reason against enum before writing STATE.json); executor-result section adds Common Mistakes table (`passing≠pass`, `failed≠failing`, freeform reason is invalid); strengthened field type docs from `string?` to `enum?` for reason |
 | v0.10 | 2026-02-24 | Orchestrator self-describing responses: all `orchestrator auto` return values include `caller_instruction` (prevents LLM callers from hallucinating completion), `next_step` field in dispatched/query results; Step Boundary in dispatch prompt (executor must complete only current step, not advance); `startStory()` guards against restarting completed/running stories; STATE.json adds `last_error` field for executor crash/timeout diagnostics; new CLI `report-error` command for external error reporting |
+| v0.11 | 2026-02-25 | Add `commit` step between verify and update-memory (solves commit hash chicken-and-egg problem); scaffold `treat_failing_as_pass` flag (RED stubs auto-normalize failing→pass, prevents infinite scaffold retry loop); Agent Teams structured spawn prompts from `DEFAULT_TEAM_ROLES` for parallel impl (backend/frontend/test teammates); pipeline now 10 steps: bdd→sdd-delta→contract→review→scaffold→impl→verify→commit→update-memory→done |

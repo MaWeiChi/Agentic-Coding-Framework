@@ -338,24 +338,42 @@ Lead should enable **delegate mode** (Shift+Tab) to ensure only orchestrating, n
 
 ### Spawn Prompt Example
 
+ACO's `buildPrompt()` auto-generates structured spawn prompts from `DEFAULT_TEAM_ROLES` when `agent_teams: true`. Example output for the impl step:
+
 ```
-You are the backend executor for cart-app project US-007.
+=== AGENT TEAMS — PARALLEL EXECUTION ===
+You are the TEAM LEAD. Create an agent team to parallelize this step.
 
-Please read the following files:
-- docs/sdd.md (focus on DiscountEngine and CartService modules)
-- docs/api/openapi.yaml
-- .ai/HANDOFF.md
+### Teammate: backend
+- Reads: docs/sdd.md, docs/api/openapi.yaml, internal/**/*.go
+- Writes: *.go
+- Spawn prompt: "You are the backend agent for story US-007.
+  Your job is to implement the backend portion of this story.
+  Read these files for context: docs/sdd.md, docs/api/openapi.yaml, internal/**/*.go.
+  You may ONLY modify files matching: *.go.
+  Do NOT touch files outside your scope.
+  When done, send a message to the team lead with a summary of changes."
 
-Your tasks:
-1. Implement CouponRepository CRUD (internal/coupon/repository.go)
-2. Implement DiscountEngine discount calculation (internal/discount/engine.go)
-3. Run go vet && golangci-lint run to confirm pass
+### Teammate: frontend
+- Reads: docs/api/openapi.yaml, src/components/**
+- Writes: *.ts, *.tsx
+- Spawn prompt: ...
 
-After completion:
-- Write status and summary to .ai/executor-result
-- Update .ai/HANDOFF.md for backend progress
-- Don't modify frontend files (src/ is frontend teammate's scope)
+### Teammate: test
+- Reads: docs/bdd/US-007.md, docs/api/openapi.yaml, docs/nfr.md
+- Writes: *_test.go, *.spec.ts
+- Spawn prompt: ...
+
+TEAM LEAD INSTRUCTIONS:
+1. Spawn all teammates using agent teams (NOT subagents)
+2. Wait for ALL teammates to complete
+3. Review results; if any teammate failed, report failing in HANDOFF.md
+4. Merge all results into a single HANDOFF.md
+5. Do NOT implement yourself — delegate to teammates
+==========================================
 ```
+
+To customize roles per project, override `DEFAULT_TEAM_ROLES` in `.ai/step-rules.yaml` (future).
 
 ### Hook Integration
 

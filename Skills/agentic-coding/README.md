@@ -4,7 +4,7 @@
 
 ## What This Skill Is
 
-A structured context protocol that turns an LLM coding agent into a disciplined executor following a repeatable per-Story micro-waterfall: BDD → SDD Delta → API Contract → Review → Test → Implement → Verify → Update Memory. It solves three specific problems.
+A structured context protocol that turns an LLM coding agent into a disciplined executor following a repeatable per-Story micro-waterfall: BDD → SDD Delta → API Contract → Review → Test → Implement → Verify → Commit → Update Memory. It solves three specific problems.
 
 ---
 

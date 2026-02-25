@@ -163,6 +163,9 @@ Define upfront, proactively construct context for agents.
 | **Review Checkpoint** | **Human review confirms correct direction** |
 | Test Scaffolding | Produce test skeletons (all red lights) |
 | Implementation | Implement to pass tests → Refactor |
+| Verify | Triple check: completeness, correctness, coherence |
+| Commit | Stage and commit code, record commit hash |
+| Update Memory | Update PROJECT_MEMORY.md with commit hash |
 
 ### Existing Project Flow
 
@@ -263,3 +266,4 @@ The following topics can be explored more deeply in subsequent discussions:
 | v0.16 | 2026-02-14 | Protocol adds Executor output rules (Diff-Only principle, prioritize structured format, per-step output strategy); HANDOFF.md upgraded to hybrid format (YAML front matter + Markdown body) |
 | v0.17 | 2026-02-14 | Apply Windsurf Round 2 Review: All "topics for future discussion" items crossed off (6 framework detail items + Lifecycle integration); Protocol upgraded to v0.6 (Hook YAML parsing, Dispatch Prompt hybrid format, team_roles completion, STATE.json schema update) |
 | v0.18 | 2026-02-16 | Field feedback (pilot project US-001): Add Full/Lite mode with scenario table and mode switching; add "keep auto-resent files minimal" and "touch it, test it" principles; DONE/LOG moved to .ai/history.md; existing project flow changed from one-time characterization tests to per-Story Step 0 |
+| v0.19 | 2026-02-25 | New project flow table add Verify, Commit, Update Memory steps; pipeline now 10 steps aligned with Protocol v0.11 |

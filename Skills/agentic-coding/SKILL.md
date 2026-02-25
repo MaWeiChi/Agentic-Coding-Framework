@@ -3,7 +3,7 @@ name: agentic-coding
 description: >
   Agentic Coding Framework executor skill. Guides the agent through
   the layered micro-waterfall workflow: Bootstrap → BDD → SDD Delta → API Contract →
-  Review Checkpoint → Test Scaffolding → Implementation → Verify → Update Memory.
+  Review Checkpoint → Test Scaffolding → Implementation → Verify → Commit → Update Memory.
   Use this skill whenever you are working on a project that follows the Agentic Coding
   Framework, or when the user asks to set up a new project with structured context
   infrastructure. Also trigger when you see PROJECT_MEMORY.md, Delta Spec, BDD scenarios
@@ -36,7 +36,7 @@ full agile flexibility (reprioritize, pivot, insert). Within a Story, you execut
 in order:
 
 ```
-Bootstrap (one-time) → [per Story: BDD → SDD Delta → API Contract → Review → Test Scaffold → Implement → Verify → Update Memory]
+Bootstrap (one-time) → [per Story: BDD → SDD Delta → API Contract → Review → Test Scaffold → Implement → Verify → Commit → Update Memory]
 ```
 
 Read `references/workflow.md` for the detailed step-by-step procedure, including what

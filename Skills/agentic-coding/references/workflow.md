@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.18, Lifecycle v0.4, Protocol v0.10 (2026-02-24)
+> Derived from: Framework v0.19, Lifecycle v0.5, Protocol v0.11 (2026-02-25)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -199,9 +199,21 @@ After all three pass:
    main `docs/sdd.md`. This is when the SDD becomes the single source of truth again.
 2. **Archive Delta** — Keep `docs/deltas/US-{id}.md` as historical record.
 
-### Step 8: Update Memory (Full Mode Only)
+### Step 8: Commit Changes
 
-**Read:** PROJECT_MEMORY.md, git log, test results
+**Read:** PROJECT_MEMORY.md, HANDOFF.md
+
+**Produce:** Git commit of all code changes. Record commit hash in HANDOFF.md.
+
+- Stage and commit all code changes from this Story
+- Use conventional commit message with story ID (e.g. `feat(US-013): implement cart discount engine`)
+- Do NOT commit PROJECT_MEMORY.md or `.ai/history.md` — those are updated in the next step
+- After committing, update HANDOFF.md front-matter: `commit_hash: <hash>`
+- This solves the chicken-and-egg problem: Update Memory can now reference the correct hash
+
+### Step 9: Update Memory (Full Mode Only)
+
+**Read:** PROJECT_MEMORY.md, HANDOFF.md (commit_hash), test results
 
 **Produce:** Updated PROJECT_MEMORY.md + HANDOFF.md + `.ai/history.md` append
 
