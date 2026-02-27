@@ -838,6 +838,90 @@ Each story automatically gets a `.ai/CHECKLIST.md` file — a per-step progress 
 
 ---
 
+## Review, Triage, and Re-entry (v0.13)
+
+Three new orchestrator commands support the ISSUES-driven feedback loop defined in [Lifecycle.md](Lifecycle.md).
+
+### review — On-Demand Project Health Check
+
+```bash
+orchestrator review <project-root>
+```
+
+Dispatches a Review Session executor that autonomously audits the project. Works on **any project** — ACF adoption is not required.
+
+**Behavior:**
+- Executor performs: code review, spec-code coherence check, regression check, PROJECT_MEMORY audit
+- Output: `review-report.md` in `.ai/` + updated ISSUES in PROJECT_MEMORY.md
+- Each new ISSUE includes: severity (`[High]`/`[Med]`/`[Low]`), description, `linked: US-XXX` (if identifiable)
+- Review is analysis-only — no state mutations, no file modifications beyond report and ISSUES
+- For non-ACF projects: produces standalone review-report.md + ISSUES list (no STATE.json required)
+
+### reopen — Re-enter Pipeline for Completed US
+
+```bash
+orchestrator reopen <project-root> <story-id> --target <step>
+```
+
+Reopens a completed User Story at a specified pipeline step.
+
+**Behavior:**
+- Validates that `story-id` matches a previously completed story (checks `.ai/history.md`)
+- Sets STATE.json: `story → story-id`, `step → target`, `status → pending`, `attempt → 1`
+- Appends to `.ai/history.md`: `US-XXX reopened — reason: [human_note or ISSUE description]`
+- Preserves existing BDD/SDD/test files — executor modifies incrementally, not rewrites
+- Step 0 Safety Net Check applies on re-entry
+
+**Guardrail — auto-escalation on repeated failure:**
+- If a reopened US fails Verify after fix → auto-escalate rollback one level deeper
+- Escalation chain: `impl → sdd-delta → bdd`
+- If `bdd` also fails → mark as `needs_human` (requires human intervention)
+- Consistent with Reason-Based Routing philosophy
+
+### triage — Classify ISSUES into Pipeline Actions
+
+```bash
+orchestrator triage <project-root>
+```
+
+Dispatches a triage executor that reads ISSUES and produces a structured plan.
+
+**Behavior:**
+- Reads PROJECT_MEMORY.md ISSUES section, filters `status != fixed`
+- For each unfixed ISSUE:
+  - If `linked: US-XXX` present → recommend `reopen` with rollback target
+  - If `linked` absent → attempt inference from `.ai/history.md`, BDD docs, git log
+  - If no link found → recommend `create` new US
+  - If spans multiple US → recommend `create` cross-cutting US
+- Output: `triage-plan.json` containing for each ISSUE:
+  - `action`: `reopen` or `create`
+  - `story_id`: existing US-XXX or proposed new ID
+  - `target_step`: rollback target (for reopen)
+  - `rationale`: why this action and target
+  - `impact`: files/modules affected
+  - `priority`: suggested execution order
+
+**Triage is human-gated.** The triage plan is presented to the human for review. Human can accept, modify, or reject individual items. Approved items are executed by the orchestrator (calling `reopen` or `start-story` as appropriate).
+
+### Typical Flow
+
+```
+orchestrator review ./my-project
+    → CC produces review-report.md + updates ISSUES
+
+orchestrator triage ./my-project
+    → CC produces triage-plan.json with recommendations
+    → Human reviews and approves
+
+# For each approved reopen:
+orchestrator reopen ./my-project US-008 --target bdd
+
+# For each approved new US:
+orchestrator start-story ./my-project US-011 --instruction "..."
+```
+
+---
+
 ## Known Issues and Solutions
 
 ### Issue 1: STATE ↔ MEMORY Sync Drift
@@ -924,3 +1008,4 @@ Most projects do not need these advanced features. Start with single-executor mo
 | v0.10 | 2026-02-24 | Orchestrator self-describing responses: all `orchestrator auto` return values include `caller_instruction` (prevents LLM callers from hallucinating completion), `next_step` field in dispatched/query results; Step Boundary in dispatch prompt (executor must complete only current step, not advance); `startStory()` guards against restarting completed/running stories; STATE.json adds `last_error` field for executor crash/timeout diagnostics; new CLI `report-error` command for external error reporting |
 | v0.11 | 2026-02-25 | Add `commit` step between verify and update-memory (solves commit hash chicken-and-egg problem); scaffold `treat_failing_as_pass` flag (RED stubs auto-normalize failing→pass, prevents infinite scaffold retry loop); Agent Teams structured spawn prompts from `DEFAULT_TEAM_ROLES` for parallel impl (backend/frontend/test teammates); pipeline now 10 steps: bdd→sdd-delta→contract→review→scaffold→impl→verify→commit→update-memory→done |
 | v0.12 | 2026-02-25 | Rollback system: `orchestrator rollback <target-step>` resets state to earlier step (validates target is before current, blocks bootstrap unless `--force`); Pre-dispatch prerequisite checks: verify `claude_reads` files exist before dispatching, warn-only (appended to prompt as WARNING section, not blocking), suggest rollback target based on missing files; Checklist system: `startStory()` auto-generates `.ai/CHECKLIST.md` with per-step checkbox items, `buildPrompt()` instructs executor to check off completed items; new CLI commands: `rollback`, `check-prereqs`; new exports: `rollback()`, `checkPrerequisites()`, `generateChecklist()`, `PrereqCheckResult` type |
+| v0.13 | 2026-02-26 | Review, Triage, and Re-entry (FB-009): `review` command dispatches on-demand Review Session (code review, spec-code coherence, regression, memory audit → review-report.md + ISSUES updates); `triage` command reads unfixed ISSUES and outputs triage-plan with CC recommendations (human-gated); `reopen` command reopens completed US at specified step (STATE overwrite + history.md entry, incremental BDD/SDD modification); guardrails: failed verify after reopen auto-escalates rollback one level deeper; cross-US issues create new US instead of reopening multiple; Review works on non-ACF projects (no .ai/STATE.json required) |

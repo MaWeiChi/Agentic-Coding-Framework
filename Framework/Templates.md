@@ -71,6 +71,7 @@ unit:42/42 ✅ | intg:18/18 ✅ | comp:12/12 ✅ | e2e:⏸ | perf:⏸
 
 ## ISSUES
 - [Med] Safari WebP display anomaly (02-14)
+- [High] Cart total rounding error on multi-currency (02-15) | linked: US-005
 
 ## SYNC
 - Product model → OpenAPI spec + frontend type
@@ -130,7 +131,7 @@ Key rules: Append-only. Never delete or rewrite entries. Each Story completion a
 | `NOW` | Memory | Current task, phase, blockers | Human intent priority | Every session |
 | `NEXT` | Memory | Backlog priority order | Human intent priority | When story completes |
 | `TESTS` | Memory | Passing test counts by level | CI / tests (fact) | After every test run |
-| `ISSUES` | Memory | Unresolved problems | Mixed (agent can add, doesn't delete human's) | Anytime |
+| `ISSUES` | Memory | Unresolved problems; optional `linked: US-XXX` suffix for triage traceability (agent-written entries must include explicit link; human-written entries may omit for CC inference) | Mixed (agent can add, doesn't delete human's) | Anytime |
 | `SYNC` | Memory | Cross-update reminders (change A requires change B) | Human knowledge priority | Add when discovered |
 | `DONE` | .ai/history.md | Completed features + test coverage summary | git + tests (fact) | When story completes |
 | `LOG` | .ai/history.md | Commit history entries | git (fact) | When story completes |
@@ -184,6 +185,7 @@ Place in the project root as the first document agents read for every conversati
 ## Agent Guidelines
 
 - Agentic Coding Mode: full
+- ACF Version: 0.8
 - Read `PROJECT_MEMORY.md` before each session to understand the current project state
 - Follow the BDD → SDD → TDD development workflow (see Agentic Coding Framework for details)
 - Update `PROJECT_MEMORY.md` when each story ends
@@ -196,6 +198,7 @@ Place in the project root as the first document agents read for every conversati
 - **What**: <one-line description>
 - **Stack**: <language, framework>
 - Agentic Coding Mode: lite
+- ACF Version: 0.8
 ```
 
 ### Writing Principles
@@ -961,11 +964,12 @@ Place in `docs/constitution.md` or embed in project entry document. Recommend st
 
 4. **Auth Everywhere**: All non-`/public/*` routes SHALL verify JWT Token (corresponds to SEC-01).
 5. **Input Validation**: All external input SHALL be sanitized (corresponds to SEC-02).
+6. **No Hardcoded Secrets**: API keys, tokens, passwords, and connection strings SHALL NOT appear in source code; use environment variables or secret management. `.gitignore` SHALL cover secret file patterns (`.env`, `*.key`, `credentials.json`, `*.pem`). Test fixtures SHALL use fake/mock values, never real credentials.
 
 ## Quality Principles
 
-6. **Test Coverage Gate**: New features SHALL include corresponding test coverage at appropriate level; CI coverage must not drop below current baseline.
-7. **No Silent Failures**: All errors SHALL be logged and return appropriate HTTP status codes.
+7. **Test Coverage Gate**: New features SHALL include corresponding test coverage at appropriate level; CI coverage must not drop below current baseline.
+8. **No Silent Failures**: All errors SHALL be logged and return appropriate HTTP status codes.
 ```
 
 ### Writing Principles
@@ -977,6 +981,8 @@ Place in `docs/constitution.md` or embed in project entry document. Recommend st
 **Link to NFR IDs**: Security and performance related principles should reference corresponding NFR IDs, establishing bidirectional tracing.
 
 **Evolves but not easily changed**: Modifying Constitution entries counts as architectural change and should have corresponding ADR documentation of change reasoning.
+
+**Security is a default**: The "No Hardcoded Secrets" principle (item 6 in the template) is pre-populated and SHOULD NOT be removed. Teams may customize the specifics (e.g. which secret management tool to use) but the category itself is always present. This applies to both Full and Lite mode — Lite Mode projects include this in CLAUDE.md's Agent Guidelines even without a separate constitution file.
 
 ---
 
@@ -1114,3 +1120,6 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.7 | 2026-02-13 | Apply refinement checklist 13 items: BDD adds Scenario Outline template, declarative style guidance, Non-Goals section, anti-pattern list; SDD adds Source of Truth principle, System Context description, Mermaid diagram guidance, Delta Spec Non-Goals; Test adds testify require/assert distinction, Table-Driven template, Suite template, Helper Function extraction principle; DDD adds Subdomain type classification (Core/Supporting/Generic) + agent behavior rules, Domain Event Registry |
 | v0.8 | 2026-02-13 | Apply Windsurf Review: add Review Checkpoint structured template (P1); recommend API contract upgrade to OpenAPI 3.1 (P2); add Playwright Full E2E Test template (P2) |
 | v0.9 | 2026-02-16 | Field feedback: PROJECT_MEMORY slimmed (DONE/LOG → .ai/history.md); add Full/Lite mode templates; add .ai/history.md template; CLAUDE.md template adds mode line + Lite variant; Legacy reverse engineering removes one-time characterization tests, replaced by per-Story Step 0 |
+| v0.10 | 2026-02-26 | ISSUES format: add optional `linked: US-XXX` suffix for triage traceability (FB-009); agent-written entries must include explicit link, human-written entries may omit for CC inference; update Section Explanation table with linked field semantics |
+| v0.11 | 2026-02-27 | CLAUDE.md template: add `ACF Version` line to Agent Guidelines in both Full and Lite mode variants (FB-010); CC reads this to determine which framework capabilities are available for the project |
+| v0.12 | 2026-02-27 | Constitution template: add "No Hardcoded Secrets" as default security principle (item 6); writing principles add "Security is a default" note — pre-populated, applies to both Full and Lite mode (FB-011) |

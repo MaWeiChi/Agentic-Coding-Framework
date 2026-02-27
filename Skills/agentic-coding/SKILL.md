@@ -115,10 +115,12 @@ what you're about to change.
 **Don't guess, mark uncertainties.** When requirements are ambiguous, write
 `[NEEDS CLARIFICATION]` and move on. Don't invent requirements.
 
-**Verify before declaring done.** After Implementation, run the triple check —
+**Verify before declaring done.** After Implementation, run four checks —
 Completeness (all BDD scenarios have tests, all Delta items implemented),
 Correctness (tests pass, NFR thresholds met), Coherence (SDD merged, API matches
-implementation, Constitution not violated). All three must pass before updating Memory.
+implementation, Constitution not violated), Security (no hardcoded secrets, `.gitignore`
+covers secret patterns, test fixtures use mock values). All four must pass before
+updating Memory.
 
 **Self-correction has limits.** The implement → test → fix loop runs at most 3–5 times
 (check `max_attempts` if configured). If exceeded, record the blocker in HANDOFF.md and
@@ -183,3 +185,23 @@ project-root/
 - **Never skip the Review Checkpoint** — if the human hasn't reviewed, ask them to
 - **Never rewrite the entire SDD** — use Delta Spec format
 - **Never loop more than max_attempts** — stop, record blocker, wait for help
+- **Never commit secrets** — API keys, tokens, passwords, connection strings must never
+  appear in source code. Use environment variables or placeholders (`YOUR_API_KEY_HERE`).
+  Check `.gitignore` before committing config files.
+
+## ACF Version
+
+CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.9`). If the project
+was bootstrapped under an older ACF version, propose adopting new features at natural
+touchpoints (session start, story completion) — never auto-upgrade. See Lifecycle.md for
+the full migration model.
+
+## Review → Triage → Re-entry
+
+If the human or orchestrator triggers a **Review Session**, you perform five checks:
+Code Review, Spec-Code Coherence, Regression, Security Scan, and Memory Audit. Output
+a `review-report.md` and update ISSUES. This is analysis only — no mutations to code.
+
+If you're asked to **reopen a completed US** (via triage), treat it like resuming from
+the rollback target step: read existing BDD/SDD/tests, modify incrementally (not rewrite),
+and re-run the pipeline from that step. Add a history entry: `US-XXX reopened — reason: ...`

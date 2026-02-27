@@ -479,6 +479,450 @@ Our Skill achieves similar coordination effects with more token-efficient means 
 
 ---
 
+### FB-009: ISSUES-Driven Triage — From Bug List to Pipeline Re-entry
+
+**Date:** 2026-02-26
+**Context:** After completing Sprint 3 (US-001→010) on go-netagent, PROJECT_MEMORY.md's ISSUES section accumulated several unfixed items. The framework has no defined path for turning these ISSUES back into actionable work — the gap between "bug discovered" and "pipeline re-entry" is entirely manual and ad-hoc.
+
+#### The Gap
+
+ACF currently defines ISSUES as:
+- **Scope guard** — "see a problem, check if it belongs to another US first, don't touch" (FB-002)
+- **Blocker record** — max_attempts exceeded → write to ISSUES (Lifecycle)
+- **Cleanup target** — resolved ISSUES cleared when Story completes (Lifecycle)
+
+What ACF does NOT define:
+- How unfixed ISSUES drive new work
+- How to re-enter the pipeline from an ISSUES item
+- Whether to reopen an existing US or create a new one
+- Which pipeline step to roll back to
+
+#### Observed Problem
+
+After a sprint completes, the team has:
+1. A `PROJECT_MEMORY.md` ISSUES section with unfixed items (some High, some Med)
+2. A `review report` or `bug list` from testing / QA / field usage
+3. No framework-defined path to turn these into pipeline work
+
+Current workaround: human manually decides which US to reopen or create, manually runs `orchestrator start-story` or `rollback`. This breaks the "Macro-Agile × Micro-Waterfall" model because the macro-level feedback loop has no structure.
+
+#### Proposed Flow: Review → Triage → Re-entry
+
+The complete feedback cycle has three phases:
+
+```
+Human or orchestrator triggers review (any time)
+        │
+        ╔══════════════════════════════════════════════╗
+        ║  Phase 1: REVIEW SESSION                     ║
+        ║  CC freezes current state, audits project    ║
+        ╚══════════════════════════════════════════════╝
+        │
+        ├── 1a. Code Review
+        │     • Cross-US dependency check: do modules from different US integrate correctly?
+        │     • Dead code / unused imports from removed features
+        │     • Consistency: naming conventions, error handling patterns across US
+        │
+        ├── 1b. Spec-Code Coherence
+        │     • BDD scenarios vs actual test coverage — any gaps?
+        │     • SDD architecture vs actual code structure — any drift?
+        │     • API contracts vs actual endpoints — any mismatches?
+        │
+        ├── 1c. Regression Check
+        │     • Run full test suite (all levels: unit + integration + e2e)
+        │     • Compare test counts: expected vs actual (from TESTS section)
+        │     • Flag any tests that were passing before but now fail
+        │
+        ├── 1d. PROJECT_MEMORY Audit
+        │     • ISSUES: are any marked "fixed" but actually not? Are there new issues?
+        │     • SYNC: do file mappings still reflect reality after multi-US changes?
+        │     • NEXT: is the priority order still relevant post-sprint?
+        │
+        └── Output: review-report.md (structured findings)
+              → New/updated ISSUES written to PROJECT_MEMORY.md
+              → Each ISSUE gets: severity, description, linked US (if identifiable)
+        │
+        ╔══════════════════════════════════════════════╗
+        ║  Phase 2: TRIAGE                             ║
+        ║  CC classifies each unfixed ISSUE            ║
+        ╚══════════════════════════════════════════════╝
+        │
+        ├── Filter: status != fixed
+        │
+        ├── For each unfixed item:
+        │     │
+        │     ├── Has linked US (e.g. "linked: US-008")
+        │     │     │
+        │     │     ├── Determine rollback target:
+        │     │     │     • Spec gap (missing scenario)     → rollback to bdd
+        │     │     │     • Design flaw (wrong architecture) → rollback to sdd-delta
+        │     │     │     • Implementation bug               → rollback to impl
+        │     │     │
+        │     │     └── Reopen US-008 at target step
+        │     │
+        │     └── No linked US
+        │           │
+        │           └── Create new US (next available ID)
+        │                 → Full pipeline from bootstrap/bdd
+        │                 → ISSUES item updated with linked US
+        │
+        └── Output: triage-plan (which US reopened, which created, rollback targets, priority)
+        │
+        ╔══════════════════════════════════════════════╗
+        ║  Phase 3: RE-ENTRY                           ║
+        ║  Pipeline resumes per triage decisions       ║
+        ╚══════════════════════════════════════════════╝
+        │
+        ├── Reopened US: pipeline resumes from rollback target step
+        │     → bdd → sdd → ... → done
+        │     → Bug fix traced in original US's spec history
+        │
+        └── New US: full pipeline from bootstrap/bdd
+              → Cross-cutting issues get their own US
+```
+
+#### Review Session Detail
+
+The Review Session is an **on-demand health check**, not a fixed pipeline step. It can be triggered at any time — the orchestrator freezes the current project state and CC audits everything up to that point.
+
+**Trigger scenarios:**
+
+| When | Why |
+|------|-----|
+| Sprint complete (all US done) | Post-sprint retrospective, plan next sprint |
+| Mid-sprint checkpoint | Verify cross-US integration before continuing |
+| Single US just completed | Quick check for regressions or spec drift |
+| Returning after a break | Understand current project health before resuming |
+| Pre-release | Final quality gate before shipping |
+| Human feels something is off | Ad-hoc health check |
+| **Existing project, not yet using ACF** | **Reverse-engineer current state → produce ISSUES + review-report as Bootstrap input** |
+
+The key insight: **Review is decoupled from the sprint lifecycle.** It operates on the current state of the project, whatever that state is. Some US may be done, some may be in-progress (paused for review), some may not have started yet. Review audits what exists.
+
+**Review as ACF on-ramp for existing projects:**
+
+An existing project that hasn't adopted ACF can use Review Session as its first contact with the framework. CC scans the codebase without any prior BDD/SDD/Memory context and produces:
+- A review-report.md with findings (code quality, architecture issues, missing tests, tech debt)
+- An ISSUES list derived from the review findings
+
+This output becomes the input for two possible next steps:
+1. **Adopt ACF** → the ISSUES list feeds directly into Bootstrap (create CLAUDE.md, SDD, Memory with ISSUES already populated) → then triage into US
+2. **Don't adopt ACF** → the review-report.md is still a useful standalone artifact — a comprehensive codebase health check
+
+This makes Review Session the **lowest-cost entry point** to ACF. No commitment to the full framework is required — just run `orchestrator review` on any project and get value immediately.
+
+| Dimension | Verify (micro, per-US) | Review Session (macro, on-demand) |
+|-----------|------------------------|-------------------------------------|
+| Scope | Single US changes | All project changes since last review (or all time) |
+| Checks | Completeness, correctness, coherence of one US | Cross-US integration, regression, spec drift, tech debt |
+| Trigger | After impl, before commit | **Any time** — human or orchestrator initiated, **any project** (ACF or not) |
+| Output | Pass/fail → commit or fix | review-report.md → ISSUES → triage (or Bootstrap) |
+| Token cost | ~3K-6K (read US files) | ~10K-20K (varies with scope) |
+| ACF required? | Yes (part of US pipeline) | **No** — works on any codebase, ACF adoption optional |
+
+**Review Session works in all modes:** Full Mode projects get the full review + triage + re-entry cycle. Lite Mode or non-ACF projects get a standalone review-report.md + ISSUES list.
+
+**Review Session checklist template:**
+
+```markdown
+## Sprint Review: Sprint {N}
+
+### Code Review
+- [ ] Cross-US module integration verified
+- [ ] No dead code / unused imports from feature changes
+- [ ] Naming and error handling consistency across US
+
+### Spec-Code Coherence
+- [ ] All BDD scenarios have corresponding tests
+- [ ] SDD architecture matches actual code structure
+- [ ] API contracts match actual endpoints
+
+### Regression
+- [ ] Full test suite passes (unit: X, intg: X, e2e: X)
+- [ ] No regressions from previous sprint baseline
+- [ ] Performance baselines maintained (if @perf tests exist)
+
+### Security
+- [ ] No hardcoded secrets across full repo (API keys, tokens, passwords, private keys)
+- [ ] `.gitignore` covers secret file patterns (.env, *.key, credentials.json, *.pem)
+- [ ] No credentials in logs, error messages, or API responses
+- [ ] Test fixtures use mock values, not real credentials
+
+### Memory Audit
+- [ ] ISSUES section reflects current reality
+- [ ] SYNC file mappings are accurate
+- [ ] NEXT priorities updated for post-sprint context
+
+### Findings
+| # | Severity | Description | Linked US | Recommended Action |
+|---|----------|-------------|-----------|-------------------|
+```
+
+#### Key Design Decisions (To Discuss)
+
+**1. Who determines the rollback target?**
+
+| Option | Pro | Con |
+|--------|-----|-----|
+| **A. CC decides** | Zero human intervention, fully autonomous | May misjudge — rollback too shallow (impl) when the real problem is spec (bdd) |
+| **B. Human decides** | Accurate | Blocks the pipeline, defeats automation purpose |
+| **C. CC proposes, human confirms** | Best of both worlds | Adds one round-trip latency |
+
+**Leaning:** Option A with guardrails — CC decides, but if the reopened US fails verify again after fix, auto-escalate rollback one level deeper (impl → sdd-delta → bdd). This is consistent with the existing "reason-based routing" philosophy.
+
+**2. ISSUES format: explicit linked US or CC infers?**
+
+Current ISSUES format (from Templates.md):
+```markdown
+## ISSUES
+- [High] 4 independent web apps, no shared state or navigation | status: open
+```
+
+Option A — Add explicit `linked` field:
+```markdown
+- [High] 4 independent web apps, no shared state | linked: US-008 | status: open
+```
+
+Option B — CC infers from context (reads history.md, BDD docs, git log):
+```markdown
+- [High] 4 independent web apps, no shared state | status: open
+```
+CC reads `.ai/history.md` → finds US-008 built the web apps → infers link.
+
+**Leaning:** Option A for agent-written ISSUES (structured, zero ambiguity), Option B allowed for human-written ISSUES (humans won't always know the linked US). CC should attempt inference when `linked` is absent.
+
+**3. Reopen semantics: what happens to the "done" US?**
+
+When US-008 is reopened:
+- STATE.json is overwritten with the reopened step (e.g. `step: bdd, status: pending`)
+- Previous completion record stays in `.ai/history.md` (append-only, never deleted)
+- A new entry is added to history: `US-008 reopened — reason: [ISSUES item description]`
+- BDD/SDD/test files from the previous completion are preserved — CC modifies them, not rewrites
+
+This is consistent with the "incremental not rewrite" principle.
+
+**4. What about ISSUES that span multiple US?**
+
+Example: "No shared navigation between 4 web apps" might touch US-003 (app A), US-005 (app B), US-008 (app C).
+
+**Leaning:** Create a new US that references all related US. Don't reopen multiple US simultaneously — that breaks the single-story-at-a-time pipeline model. The new US's BDD should define the cross-cutting behavior, and its SDD delta can reference the existing modules.
+
+**5. Review Session: autonomous or human-gated?**
+
+| Option | Pro | Con |
+|--------|-----|-----|
+| **A. Fully autonomous** | CC runs review + triage + re-entry without stopping | May miss context that only human knows; could reopen wrong US |
+| **B. Review auto, triage human-gated** | CC produces review report + triage plan, human approves before re-entry | One round-trip, but human sees the full picture before pipeline restarts |
+| **C. All human-gated** | Every phase needs approval | Too slow, defeats automation purpose |
+
+**Decision:** Option B with agent recommendations — Review Session runs autonomously (analysis only, no mutations), triage plan includes CC's **reasoned recommendations** (not just a list), human confirms before execution.
+
+CC's triage plan should include for each ISSUE:
+- **Recommended action:** reopen US-XXX at step Y / create new US
+- **Rationale:** why this rollback target (e.g. "BDD for US-008 has no scenario for shared navigation — spec gap, not impl bug")
+- **Impact estimate:** which files/modules will be affected, estimated scope
+- **Priority suggestion:** recommended execution order with reasoning (e.g. "fix US-008 first — US-011 depends on its shared state module")
+
+Human sees CC's reasoning, can override any decision, then approves the final plan.
+
+The flow becomes:
+```
+CC runs Review Session autonomously
+    → produces review-report.md + updates ISSUES
+    → CC runs triage, outputs triage-plan with recommendations + rationale
+    → Human reviews plan (sees CC's reasoning, can override)
+    → Human approves → orchestrator executes triage plan
+    → Pipeline re-entry begins
+```
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐⭐ Saves tokens by routing bugs back to the correct spec level instead of ad-hoc fixes that miss root cause and require re-fixing. Review Session costs ~10-20K tokens but prevents multiple rounds of wrong-level fixes |
+| **Quality** | ⭐⭐⭐ Review Session catches cross-US issues that per-US Verify misses (integration gaps, spec drift, regression). Bugs are fixed at the spec level (BDD/SDD), not just patched in code |
+| **Autonomy** | ⭐⭐⭐ Removes the biggest remaining manual bottleneck: "sprint is done, now what?" CC can review, triage, and propose next actions autonomously — human only confirms |
+
+**Verdict: Must-Do** (all three dimensions score ⭐⭐+)
+
+#### Relationship to Existing Concepts
+
+- **Verify step** (Lifecycle.md): Review Session is the macro-level equivalent — Verify checks one US, Review checks the whole sprint.
+- **Reason-Based Routing** (Protocol.md): Already handles "failing → retry or route" within a running story. Triage extends this to completed stories.
+- **Rollback** (Protocol.md v0.12): Already implemented in ACO. Reopen = rollback on a completed story.
+- **Touch-it-test-it** (FB-R03): When reopening, Step 0 Safety Net Check applies — verify test coverage before modifying.
+- **Macro-Agile** (Lifecycle.md): Review → Triage → Re-entry is the missing feedback loop that closes the macro-agile cycle: sprint → review → triage → next sprint.
+- **Review Checkpoint** (Lifecycle.md): Triage plan human-gate is the sprint-level analogue of the per-US Review Checkpoint.
+
+**Status:** ✅ All 5 design decisions confirmed. Incorporated into Lifecycle.md v0.7 + Protocol.md v0.13 + Templates.md v0.10.
+
+---
+
+### FB-010: Framework Migration — Versioned Adoption for Existing Projects
+
+**Date:** 2026-02-27
+**Context:** As ACF evolves (v0.6 → v0.7 Lifecycle, v0.12 → v0.13 Protocol, etc.), existing projects bootstrapped under earlier versions have no defined path to adopt new capabilities. go-netagent was bootstrapped before FB-009 (Review → Triage → Re-entry) existed — how does it start using those features?
+
+#### The Gap
+
+ACF defines how to bootstrap a new project and how to run the pipeline, but not how a project transitions when the framework itself changes. This is different from code migration — ACF is a set of conventions, not software with APIs. But conventions still evolve, and existing projects need a smooth path to benefit from new capabilities.
+
+#### Design: Version Tag + Gradual Adoption + Backward Compatibility
+
+**1. CLAUDE.md records ACF version**
+
+Add to Agent Guidelines section:
+```
+ACF Version: 0.7
+```
+
+CC reads this to know which ACF capabilities the project was set up under. When CC reads a newer ACF spec, it compares versions and knows what's new for this project.
+
+**2. Gradual adoption at natural touchpoints**
+
+CC does NOT auto-upgrade existing projects. Instead, it proposes new features at natural moments:
+
+| Touchpoint | What CC proposes |
+|------------|-----------------|
+| Session start | "ACF has new Review → Triage → Re-entry. Want me to explain what it adds?" |
+| Story completion | "Your ISSUES could benefit from `linked: US-XXX` format for automated triage. Want me to add links to existing ISSUES?" |
+| Review Session | During Memory Audit, CC backfills `linked` on ISSUES where it can infer the linked US from history.md + BDD/SDD |
+| Triage | CC infers `linked` for any ISSUES that don't have it, as part of classification |
+
+Human approves which features to adopt. No forced migration.
+
+**3. Backward compatibility — nothing breaks**
+
+| ACF change type | Impact on old projects |
+|----------------|----------------------|
+| Additive (new command like `review`) | Available when needed, ignored otherwise |
+| Format extension (ISSUES `linked` field) | Old format still works; CC infers when `linked` is absent |
+| New pipeline step (e.g. commit step v0.11) | CC follows new spec on next dispatch; no project-side change needed |
+| Behavioral change (e.g. HANDOFF latest-entry-only) | CC adopts new behavior; old HANDOFF content preserved in history |
+
+**4. CC backfills `linked` on ISSUES automatically**
+
+When CC encounters ISSUES without `linked` — at Triage or Review Session — it reads `.ai/history.md`, BDD/SDD docs, and git log to infer the linked US. If inference is confident, CC adds the `linked` field directly. This is consistent with design decision #2 from FB-009 (CC infers for human-written ISSUES).
+
+Backfill timing:
+- **Triage:** always — CC must classify every ISSUE, so inference happens naturally
+- **Review Session:** always — Memory Audit checks ISSUES accuracy, backfill is part of that
+- **Session start:** optional — costs extra tokens, only if human opts in
+
+#### Design Decisions
+
+**1. No migration script — CC is the migration engine**
+
+ACF is read by CC every session. When the spec changes, CC's behavior changes. The "migration" is CC reading the new spec and applying it. No external tooling needed.
+
+**2. Version in CLAUDE.md, not in a separate file**
+
+CLAUDE.md is already the project's configuration file for ACF (mode, team size). Adding version there is consistent. CC reads CLAUDE.md every session — zero extra cost.
+
+**3. Human-gated adoption, not auto-upgrade**
+
+Same philosophy as Triage (FB-009): CC recommends, human confirms. This prevents surprises when a project suddenly behaves differently because the framework updated.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ Minimal cost — one line in CLAUDE.md, version comparison is trivial |
+| **Quality** | ⭐⭐ Existing projects get access to new quality mechanisms (Review, Triage) without starting over |
+| **Autonomy** | ⭐⭐ CC can self-assess what's new and propose adoption — human doesn't need to read changelogs |
+
+**Verdict: Worth-Doing** (two dimensions score ⭐⭐)
+
+**Status:** ✅ Design confirmed. Ready to incorporate into Lifecycle.md + Templates.md.
+
+---
+
+### FB-011: Security Principle — Secrets Handling as a Framework Constraint
+
+**Date:** 2026-02-27
+**Context:** ACF has no guidance on how agents should handle secrets (API keys, tokens, credentials, connection strings). In practice, agents frequently encounter these during implementation — config files, environment setup, test fixtures, CI integration. Without a framework-level constraint, agents may hardcode secrets, commit `.env` files, or expose credentials in test data.
+
+#### The Gap
+
+Constitution defines 3-5 project principles, but security is not a default. Verify checks completeness/correctness/coherence but not security. Review Session checks code quality and spec drift but not credential exposure. Security is entirely left to the developer's memory.
+
+#### Design: Three-Layer Security Integration
+
+**Layer 1: Constitution — Default Security Principle (Bootstrap)**
+
+Every project's Constitution includes a security principle by default. Template provides a starter set; teams can customize.
+
+```markdown
+## Security
+- Never hardcode secrets (API keys, tokens, passwords, connection strings) in source code
+- Use environment variables or secret management; document required vars in README
+- Ensure .gitignore covers secret files (.env, *.key, credentials.json, *.pem) before first commit
+- Test fixtures use fake/mock values, never real credentials
+- If a secret is needed for implementation, add a placeholder with clear naming (e.g. `YOUR_API_KEY_HERE`)
+```
+
+**Layer 2: Verify — Security Check (Per-US)**
+
+Extend Verify from three checks to four:
+
+| Check Dimension | Content | Determination Method |
+|-----------------|---------|---------------------|
+| **Security** | No hardcoded secrets in committed files? `.gitignore` covers secret file patterns? Test fixtures use mock values? | **Semi-deterministic**: grep for common secret patterns (`password=`, `apikey=`, `token=`, `BEGIN RSA`), check `.gitignore` entries |
+
+Action on failure: return to Implementation to fix. Same as Correctness — this is a hard gate, not a warning.
+
+**Layer 3: Review Session — Security Scan (Cross-US)**
+
+Add to Review Session's Code Review checklist:
+- No secrets committed across any US (scan full repo, not just current diff)
+- `.gitignore` still covers all secret patterns after multi-US changes
+- No credentials leaked in logs, error messages, or API responses
+- Dependencies with known vulnerabilities flagged (if tooling available)
+
+#### Why Not a US?
+
+A US produces a deliverable and completes. Security is not something you "finish" — it's a constraint that applies to every US. This is exactly what Constitution + Verify + Review are designed for: cross-cutting concerns that persist across the entire project lifecycle.
+
+#### Design Decisions
+
+**1. Constitution security is a default, not optional**
+
+Unlike other Constitution principles which are project-specific (3-5 chosen by the team), the security principle is pre-populated in the template. Teams can modify the specifics but not remove the category entirely.
+
+**2. Verify security check is semi-deterministic**
+
+Pattern-based grep catches most common mistakes (hardcoded passwords, API keys, private keys). It won't catch everything (e.g. a secret disguised as a normal string), but it catches the 80% case at near-zero token cost. The remaining 20% is caught by Review Session's broader scan.
+
+**3. Lite Mode still gets Constitution security**
+
+Even Lite Mode projects benefit from the security principle. Since Lite Mode skips Verify's full triple-check, the Constitution text in CLAUDE.md serves as the primary guardrail — CC reads it every session and applies it during implementation.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ Near-zero cost — Constitution is a few lines, Verify grep is cheap, Review adds one checklist item |
+| **Quality** | ⭐⭐⭐ Prevents the most common and dangerous agent mistake — committing secrets to version control |
+| **Autonomy** | ⭐⭐ Agent self-checks for secrets without human needing to remember to ask |
+
+**Verdict: Must-Do** (Quality ⭐⭐⭐ alone justifies it)
+
+**Status:** ✅ Design confirmed. Ready to incorporate into Templates.md (Constitution) + Lifecycle.md (Verify + Review).
+
+---
+
+## Future Notes
+
+Items identified as potential improvements but not yet prioritized for design or implementation.
+
+| # | Topic | Description | Priority |
+|---|-------|-------------|----------|
+| FN-001 | **Metrics / Measurement** | Define KPIs for ACF effectiveness: token cost per US, retry rate, triage reopen ratio, regression rate across sprints. Data source: hook.log + STATE.json history. Purpose: continuous improvement of the framework itself | Low — need more field data first |
+| FN-002 | **Estimation** | Complexity estimation at BDD stage (S/M/L) based on scenario count, module coupling, and history of similar US. Could inform sprint planning and token budget prediction | Low — useful but not blocking |
+| FN-003 | **Cross-Project Learning** | Mechanism for patterns learned in one project (e.g. "WebRTC US needs deeper SDD") to transfer to new projects. Could be a shared knowledge base or agent memory that spans projects | Low — single-project workflow is solid first |
+
+---
+
 ## Changelog
 
 | Version | Date | Changes |
@@ -492,3 +936,6 @@ Our Skill achieves similar coordination effects with more token-efficient means 
 | v0.7 | 2026-02-16 | FB-R01 expanded: Lite mode retains minimal PROJECT_MEMORY (NOW+NEXT); Lite as on-ramp to Full (scenario table); mode switching mechanism (verbal + CLAUDE.md edit); Upgrade Checklist + Downgrade procedure; agent must acknowledge and inform on mode switch |
 | v0.8 | 2026-02-17 | FB-R05~R07 incorporated into Skill. FB-007/FB-008 summary recorded |
 | v0.9 | 2026-02-17 | FB-007 expanded: full ROI tables (high/low elements), token consumption analysis (53% saving, 42% overhead ratio), applicability conclusions, 6 core learnings. FB-008 expanded: full concept mapping table, upgrade directions (sub-agent split, persistent memory, agent team for large US), future migration path triggers table |
+| v0.10 | 2026-02-26 | FB-009: ISSUES-Driven Triage — Review → Triage → Re-entry flow for turning unfixed ISSUES into pipeline work (reopen linked US or create new US), 6 design decisions confirmed, Review Session as on-demand health check and ACF on-ramp for existing projects |
+| v0.11 | 2026-02-27 | FB-010: Framework Migration — version tag in CLAUDE.md, gradual adoption at natural touchpoints, backward compatibility, CC backfills `linked` on ISSUES automatically. Future Notes section added: FN-001 (Metrics), FN-002 (Estimation), FN-003 (Cross-Project Learning) |
+| v0.12 | 2026-02-27 | FB-011: Security Principle — three-layer security integration: Constitution default security principle (Bootstrap), Verify fourth check dimension (per-US), Review Session security scan (cross-US). Default in all modes including Lite |

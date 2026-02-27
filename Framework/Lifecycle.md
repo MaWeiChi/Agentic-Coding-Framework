@@ -104,17 +104,18 @@ Dependencies between Stories fall into two types:
 
 ### Verify Step (After Implementation, Before Update Memory)
 
-Verify is the quality gate for each Story's micro-waterfall, executed after all tests pass but before updating Memory. The agent automatically performs three checks:
+Verify is the quality gate for each Story's micro-waterfall, executed after all tests pass but before updating Memory. The agent automatically performs four checks:
 
 | Check Dimension | Content | Determination Method | Action on Failure |
 |-----------------|---------|---------------------|------------------|
 | **Completeness** | Are all BDD scenarios covered by corresponding tests? Have all ADDED items in Delta Spec been implemented? Are there any unresolved `[NEEDS CLARIFICATION]` remaining? | **Semi-deterministic**: test existence can be confirmed by grep; "all implemented" requires LLM judgment | Return to corresponding step to complete |
 | **Correctness** | Do all tests pass? Are NFR thresholds met? | **Deterministic**: `go test` / `npm test` exit code + numerical results from NFR tools | Return to Implementation to fix |
 | **Coherence** | Has the main SDD file merged Delta Spec? Does the API contract match the implementation? Are Constitution principles violated? | **LLM-dependent**: executor needs to read multiple documents and compare semantic consistency | Fix inconsistencies |
+| **Security** | No hardcoded secrets in committed files? `.gitignore` covers secret file patterns? Test fixtures use mock values, not real credentials? | **Semi-deterministic**: grep for common secret patterns (`password=`, `apikey=`, `token=`, `BEGIN RSA PRIVATE KEY`), check `.gitignore` entries | Return to Implementation to fix |
 
-**Significance of Determination Method Classification**: Deterministic checks (Correctness) can be automatically executed by hooks with zero LLM tokens; semi-deterministic and LLM-dependent checks (Completeness, Coherence) require executor session handling, consuming tokens. Orchestrator can run deterministic checks in the hook phase first, and only dispatch executor for Coherence checks after all pass, saving token costs on failures.
+**Significance of Determination Method Classification**: Deterministic checks (Correctness) can be automatically executed by hooks with zero LLM tokens; semi-deterministic and LLM-dependent checks (Completeness, Coherence, Security) require executor session handling, consuming tokens. Orchestrator can run deterministic checks in the hook phase first, and only dispatch executor for Coherence checks after all pass, saving token costs on failures. Security checks are cheap (pattern-based grep) and should run alongside Correctness in the hook phase.
 
-Verify is automatic checking by the agent, not human Review. If all three checks pass, proceed to Commit; if any check fails, return to the corresponding step to fix and re-run Verify.
+Verify is automatic checking by the agent, not human Review. If all four checks pass, proceed to Commit; if any check fails, return to the corresponding step to fix and re-run Verify.
 
 ### Implementation Self-Correction Loop and Recursion Limit
 
@@ -219,6 +220,96 @@ With DONE and LOG moved to `.ai/history.md`, PROJECT_MEMORY.md is significantly 
 | `.ai/history.md` grows very large | Human decides whether to archive older entries (this file is append-only by design) |
 
 Cleanup principle: **Fact-based sections can be auto-cleaned (truncate by rule), intent-based sections can only be cleaned by humans.** Agent never proactively deletes content in `NOW`, `NEXT`, `SYNC`.
+
+### Review → Triage → Re-entry (ISSUES-Driven Feedback Loop)
+
+The micro-waterfall handles forward progress within a single US. This section defines the **reverse path**: how bugs, review findings, and unfixed ISSUES re-enter the pipeline.
+
+#### Review Session
+
+A Review Session is an **on-demand project health check**. It is not tied to sprint boundaries — it can be triggered at any time by a human or orchestrator, and operates on the project's current state.
+
+**Trigger scenarios:**
+
+| When | Why |
+|------|-----|
+| Sprint complete (all US done) | Post-sprint retrospective, plan next sprint |
+| Mid-sprint checkpoint | Verify cross-US integration before continuing |
+| Single US just completed | Quick check for regressions or spec drift |
+| Returning after a break | Understand current project health before resuming |
+| Pre-release | Final quality gate before shipping |
+| Existing project, not yet using ACF | Reverse-engineer current state as ACF Bootstrap input |
+
+CC autonomously performs five checks:
+
+1. **Code Review** — cross-US integration, dead code, naming/error-handling consistency
+2. **Spec-Code Coherence** — BDD scenarios vs test coverage, SDD vs code structure, API contracts vs endpoints
+3. **Regression Check** — run full test suite, compare against baseline, flag regressions
+4. **Security Scan** — no secrets committed across any US (scan full repo), `.gitignore` covers all secret patterns, no credentials in logs/error messages/API responses
+5. **PROJECT_MEMORY Audit** — ISSUES accuracy, SYNC mappings, NEXT priorities
+
+Output: `review-report.md` (structured findings) + updated ISSUES in PROJECT_MEMORY.md. Each new ISSUE includes severity, description, and linked US (if identifiable).
+
+**Review works on any project:** ACF projects get the full review + triage + re-entry cycle. Non-ACF projects get a standalone review-report.md + ISSUES list — the lowest-cost entry point to ACF.
+
+**Review Session is Full Mode only** for ACF projects. Lite Mode projects skip it — the per-US Verify step is sufficient for small scope.
+
+#### Triage
+
+After a Review Session produces updated ISSUES, CC classifies each unfixed item:
+
+| ISSUE has linked US? | Action |
+|---------------------|--------|
+| Yes (e.g. `linked: US-008`) | **Reopen** US-008 at the appropriate pipeline step |
+| No | **Create** a new US (next available ID), link it to the ISSUE |
+| Spans multiple US | **Create** a new cross-cutting US that references all related US |
+
+**Rollback target determination** — CC decides based on the nature of the bug:
+
+| Bug type | Rollback to | Rationale |
+|----------|-------------|-----------|
+| Missing scenario / spec gap | `bdd` | The behavior was never defined |
+| Architecture / design flaw | `sdd-delta` | The design needs revision |
+| Implementation bug | `impl` | The design is correct, code is wrong |
+
+**Guardrail:** If a reopened US fails Verify again after the fix, the system auto-escalates rollback one level deeper (impl → sdd-delta → bdd). This is consistent with Reason-Based Routing — repeated failure at one level suggests the root cause is deeper.
+
+**Triage output:** A triage plan containing, for each ISSUE:
+- Recommended action (reopen at step X / create new US)
+- Rationale (why this rollback target)
+- Impact estimate (files/modules affected)
+- Priority suggestion (execution order with reasoning)
+
+**Triage is human-gated.** CC produces the triage plan with reasoned recommendations; human reviews, can override any decision, then approves. This matches the Review Checkpoint philosophy — design-level decisions require human confirmation.
+
+#### Re-entry
+
+Once the triage plan is approved:
+
+- **Reopened US:** STATE.json is overwritten with the target step (`status: pending`). Previous completion record stays in `.ai/history.md`. A new entry is added: `US-XXX reopened — reason: [ISSUE description]`. Existing BDD/SDD/test files are preserved — CC modifies them incrementally, not rewrites.
+- **New US:** Enters the standard pipeline from `bootstrap` or `bdd`.
+- **Step 0 applies:** When reopening, the Safety Net Check (touch-it-test-it) still applies — verify test coverage before modifying.
+
+#### Relationship to Existing Mechanisms
+
+| Mechanism | Scope | This extends it to |
+|-----------|-------|--------------------|
+| Verify | Single US, after impl | Review Session: all US, any time |
+| Reason-Based Routing | Within a running story | Triage: across completed stories |
+| Rollback | Current story's step | Reopen: completed story's step |
+| Review Checkpoint | Per-US human gate | Triage plan: sprint-level human gate |
+
+### Framework Version Migration
+
+When ACF itself evolves, existing projects need a path to adopt new capabilities without disruption.
+
+**Version tracking:** CLAUDE.md records the ACF version the project was bootstrapped under (e.g. `ACF Version: 0.7`). CC compares this against the current spec version each session.
+
+**Adoption model:** CC does not auto-upgrade projects. It proposes new features at natural touchpoints — session start, story completion, Review Session, or Triage. Human approves which features to adopt.
+
+**Backward compatibility:** All ACF changes are designed to be backward-compatible. Additive features (new commands) are available when needed. Format extensions (e.g. ISSUES `linked` field) degrade gracefully — CC infers when the field is absent. New pipeline behaviors (e.g. commit step) apply automatically on next dispatch.
+
+**CC as migration engine:** Because CC reads the ACF spec every session, "migration" is simply CC reading the updated spec and adjusting behavior. No external migration scripts or tooling required.
 
 ### Why "Incremental Update" Rather Than "Rewrite"
 
@@ -335,3 +426,6 @@ Different project types (Go container service, WordPress CMS, Astro + WordPress 
 | v0.4 | 2026-02-16 | Field feedback: Bootstrap split into Full/Lite mode; add Step 0 Safety Net Check ("touch it, test it"); add mode switching with Upgrade Checklist/Downgrade; Memory update rules changed (DONE/LOG → .ai/history.md); conflict resolution and cleanup rules updated |
 | v0.5 | 2026-02-25 | Add Commit step between Verify and Update Memory; Verify pass now proceeds to Commit instead of Update Memory; aligned with Protocol v0.11 |
 | v0.6 | 2026-02-25 | Checklist system: each story auto-generates `.ai/CHECKLIST.md` with per-step checkbox items; executor updates checklist as it completes work. Rollback support: pipeline can roll back to earlier step when needed. Pre-dispatch prerequisite checks: warn if `claude_reads` files missing before dispatch. Aligned with Protocol v0.12 |
+| v0.7 | 2026-02-26 | FB-009: Review → Triage → Re-entry feedback loop. On-demand Review Session (code review, spec-code coherence, regression, memory audit). Triage classifies unfixed ISSUES into reopen (linked US) or create (new US) with rollback target determination and auto-escalation guardrails. Human-gated triage plan. Review works on non-ACF projects as ACF on-ramp |
+| v0.8 | 2026-02-27 | FB-010: Framework Version Migration — CLAUDE.md records `ACF Version`, CC proposes new features at natural touchpoints (session start, story completion, Review, Triage), backward-compatible design, CC as migration engine (no external tooling). CC backfills `linked` on ISSUES automatically during Triage and Review |
+| v0.9 | 2026-02-27 | FB-011: Security Principle — Verify extended from 3 to 4 checks (add Security: no hardcoded secrets, .gitignore coverage, mock credentials in tests); Review Session extended from 4 to 5 checks (add Security Scan: full-repo secret scan, credential leak in logs/responses) |

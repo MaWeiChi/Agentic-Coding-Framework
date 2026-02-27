@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.20, Lifecycle v0.6, Protocol v0.12 (2026-02-25)
+> Derived from: Framework v0.20, Lifecycle v0.9, Protocol v0.13, Templates v0.12 (2026-02-27)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -14,16 +14,16 @@ when you need specifics on what to read, produce, and check at each step.
 **Read:** Nothing yet (you're starting fresh)
 
 **Full Mode — Produce:**
-1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full`
+1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.9`
 2. `docs/sdd/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
-3. `docs/constitution.md` — 3–5 inviolable architectural principles (RFC 2119 SHALL level)
+3. `docs/constitution.md` — 3–5 inviolable architectural principles (RFC 2119 SHALL level). **Must include a "No Hardcoded Secrets" principle by default** (API keys, tokens, passwords in env vars, `.gitignore` covers secret files, test fixtures use mock values)
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
 5. `.ai/history.md` — Empty file (will hold DONE, LOG, and session history)
 6. `.ai/HANDOFF.md` — Empty file
 7. Directory structure: `docs/bdd/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
 
 **Lite Mode — Produce:**
-1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite`
+1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.9`
 2. `PROJECT_MEMORY.md` — Minimal: NOW + NEXT only (~5 lines). Even one-off tasks
    benefit from this in case follow-up sessions occur.
 3. Do NOT create `.ai/` files (HANDOFF.md, history.md) — these are Full Mode only.
@@ -185,15 +185,16 @@ If any `[NEEDS CLARIFICATION]` items exist, the human clarifies them at this poi
 
 **Produce:** Nothing (check only). If passing, proceed. If failing, return to relevant step.
 
-**Three checks:**
+**Four checks:**
 
 | Check | What to Verify | On Failure |
 |-------|---------------|-----------|
 | **Completeness** | All BDD scenarios have tests? All ADDED items in Delta implemented? No unresolved `[NEEDS CLARIFICATION]`? | Return to the step that's incomplete |
 | **Correctness** | All tests pass? NFR thresholds met? | Return to Implementation |
 | **Coherence** | Main SDD merged with Delta? API contract matches implementation? Constitution not violated? | Fix the inconsistency |
+| **Security** | No hardcoded secrets in committed files? `.gitignore` covers secret patterns (`.env`, `*.key`, `credentials.json`, `*.pem`)? Test fixtures use mock values? | Return to Implementation |
 
-After all three pass:
+After all four pass:
 
 1. **Merge Delta into SDD** — Apply ADDED/MODIFIED/REMOVED from Delta Spec into the
    main `docs/sdd.md`. This is when the SDD becomes the single source of truth again.
