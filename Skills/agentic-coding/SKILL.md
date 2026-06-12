@@ -168,7 +168,8 @@ project-root/
 │   ├── specs/<capability>.md         # Layer 2: Behavior Specs (current behavior truth)
 │   ├── sdd/sdd.md                    # Layer 3: Software Design Document
 │   ├── api/openapi.yaml              # Interface contracts
-│   ├── deltas/US-XXX.md              # Per-Story delta: Behavior Delta + SDD Delta (archived after merge)
+│   ├── deltas/US-XXX.md              # Per-Story delta: Behavior + SDD (exists only while in flight)
+│   ├── deltas/archive/               # Merged deltas, date-prefixed (frozen history)
 │   ├── nfr.md                        # Non-functional requirements
 │   ├── constitution.md               # Architectural invariants
 │   └── ddd/                          # DDD (if multi-domain)

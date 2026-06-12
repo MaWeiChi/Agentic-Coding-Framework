@@ -1047,6 +1047,43 @@ Company- or domain-mandated requirement formats stay out of scope. If an upstrea
 
 ---
 
+### FB-015: Delta Disposition — Archive-on-Merge Replaces "Archive or Delete"
+
+**Date:** 2026-06-12
+**Context:** FB-012 made the per-Story delta file (`docs/deltas/US-{id}.md`, Behavior Delta + SDD Delta) the BDD/SDD steps' working artifact, but left its post-merge disposition ambiguous: "archive in place or delete, project's choice."
+
+#### The Gap
+
+1. **State ambiguity.** A file at `docs/deltas/US-003.md` looks identical whether it is (a) the in-flight working draft of an active Story or (b) merged history from weeks ago. Tooling cannot treat file presence as a signal (the pre-dispatch check and rollback heuristic already try to), and an agent globbing `docs/deltas/` may misread a merged delta as pending work.
+2. **Delete loses the only home of per-Story rationale.** SDD Delta MODIFIED sections carry `Reason:`/`Impact:`; Behavior Delta MODIFIED notes previous behavior. None of this merges — specs/SDD store current state only, git diff shows what changed but not why, ADRs cover only architecture-level decisions.
+3. **Delete breaks mid-pipeline reopen.** `reopen --target scaffold|verify` steps list the active delta in `claude_reads`; deletion forces every reopen back to `bdd`.
+4. **The `.feature` analogy does not transfer.** `.feature` was a *live* second copy with ongoing sync cost; a merged delta is *frozen* — zero maintenance, not auto-resent, in no future Story's `claude_reads`. The real cost is ambiguity, not storage.
+
+#### Design: Archive-on-Merge (OpenSpec-style)
+
+1. **Verify step, after the dual merge passes:** move `docs/deltas/US-{id}.md` → `docs/deltas/archive/{YYYY-MM-DD}-US-{id}.md`.
+2. **Path encodes state:** the active path exists ⟺ the Story is in flight. Pre-dispatch file checks and the rollback heuristic become deterministic signals instead of heuristics; absence of an active delta for a completed Story is the expected state, not an error.
+3. **Date prefix** handles reopen cycles: a US reopened at `bdd` produces a fresh active delta covering only the fix; on its merge, the second archive entry does not collide with the first.
+4. **Delete remains a project-level option** for projects that fully trust git history; the default is archive.
+
+#### Open Follow-Up
+
+Post-merge reopen at steps that read the delta (`scaffold`, `verify`) should arguably read `docs/specs/` (the merged truth) rather than the old delta — "make code match spec" re-entry. This changes per-step `claude_reads` semantics in Protocol and is deferred; for now, reopen at those steps may consult `docs/deltas/archive/` read-only for context, or roll back to `bdd`.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ Prevents agents loading stale deltas as pending work; archive is cold (never auto-read) |
+| **Quality** | ⭐⭐ Per-Story rationale preserved; active-vs-merged state unambiguous |
+| **Autonomy** | ⭐⭐ File-presence checks (pre-dispatch, rollback suggestion) become reliable signals |
+
+**Verdict: Worth-Doing** (two dimensions; incorporated immediately since the change is one move operation)
+
+**Status:** ✅ Incorporated (2026-06-12) into Lifecycle v0.11, Protocol v0.15, Templates v0.14, and Skill (SKILL.md structure, workflow.md Step 7).
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1077,3 +1114,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.12 | 2026-02-27 | FB-011: Security Principle — three-layer security integration: Constitution default security principle (Bootstrap), Verify fourth check dimension (per-US), Review Session security scan (cross-US). Default in all modes including Lite |
 | v0.13 | 2026-06-11 | FB-012~014 (field feedback from BDD requirement-writing practice + OpenSpec model review): FB-012 OpenSpec-style Behavior Specs replace `.feature` (Requirement/Scenario format with behavior-level IDs, Delta → merge lifecycle mirroring SDD, Gherkin demoted to opt-in, ID-based Completeness check); FB-013 requirement-semantics rules (Parameters table + Counter/Gauge typology, scenario exemption, answerable TBD-N, no API in scenarios, event trigger discipline, Scenario Outline retirement); FB-014 agent-first disclosure (mechanical+semantic self-check, Assumptions/Source Mapping/Conflict Scan in Review Checkpoint). Direction confirmed; incorporation pending |
 | v0.14 | 2026-06-11 | FB-012~014 incorporated: Framework v0.21, Lifecycle v0.10, Protocol v0.14, Templates v0.13, README project structure; Skill re-derived (SKILL.md, workflow.md, templates.md) with new derivation line. FB-012 status note: ACF stays self-contained — no upstream requirement-document dependency; OpenSpec-style format conventions only, no tool dependency |
+| v0.15 | 2026-06-12 | FB-015: delta disposition — archive-on-merge replaces "archive or delete"; Verify moves the active delta to `docs/deltas/archive/{date}-US-{id}.md` so path encodes in-flight vs merged state; rationale (Reason/Impact) preserved; delete remains project option; open follow-up recorded (post-merge reopen should read docs/specs/ instead of old delta). Incorporated into Lifecycle v0.11, Protocol v0.15, Templates v0.14, Skill |

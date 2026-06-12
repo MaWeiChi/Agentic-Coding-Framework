@@ -497,6 +497,7 @@ steps:
     claude_writes:
       - docs/specs/                # Behavior Delta merges in on pass
       - docs/sdd.md                # SDD Delta merges in on pass
+      - docs/deltas/archive/       # Active delta moves here on pass (date-prefixed, FB-015)
 
   commit:
     next_on_pass: update-memory
@@ -653,7 +654,7 @@ After completion:
 | contract | Based on the Story's delta file, update affected endpoints/events in OpenAPI/AsyncAPI contracts |
 | scaffold | Based on scenario `Test Level` fields, Parameters tables, and NFR table, produce corresponding test skeleton with machine-readable Spec/Scenario headers. All tests must fail (red) |
 | impl | Read failing tests, write minimal code to make tests pass, then refactor |
-| verify | Execute four checks: Completeness (every Requirement ID touched has a test via `Spec:` headers, all Delta implemented), Correctness (tests pass, NFR met), Coherence (specs/SDD merged Deltas, contracts consistent, Constitution not violated), Security (no hardcoded secrets). On pass, merge Behavior Delta → docs/specs/ and SDD Delta → docs/sdd.md |
+| verify | Execute four checks: Completeness (every Requirement ID touched has a test via `Spec:` headers, all Delta implemented), Correctness (tests pass, NFR met), Coherence (specs/SDD merged Deltas, contracts consistent, Constitution not violated), Security (no hardcoded secrets). On pass, merge Behavior Delta → docs/specs/ and SDD Delta → docs/sdd.md, then move the delta file to `docs/deltas/archive/{YYYY-MM-DD}-US-{story}.md` |
 | commit | Stage and commit all code changes with conventional commit message including story ID. Do NOT commit PROJECT_MEMORY.md or .ai/history.md. Record commit hash in HANDOFF.md front-matter as `commit_hash: <hash>` |
 | update-memory | Read HANDOFF.md commit_hash + STATE.json test results, update MEMORY's NOW/TESTS/NEXT/ISSUES/SYNC. Append DONE + LOG entry to `.ai/history.md`. Overwrite HANDOFF.md with latest session state |
 
@@ -816,6 +817,7 @@ Before dispatching an executor, the orchestrator verifies that the files listed 
 - Skips `HANDOFF.md` on first attempt (it may not exist yet for the story's first step)
 - **Warn-only**: does not block dispatch. Missing files are appended to the dispatch prompt as a WARNING section
 - Suggests a rollback target based on heuristic file-path matching (e.g., missing `docs/deltas/US-{story}.md` → suggest rollback to `bdd`)
+- The active delta path is a reliable signal (FB-015): it exists only while a Story is in flight — on Verify pass it moves to `docs/deltas/archive/`. Its absence for a *completed* Story is expected, not an error; only a missing active delta during an in-flight Story's dispatch warrants the rollback suggestion
 
 ```bash
 orchestrator check-prereqs <project-root>
@@ -1012,3 +1014,4 @@ Most projects do not need these advanced features. Start with single-executor mo
 | v0.12 | 2026-02-25 | Rollback system: `orchestrator rollback <target-step>` resets state to earlier step (validates target is before current, blocks bootstrap unless `--force`); Pre-dispatch prerequisite checks: verify `claude_reads` files exist before dispatching, warn-only (appended to prompt as WARNING section, not blocking), suggest rollback target based on missing files; Checklist system: `startStory()` auto-generates `.ai/CHECKLIST.md` with per-step checkbox items, `buildPrompt()` instructs executor to check off completed items; new CLI commands: `rollback`, `check-prereqs`; new exports: `rollback()`, `checkPrerequisites()`, `generateChecklist()`, `PrereqCheckResult` type |
 | v0.13 | 2026-02-26 | Review, Triage, and Re-entry (FB-009): `review` command dispatches on-demand Review Session (code review, spec-code coherence, regression, memory audit → review-report.md + ISSUES updates); `triage` command reads unfixed ISSUES and outputs triage-plan with CC recommendations (human-gated); `reopen` command reopens completed US at specified step (STATE overwrite + history.md entry, incremental BDD/SDD modification); guardrails: failed verify after reopen auto-escalates rollback one level deeper; cross-US issues create new US instead of reopening multiple; Review works on non-ACF projects (no .ai/STATE.json required) |
 | v0.14 | 2026-06-11 | FB-012: bdd step output changes from `docs/bdd/US-{story}.md` to the Behavior Delta section of `docs/deltas/US-{story}.md` (post_check greps for `## Behavior Delta`); sdd-delta appends the SDD Delta to the same file; scaffold reads the delta file (Test Level fields + Parameters tables) and emits machine-readable Spec/Scenario test headers; verify becomes ID-based Completeness + merges Behavior Delta → `docs/specs/` and SDD Delta → `docs/sdd.md` on pass; bootstrap creates `docs/specs/` instead of `docs/bdd/`; step instructions updated (TBD-N clarification phrasing, four-check verify); rollback heuristic example updated. Pipeline step IDs unchanged |
+| v0.15 | 2026-06-12 | FB-015: verify moves the merged delta to `docs/deltas/archive/{date}-US-{story}.md` (claude_writes + step instruction updated); active delta path becomes a reliable in-flight signal for pre-dispatch checks and rollback suggestions |

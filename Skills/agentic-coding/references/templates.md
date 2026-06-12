@@ -1,6 +1,6 @@
 # Document Templates Reference
 
-> Derived from: Templates v0.13 (2026-06-11)
+> Derived from: Templates v0.14 (2026-06-12)
 
 Condensed templates and writing guidelines for each framework document type. Use this
 when producing any framework document.
@@ -176,7 +176,9 @@ Fix login timeout bug | phase:implementation | blocker:none
 
 Current behavior truth lives in `docs/specs/<capability>.md`. Each Story contributes a
 **Behavior Delta** inside `docs/deltas/US-{id}.md`; it merges into the specs when Verify
-passes. No `.feature` files (Gherkin is opt-in only when the stack executes it).
+passes, then the delta file moves to `docs/deltas/archive/{date}-US-{id}.md` — the active
+path exists only while the Story is in flight. No `.feature` files (Gherkin is opt-in only
+when the stack executes it).
 
 ```markdown
 ## Behavior Delta — US-XXX <Story Title>

@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.21, Lifecycle v0.10, Protocol v0.14, Templates v0.13 (2026-06-11)
+> Derived from: Framework v0.21, Lifecycle v0.11, Protocol v0.15, Templates v0.14 (2026-06-12)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -234,7 +234,10 @@ After all four pass:
    `docs/specs/<capability>.md`. Specs become the current behavior truth again.
 2. **Merge SDD Delta into SDD** — Apply ADDED/MODIFIED/REMOVED into the main `docs/sdd.md`.
    Both merges happen at the same moment (FB-012).
-3. **Archive Delta** — Keep `docs/deltas/US-{id}.md` as historical record.
+3. **Archive Delta** — Move `docs/deltas/US-{id}.md` to `docs/deltas/archive/{YYYY-MM-DD}-US-{id}.md`.
+   The active delta path exists only while a Story is in flight — its absence for a completed
+   Story is expected. The date prefix prevents reopen-cycle collisions. (Projects that fully
+   trust git history may delete instead; archive is the default.)
 
 ### Step 8: Commit Changes
 
