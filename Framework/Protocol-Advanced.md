@@ -76,7 +76,7 @@ impl:
         - "*.tsx"
     test:
       claude_reads:
-        - docs/bdd/US-{story}.md
+        - docs/deltas/US-{story}.md   # Behavior Delta (Test Level fields + Parameters tables)
         - docs/api/openapi.yaml
         - docs/nfr.md
       claude_writes:
@@ -84,8 +84,8 @@ impl:
         - "*.spec.ts"
     verify:
       claude_reads:
-        - docs/bdd/US-{story}.md
-        - docs/deltas/US-{story}.md
+        - docs/deltas/US-{story}.md   # Behavior Delta + SDD Delta
+        - docs/specs/
         - docs/api/openapi.yaml
         - docs/constitution.md
       claude_writes: []
@@ -360,7 +360,7 @@ You are the TEAM LEAD. Create an agent team to parallelize this step.
 - Spawn prompt: ...
 
 ### Teammate: test
-- Reads: docs/bdd/US-007.md, docs/api/openapi.yaml, docs/nfr.md
+- Reads: docs/deltas/US-007.md, docs/api/openapi.yaml, docs/nfr.md
 - Writes: *_test.go, *.spec.ts
 - Spawn prompt: ...
 

@@ -77,7 +77,7 @@ The [Protocol document](Framework/Protocol.md) defines how an external orchestra
 | Multiple agents or team members?      | Full Mode           | Either              |
 | Quick prototype or spike?             | Lite Mode           | Either              |
 
-Lite Mode skips `.feature` files, Delta Spec, API Contracts, and Review Checkpoint. You can upgrade to Full Mode at any time by adding those documents.
+Lite Mode skips Behavior Specs, Delta Spec, API Contracts, and Review Checkpoint. You can upgrade to Full Mode at any time by adding those documents.
 
 ### Step 2 — Write a Project Summary
 
@@ -151,13 +151,13 @@ your-project/
 ├── CLAUDE.md / PROJECT_CONTEXT.md    # Layer 1: Project Summary
 ├── PROJECT_MEMORY.md                  # Dynamic state tracking
 ├── docs/
-│   ├── bdd/                           # Layer 2: BDD scenarios per story
-│   │   └── US-001.feature
+│   ├── specs/                         # Layer 2: Behavior Specs (current behavior truth)
+│   │   └── cart.md
 │   ├── sdd/                           # Layer 3: Software Design Document
 │   │   └── sdd.md
 │   ├── api/                           # Interface contracts
 │   │   └── openapi.yaml
-│   ├── deltas/                        # SDD Delta Specs (archived)
+│   ├── deltas/                        # Per-story deltas: Behavior + SDD (archived)
 │   │   └── US-001.md
 │   ├── nfr.md                         # Non-functional requirements
 │   ├── constitution.md                # Architectural invariants

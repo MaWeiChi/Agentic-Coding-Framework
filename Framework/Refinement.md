@@ -911,6 +911,142 @@ Even Lite Mode projects benefit from the security principle. Since Lite Mode ski
 
 ---
 
+### FB-012: Spec-Embedded Scenarios — Behavior Specs Replace `.feature` Files
+
+**Date:** 2026-06-11
+**Context:** Field feedback from BDD-structured requirement-writing practice, plus a review of OpenSpec's spec-driven development model. ACF's BDD step produces standalone Gherkin files (`docs/bdd/US-{id}.feature`) per Story. Two structural issues surfaced: the `.feature` files have no consumer in ACF's actual loop, and per-Story scenario files never consolidate into a "current behavior" truth — unlike the SDD, which has a Delta → merge lifecycle.
+
+#### The Gap
+
+1. **`.feature` files have no consumer.** The framework scaffolds testify/Playwright/pytest tests manually from scenarios (Test Scaffolding step); no Gherkin runner (cucumber/behave/pytest-bdd) executes them, and reviewers read markdown. The `.feature` file is a behavior document in a different syntax — a middleman artifact.
+2. **Scenarios have no stable IDs.** Traceability is a comment (`// Generated from: BDD US-XXX — <Scenario>`) — story-level only, not behavior-level, and not machine-checkable.
+3. **No current-behavior truth.** `docs/bdd/` accumulates per-Story snapshots; after 20 Stories, answering "how does the system behave today?" means replaying all of them. The SDD solves exactly this with Delta → merge; behavior scenarios never got the same treatment.
+4. **Lite Mode already proved `.feature` is droppable** — it writes BDD-style test names directly in code and works.
+
+#### Design: OpenSpec-Style Behavior Specs with the Same Delta → Merge Lifecycle as the SDD
+
+```
+docs/specs/<capability>.md     # current behavior truth: Requirements + embedded Scenarios
+docs/deltas/US-{id}.md         # per-Story delta: SDD delta + Behavior delta (ADDED/MODIFIED/REMOVED Requirements)
+```
+
+1. **Step 1 (BDD) produces a Behavior Delta, not a `.feature`:** ADDED / MODIFIED / REMOVED Requirements, each Requirement carrying its scenarios inline.
+2. **Spec format (OpenSpec-style):**
+
+```markdown
+### Requirement: <short behavior statement> [R-<CAP>-NNN]
+The system SHALL ...
+
+#### Scenario: <branch label> (Test Level: integration)
+- Given <precondition>
+- When <trigger>
+- Then <expected result>
+```
+
+3. **Stable behavior-level IDs.** One Requirement ID = one independently verifiable behavior = one test. Scaffolded tests carry a machine-readable header (`id`, `given/when/then`, `assertion_type`) instead of a free-text comment.
+4. **Test-level tags become spec fields** (`Test Level: integration | component | e2e`); NFR tags (`@perf(PERF-01)`, `@secure(SEC-01)`) attach to the Scenario label.
+5. **Unit-level scenarios exit the spec entirely.** Specs collect externally observable behavior only; unit-level GWT lives as test names in code (generalizes the Lite-mode fast path to Full Mode). Behavior documents must not describe implementation-internal behavior.
+6. **Scenario Outline / Examples retired** — parameterized cases derive mechanically from the Parameters table (see FB-013) via table-driven tests / parametrize.
+7. **Merge on Verify pass (Step 7):** the Behavior delta merges into `docs/specs/` at the same moment the SDD delta merges into the SDD. Specs are the single current truth; deltas archive as history.
+8. **Gherkin becomes opt-in:** only when the project stack actually executes `.feature` (cucumber/behave/pytest-bdd). In that case `.feature` is a **test-layer artifact derived from the spec**; the spec remains the behavior truth.
+9. **Verify Completeness check becomes ID-based:** every Requirement ID touched by the Story has a corresponding test — mechanically checkable, replacing "all BDD scenarios have tests".
+
+#### Design Decisions
+
+**1. Why Requirement + Scenario structure instead of bare scenario lists?**
+The Requirement is the addressable unit — it carries the ID, appears in deltas, and maps to tests. A flat scenario list has nothing stable to reference when behavior changes across Stories.
+
+**2. Why give behavior specs the SDD's merge lifecycle?**
+Symmetry keeps the framework coherent: one delta per Story covering both architecture and behavior, one merge point, one answer to "what is current truth." This is the part of OpenSpec's model that per-Story `.feature` files structurally cannot replicate.
+
+**3. ACF stays self-contained — no upstream-document dependency.**
+Company- or domain-mandated requirement formats stay out of scope. If an upstream document exists, the Behavior Delta may cite it as a source, but ACF's pipeline reads and writes only its own specs. What is adopted here are format conventions, not a tool dependency — no OpenSpec CLI required.
+
+**4. Migration**
+`docs/bdd/` is retired from the project structure; existing `.feature` files are archived (not deleted — history matters). Adoption follows FB-010's versioned migration path at natural touchpoints.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐⭐ One fewer artifact to write and keep in sync per Story; no GWT duplication; "current behavior" lookup is one file, not N snapshots |
+| **Quality** | ⭐⭐⭐ Single source of truth for behavior; behavior-level traceability survives requirement churn |
+| **Autonomy** | ⭐⭐ ID-based Completeness check is mechanically verifiable; agent self-checks coverage without human cross-reading two documents |
+
+**Verdict: Must-Do**
+
+**Status:** ✅ Incorporated (2026-06-11) into Framework v0.21, Lifecycle v0.10, Protocol v0.14, Templates v0.13, README, and Skill (SKILL.md + workflow.md + templates.md re-derived). `.feature` retired; specs self-contained with no upstream-document dependency; `docs/bdd/` → `docs/specs/`.
+
+---
+
+### FB-013: Requirement-Semantics Rules for Behavior Specs
+
+**Date:** 2026-06-11
+**Context:** Field feedback from BDD-structured requirement-writing practice surfaced requirement-semantics rules that ACF's BDD/Templates layer lacks. Without them, agents produce "fake BDD" for parameter-type stories, hand-fill boundary values into Examples tables, and leak API details into scenarios.
+
+#### Items
+
+**1. Scenario exemption rule.** Pure parameter/field/range requirements do not get forced GWT — a Parameters table + Error Cases suffice. The scenario field stays present with an explicit reason: `Not needed — <reason>`, or `Deferred — blocked by TBD-N`. Forcing GWT onto non-behavioral requirements produces scenarios with no test value.
+
+**2. Parameters table as a first-class artifact.** Eight columns: Parameter / Type / Unit / Range / Default / Example / R/W / Notes. Key sub-rules:
+- **Counter / Gauge / UpDownCounter typology** — Counter Range is `0 - (none)` with wrap/saturate behavior in Notes; Gauge Range is the real requirement/physical bound (e.g. `0-100` %, `-40-85` °C).
+- **Unbounded notation** — never write type ceilings (`2^63-1`) as Range; they are not requirement constraints and boundary tests cannot validate them. Write `0 - (none)`.
+- **usage/limit separation** — device-dependent ceilings split into `xxxUsage` (Range = `0 - (limit)`) and `xxxLimit` (actual device value), isolating device variance.
+- **Type abstraction** — requirement-level categories only (`integer`, `number`, `string`, `boolean`, `enum`); OpenAPI `format` (int32, float…) never backfills into the spec.
+- **Boundary tests derive mechanically** from Range / Error Cases via table-driven tests / parametrize. This **replaces Scenario Outline + Examples** (Templates v0.7 item 4): hand-filling boundary permutations into a requirement document is test-plan work and an anti-pattern at spec level.
+
+**3. Answerable TBDs upgrade `[NEEDS CLARIFICATION]`.** Numbered `TBD-N`, phrased as a question the owner can actually answer (not "to be confirmed"). Distinguish from **disclosed assumptions**: when the source has a defensible hint, the agent extracts a candidate value and discloses it for challenge (see FB-014) instead of asking.
+
+**4. No API details in scenarios.** Scenarios state behavior intent; endpoint, HTTP status, JSON field names belong to the API Contract step. Optionally one line `API Reference: METHOD /path (see openapi.yaml)` links requirement → endpoint for traceability — it adds no new test semantics.
+
+**5. Event trigger discipline.** Event-type requirements must state: precise **Trigger** condition, explicit **NOT-Triggered** condition, and **message format + variables** with matching examples — not buried in a scenario `Then` clause.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐⭐ Kills fake-BDD bloat and Examples-table hand-expansion; boundary cases generated, not authored |
+| **Quality** | ⭐⭐⭐ Range/Default/boundary semantics become testable facts; event triggers become assertable |
+| **Autonomy** | ⭐⭐ Agent decides AC-vs-Parameters mechanically; boundary expansion needs no human input |
+
+**Verdict: Must-Do** (items 1–3); items 4–5 Worth-Doing alongside.
+
+**Status:** ✅ Incorporated (2026-06-11) into Templates v0.13 (Behavior Spec writing principles, Parameters Table guide, Scenario Outline retirement) and Skill workflow.md Step 1 / templates.md.
+
+---
+
+### FB-014: Agent-First Disclosure — Self-Check and Assumptions Before Review Checkpoint
+
+**Date:** 2026-06-11
+**Context:** Field feedback from BDD-structured requirement-writing practice: when the agent self-checks its output and discloses its assumptions *before* requesting review, human review shifts from "find all bugs" to "challenge listed assumptions" — materially cheaper and more targeted. ACF's Review Checkpoint has only a Pending Clarification table; the agent runs no self-check before requesting review and discloses no assumptions.
+
+#### Design
+
+**1. Pre-review self-check (before the Review Checkpoint):**
+- **Mechanical pass:** ID format and placement, template compliance, tag/Test-Level presence, no API details in scenarios (FB-013 item 4).
+- **Semantic pass:** scenario executability (can each Given/When/Then become a test assertion?), boundary sanity (Ranges/Defaults make sense semantically, not just schema-complete), Error Case coverage (permission / invalid input / missing resource / concurrency), cross-Story conflict and redundancy, full coverage of the source Story.
+
+**2. Review Checkpoint template gains three sections:**
+- **Assumptions Made** — what the agent inferred and on what basis, listed for challenge.
+- **Source Mapping** — which source items (Story description, referenced documents) were handled, partially handled, or deferred (with reason).
+- **Cross-Story Conflict Scan** — redundancy, contradiction, undeclared dependencies against existing specs.
+
+**3. Reviewer entry point becomes:** read Assumptions Made → TBD list → spot-check the spec body. Same philosophy as FB-009/FB-010: agent recommends and discloses, human confirms.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ A few lines per US; the self-check passes are checklist runs, not regeneration |
+| **Quality** | ⭐⭐ Undisclosed assumptions are today's silent failure mode at Review |
+| **Autonomy** | ⭐⭐⭐ Review round-trips drop; human attention goes only where the agent was uncertain |
+
+**Verdict: Must-Do** (Autonomy ⭐⭐⭐ is the framework's core dimension)
+
+**Status:** ✅ Incorporated (2026-06-11) into Templates v0.13 (Review Checkpoint template + Pre-Review Self-Check), Lifecycle v0.10 (Review Checkpoint row), and Skill workflow.md Step 4 / templates.md.
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -939,3 +1075,5 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.10 | 2026-02-26 | FB-009: ISSUES-Driven Triage — Review → Triage → Re-entry flow for turning unfixed ISSUES into pipeline work (reopen linked US or create new US), 6 design decisions confirmed, Review Session as on-demand health check and ACF on-ramp for existing projects |
 | v0.11 | 2026-02-27 | FB-010: Framework Migration — version tag in CLAUDE.md, gradual adoption at natural touchpoints, backward compatibility, CC backfills `linked` on ISSUES automatically. Future Notes section added: FN-001 (Metrics), FN-002 (Estimation), FN-003 (Cross-Project Learning) |
 | v0.12 | 2026-02-27 | FB-011: Security Principle — three-layer security integration: Constitution default security principle (Bootstrap), Verify fourth check dimension (per-US), Review Session security scan (cross-US). Default in all modes including Lite |
+| v0.13 | 2026-06-11 | FB-012~014 (field feedback from BDD requirement-writing practice + OpenSpec model review): FB-012 OpenSpec-style Behavior Specs replace `.feature` (Requirement/Scenario format with behavior-level IDs, Delta → merge lifecycle mirroring SDD, Gherkin demoted to opt-in, ID-based Completeness check); FB-013 requirement-semantics rules (Parameters table + Counter/Gauge typology, scenario exemption, answerable TBD-N, no API in scenarios, event trigger discipline, Scenario Outline retirement); FB-014 agent-first disclosure (mechanical+semantic self-check, Assumptions/Source Mapping/Conflict Scan in Review Checkpoint). Direction confirmed; incorporation pending |
+| v0.14 | 2026-06-11 | FB-012~014 incorporated: Framework v0.21, Lifecycle v0.10, Protocol v0.14, Templates v0.13, README project structure; Skill re-derived (SKILL.md, workflow.md, templates.md) with new derivation line. FB-012 status note: ACF stays self-contained — no upstream requirement-document dependency; OpenSpec-style format conventions only, no tool dependency |
