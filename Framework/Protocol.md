@@ -444,7 +444,7 @@ steps:
       scope_warning: sdd-delta         # Scope issue → adjust Delta
     requires_human: true          # orchestrator sends message, waits for human
     claude_reads: []              # executor doesn't participate
-    claude_writes: []
+    claude_writes: []             # summary is ephemeral (FB-016); disclosure already lives in the delta's ## Review Disclosure section
 
   scaffold:
     next_on_pass: impl
@@ -649,12 +649,12 @@ After completion:
 
 | Step | Instruction |
 |------|-------------|
-| bdd | Based on MEMORY's NOW/NEXT, write the Behavior Delta for this Story (ADDED/MODIFIED/REMOVED Requirements with embedded scenarios, `Test Level` field per scenario, Parameters tables where applicable). Use RFC 2119 language. Mark unclear items `[NEEDS CLARIFICATION: TBD-N — <answerable question>]` |
-| sdd-delta | Based on the Behavior Delta, analyze affected modules, append the SDD Delta (ADDED/MODIFIED/REMOVED) to the Story's delta file |
+| bdd | Based on MEMORY's NOW/NEXT, write the Behavior Delta for this Story (ADDED/MODIFIED/REMOVED Requirements with embedded scenarios, `Test Level` field per scenario, Parameters tables where applicable). Use RFC 2119 language. Mark unclear items `[NEEDS CLARIFICATION: TBD-N — <answerable question>]`. Seed the `## Review Disclosure` section with behavior-level assumptions |
+| sdd-delta | Based on the Behavior Delta, analyze affected modules, append the SDD Delta (ADDED/MODIFIED/REMOVED) to the Story's delta file. Add architecture assumptions and the Cross-Story Conflict Scan to `## Review Disclosure` |
 | contract | Based on the Story's delta file, update affected endpoints/events in OpenAPI/AsyncAPI contracts |
 | scaffold | Based on scenario `Test Level` fields, Parameters tables, and NFR table, produce corresponding test skeleton with machine-readable Spec/Scenario headers. All tests must fail (red) |
 | impl | Read failing tests, write minimal code to make tests pass, then refactor |
-| verify | Execute four checks: Completeness (every Requirement ID touched has a test via `Spec:` headers, all Delta implemented), Correctness (tests pass, NFR met), Coherence (specs/SDD merged Deltas, contracts consistent, Constitution not violated), Security (no hardcoded secrets). On pass, merge Behavior Delta → docs/specs/ and SDD Delta → docs/sdd.md, then move the delta file to `docs/deltas/archive/{YYYY-MM-DD}-US-{story}.md` |
+| verify | Execute four checks: Completeness (every Requirement ID touched has a test via `Spec:` headers, all Delta implemented), Correctness (tests pass, NFR met), Coherence (specs/SDD merged Deltas, contracts consistent, Constitution not violated), Security (no hardcoded secrets). On pass, merge `## Behavior Delta` → docs/specs/ and `## SDD Delta` → docs/sdd.md (skip `## Review Disclosure`), then move the delta file to `docs/deltas/archive/{YYYY-MM-DD}-US-{story}.md` |
 | commit | Stage and commit all code changes with conventional commit message including story ID. Do NOT commit PROJECT_MEMORY.md or .ai/history.md. Record commit hash in HANDOFF.md front-matter as `commit_hash: <hash>` |
 | update-memory | Read HANDOFF.md commit_hash + STATE.json test results, update MEMORY's NOW/TESTS/NEXT/ISSUES/SYNC. Append DONE + LOG entry to `.ai/history.md`. Overwrite HANDOFF.md with latest session state |
 
@@ -859,7 +859,7 @@ Dispatches a Review Session executor that autonomously audits the project. Works
 - Output: `review-report.md` in `.ai/` + updated ISSUES in PROJECT_MEMORY.md
 - Each new ISSUE includes: severity (`[High]`/`[Med]`/`[Low]`), description, `linked: US-XXX` (if identifiable)
 - Review is analysis-only — no state mutations, no file modifications beyond report and ISSUES
-- For non-ACF projects: produces standalone review-report.md + ISSUES list (no STATE.json required)
+- For non-ACF projects: produces standalone `.ai/review-report.md` + ISSUES list (no STATE.json required)
 
 ### reopen — Re-enter Pipeline for Completed US
 
@@ -1015,3 +1015,4 @@ Most projects do not need these advanced features. Start with single-executor mo
 | v0.13 | 2026-02-26 | Review, Triage, and Re-entry (FB-009): `review` command dispatches on-demand Review Session (code review, spec-code coherence, regression, memory audit → review-report.md + ISSUES updates); `triage` command reads unfixed ISSUES and outputs triage-plan with CC recommendations (human-gated); `reopen` command reopens completed US at specified step (STATE overwrite + history.md entry, incremental BDD/SDD modification); guardrails: failed verify after reopen auto-escalates rollback one level deeper; cross-US issues create new US instead of reopening multiple; Review works on non-ACF projects (no .ai/STATE.json required) |
 | v0.14 | 2026-06-11 | FB-012: bdd step output changes from `docs/bdd/US-{story}.md` to the Behavior Delta section of `docs/deltas/US-{story}.md` (post_check greps for `## Behavior Delta`); sdd-delta appends the SDD Delta to the same file; scaffold reads the delta file (Test Level fields + Parameters tables) and emits machine-readable Spec/Scenario test headers; verify becomes ID-based Completeness + merges Behavior Delta → `docs/specs/` and SDD Delta → `docs/sdd.md` on pass; bootstrap creates `docs/specs/` instead of `docs/bdd/`; step instructions updated (TBD-N clarification phrasing, four-check verify); rollback heuristic example updated. Pipeline step IDs unchanged |
 | v0.15 | 2026-06-12 | FB-015: verify moves the merged delta to `docs/deltas/archive/{date}-US-{story}.md` (claude_writes + step instruction updated); active delta path becomes a reliable in-flight signal for pre-dispatch checks and rollback suggestions |
+| v0.16 | 2026-06-13 | FB-016: bdd/sdd-delta step instructions seed and extend the delta's `## Review Disclosure` section; verify merge explicitly skips it; `review` step `claude_writes: []` documented as intentional (ephemeral summary, disclosure lives in the delta) |

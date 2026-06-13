@@ -1084,6 +1084,54 @@ Post-merge reopen at steps that read the delta (`scaffold`, `verify`) should arg
 
 ---
 
+### FB-016: Review Disclosure Lives in the Delta; the Review Summary Is Ephemeral
+
+**Date:** 2026-06-13
+**Context:** FB-014 added the Review Checkpoint summary (Change Summary, Assumptions Made, Source Mapping, Cross-Story Conflict Scan, Pending Clarification, Review Conclusion). But — exactly like the pre-FB-015 delta — its *disposition* was never defined: Templates gives a template, workflow.md says "produce the Review summary", and Protocol's `review` step has `claude_writes: []`. Each agent improvises (print to chat, write `docs/review/US-XXX.md`, stuff it into HANDOFF), and any agent that writes a file creates a permanently stale snapshot.
+
+Note: this is distinct from FB-009's on-demand `review-report.md`, which has a defined home (`.ai/`) and a defined consumer (triage). That artifact is fine. The gap is the per-Story Review *Checkpoint* summary.
+
+#### The Gap — where each block belongs after review ends
+
+| Summary block | Destination after review | Pre-FB-016 state |
+|---------------|--------------------------|------------------|
+| Change Summary (counts) | None — a view derived from the delta; discard | OK, nobody stored it |
+| **Assumptions Made** | **The only block with durable value** — accepted assumptions are the *rationale* behind requirements; must persist | ✗ no home, evaporates at review end |
+| Pending Clarification (TBD-N) | Answered → into delta/spec; unanswered → Memory ISSUES | OK, rule exists |
+| Source Mapping | Deferred items → Memory NEXT; rest discard | ⚠ NEXT convention exists but unwritten |
+| Cross-Story Conflict Scan | Fix delta now, or log to ISSUES | ⚠ same |
+| Review Conclusion (sign-off) | Orchestrated → STATE.json review pass; manual → history.md session block | OK |
+
+The decisive observation: **FB-015 already solved half of this.** Archive-on-merge gives every Story a frozen record; if the disclosure is written *into the delta*, it rides along to `docs/deltas/archive/` automatically — no separate review snapshot file is needed.
+
+#### Design: disclosure is a delta section; summary is an assembled view
+
+1. **The delta file gains a third top-level section** `## Review Disclosure — US-XXX` (Assumptions Made / Source Mapping / Cross-Story Conflict Scan), built incrementally: the `bdd` step records behavior-level assumptions, `sdd-delta` adds architecture assumptions and the conflict scan, and Step 4 finalizes it.
+2. **The merge reads only `## Behavior Delta` and `## SDD Delta`; it explicitly skips `## Review Disclosure`.** Specs/SDD store current behavior and architecture, not the meta-rationale. The whole delta file (disclosure included) then moves to `docs/deltas/archive/` per FB-015 — so the rationale is preserved as frozen history, co-located with the change it explains.
+3. **The Review Checkpoint summary becomes an ephemeral view**, assembled from the delta (Change Summary counts derived from it, Review Disclosure surfaced, Pending Clarifications collected from `[NEEDS CLARIFICATION]` markers) and presented in chat / the orchestrator message. It is **never written to a file** — no `docs/review/`, no `.ai/REVIEW.md`.
+4. **Convergence rules at Step 4 close-out** (now written explicitly, per the table above): a challenged assumption → edit the delta to match and update its Review Disclosure entry; an answered TBD → apply into the delta/spec and remove from Memory ISSUES; an unanswered TBD → stays in Memory ISSUES; a deferred Source Mapping item → Memory NEXT; a found conflict → fix the delta now or log to ISSUES.
+
+Note the pre-review self-check (FB-014, mechanical + semantic passes) stays ephemeral — those are *checks*, not artifacts. Only the disclosure (Assumptions / Source Mapping / Conflict Scan) becomes a delta section.
+
+#### Considered and Rejected
+
+- **Keep summary as a file for team audit (Team Size N):** real teams carry sign-off in PR review; STATE.json (orchestrated) and history.md (manual) already record the gate. A standalone review file would re-stale immediately.
+- **Merge the disclosure into specs:** specs are current-behavior truth; assumptions are meta. Mixing them pollutes the spec. The archived delta is the correct home (same reasoning as keeping `Reason:`/`Impact:` out of the merged SDD — FB-015).
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ No second artifact; summary is assembled on demand, never stored or re-read |
+| **Quality** | ⭐⭐ Requirement rationale (accepted assumptions) is preserved with the change, not lost at review end; no stale review snapshots |
+| **Autonomy** | ⭐⭐ Disposition is fully specified — the agent stops improvising where the summary goes |
+
+**Verdict: Worth-Doing** (Quality + Autonomy)
+
+**Status:** ✅ Incorporated (2026-06-13) into Lifecycle v0.12, Protocol v0.16, Templates v0.15, and Skill (workflow.md Steps 1/2/4/7, templates.md).
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1115,3 +1163,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.13 | 2026-06-11 | FB-012~014 (field feedback from BDD requirement-writing practice + OpenSpec model review): FB-012 OpenSpec-style Behavior Specs replace `.feature` (Requirement/Scenario format with behavior-level IDs, Delta → merge lifecycle mirroring SDD, Gherkin demoted to opt-in, ID-based Completeness check); FB-013 requirement-semantics rules (Parameters table + Counter/Gauge typology, scenario exemption, answerable TBD-N, no API in scenarios, event trigger discipline, Scenario Outline retirement); FB-014 agent-first disclosure (mechanical+semantic self-check, Assumptions/Source Mapping/Conflict Scan in Review Checkpoint). Direction confirmed; incorporation pending |
 | v0.14 | 2026-06-11 | FB-012~014 incorporated: Framework v0.21, Lifecycle v0.10, Protocol v0.14, Templates v0.13, README project structure; Skill re-derived (SKILL.md, workflow.md, templates.md) with new derivation line. FB-012 status note: ACF stays self-contained — no upstream requirement-document dependency; OpenSpec-style format conventions only, no tool dependency |
 | v0.15 | 2026-06-12 | FB-015: delta disposition — archive-on-merge replaces "archive or delete"; Verify moves the active delta to `docs/deltas/archive/{date}-US-{id}.md` so path encodes in-flight vs merged state; rationale (Reason/Impact) preserved; delete remains project option; open follow-up recorded (post-merge reopen should read docs/specs/ instead of old delta). Incorporated into Lifecycle v0.11, Protocol v0.15, Templates v0.14, Skill |
+| v0.16 | 2026-06-13 | FB-016: Review Disclosure (Assumptions Made / Source Mapping / Cross-Story Conflict Scan) becomes a third top-level section of the delta file, built incrementally and finalized at Review Checkpoint; merge skips it (rides to archive with the delta, FB-015); the Review Checkpoint summary is an ephemeral assembled view, never written to a file (distinct from FB-009's `.ai/review-report.md`); Step 4 close-out convergence rules made explicit. Incorporated into Lifecycle v0.12, Protocol v0.16, Templates v0.15, Skill |

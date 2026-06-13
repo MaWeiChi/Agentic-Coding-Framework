@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.21, Lifecycle v0.11, Protocol v0.15, Templates v0.14 (2026-06-12)
+> Derived from: Framework v0.21, Lifecycle v0.12, Protocol v0.16, Templates v0.15 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -78,6 +78,7 @@ if tests are already written. Constitution and NFR checks are also skipped in Li
 - No API details (endpoints, status codes, JSON field names) in scenarios — those belong to Step 3
 - Event-type requirements state precise **Trigger**, **NOT-Triggered** condition, and message format + variables
 - Mark unclear requirements with `[NEEDS CLARIFICATION: TBD-N — <answerable question>]`; when the source gives a defensible hint, extract a candidate and disclose it as an assumption at Step 4 instead of asking
+- Seed the `## Review Disclosure` section of the delta file with behavior-level Assumptions Made — this section is finalized at Step 4 and is merge-skipped at Step 7 (FB-016)
 
 **Template:**
 ```markdown
@@ -111,6 +112,23 @@ The system SHALL {behavior}.
 - [R-{CAP}-{NNN}] {reason}
 ```
 
+After the Behavior Delta, append the Review Disclosure stub to the same file (finalized at Step 4):
+
+```markdown
+## Review Disclosure — US-{id}: {Story Title}
+
+### Assumptions Made
+| # | Assumption | Basis |
+|---|-----------|-------|
+
+### Source Mapping
+| Source Item | Handling | Note |
+|-------------|----------|------|
+
+### Cross-Story Conflict Scan
+- (filled at sdd-delta / Step 4)
+```
+
 See `references/templates.md` for the Parameters table rules (Counter/Gauge typology,
 `0 - (none)` notation, usage/limit separation).
 
@@ -126,6 +144,7 @@ See `references/templates.md` for the Parameters table rules (Counter/Gauge typo
 - Reference affected SDD modules by name
 - If touching data model, ensure Source of Truth is clear (which module owns the data)
 - Include Non-Goals / Out of Scope section
+- Extend the `## Review Disclosure` section: add architecture-level assumptions and run the Cross-Story Conflict Scan against existing specs (FB-016)
 
 **Template:**
 ```markdown
@@ -167,10 +186,9 @@ See `references/templates.md` for the Parameters table rules (Counter/Gauge typo
 - **Mechanical pass:** Requirement ID format and placement, Behavior/SDD Delta template compliance, `Test Level` present on every scenario, no API details in scenarios
 - **Semantic pass:** scenario executability (each Given/When/Then can become a test assertion), boundary sanity (Ranges/Defaults make sense semantically), Error Case coverage (permission / invalid input / missing resource / concurrency), cross-Story conflict against existing specs, full coverage of the source Story
 
-**Then produce the Review summary** (see Review Checkpoint template in `references/templates.md`), disclosing:
-- **Assumptions Made** — what you inferred and on what basis, listed for challenge
-- **Source Mapping** — which source items were handled, partially handled, or deferred (with reason)
-- **Cross-Story Conflict Scan** — redundancy, contradiction, undeclared dependencies
+**Finalize the `## Review Disclosure` section** in the delta (Assumptions Made / Source Mapping / Cross-Story Conflict Scan) — this is the durable record; it rides to `docs/deltas/archive/` on merge (FB-016).
+
+**Then assemble an ephemeral Review summary** (see Review Checkpoint template in `references/templates.md`) — Change Summary counts derived from the delta, the Review Disclosure surfaced, Pending Clarifications collected from `[NEEDS CLARIFICATION]` markers. **Present it in chat / the orchestrator message — never write it to a file** (no `docs/review/`, no `.ai/REVIEW.md`). It is a view, not an artifact.
 
 The human reviews the Behavior Delta + SDD Delta + contract changes, entering via
 Assumptions Made → Pending Clarifications → spot-check. Wait for human confirmation.
@@ -178,6 +196,13 @@ If the human has modification requests, they'll come via HANDOFF.md's human_note
 direct instruction.
 
 If any `[NEEDS CLARIFICATION]` items exist, the human clarifies them at this point.
+
+**On the human's verdict, route each item to its home** (the summary dissolves):
+- Assumption challenged → edit the delta to match + update its Review Disclosure entry
+- TBD answered → apply into the delta/spec + remove from Memory ISSUES
+- TBD unanswered → stays in Memory ISSUES
+- Source Mapping deferred → record in Memory NEXT
+- Conflict confirmed → fix the delta now, or log to Memory ISSUES
 
 ### Step 5: Test Scaffolding (Red)
 
@@ -233,8 +258,10 @@ After all four pass:
 1. **Merge Behavior Delta into specs** — Apply ADDED/MODIFIED/REMOVED Requirements into
    `docs/specs/<capability>.md`. Specs become the current behavior truth again.
 2. **Merge SDD Delta into SDD** — Apply ADDED/MODIFIED/REMOVED into the main `docs/sdd.md`.
-   Both merges happen at the same moment (FB-012).
+   Both merges happen at the same moment (FB-012). **Skip the `## Review Disclosure` section** —
+   it is meta-rationale, not behavior/architecture; it stays in the delta file (FB-016).
 3. **Archive Delta** — Move `docs/deltas/US-{id}.md` to `docs/deltas/archive/{YYYY-MM-DD}-US-{id}.md`.
+   The Review Disclosure rides along, preserving the *why* next to the *what*.
    The active delta path exists only while a Story is in flight — its absence for a completed
    Story is expected. The date prefix prevents reopen-cycle collisions. (Projects that fully
    trust git history may delete instead; archive is the default.)

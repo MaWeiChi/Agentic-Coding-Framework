@@ -81,7 +81,7 @@ After Bootstrap is complete, each User Story enters one independent micro-waterf
 | BDD (Full Mode) / Write Tests Directly (Lite Mode) | Output a **Behavior Delta** (ADDED/MODIFIED/REMOVED Requirements with embedded scenarios, **only for the current Story**; use RFC 2119 language, mark `[NEEDS CLARIFICATION: TBD-N — <answerable question>]`). No `.feature` file — see Behavior Spec template in [Templates document](Templates.md). Lite Mode: skip the Behavior Delta, write test files directly, then skip to Implementation |
 | SDD Incremental Update | Append or modify affected modules and architecture sections, output **SDD Delta** (ADDED/MODIFIED/REMOVED), don't rewrite the entire SDD |
 | API Contract Incremental Update | Add or adjust affected endpoints / events, don't rewrite the entire contract |
-| **Review Checkpoint** | **Agent first runs the pre-review self-check (mechanical + semantic, see Templates document) and discloses Assumptions Made / Source Mapping / Cross-Story Conflict Scan; then human confirms Behavior Delta + SDD Delta + contract differences + clarifies all `[NEEDS CLARIFICATION]`** |
+| **Review Checkpoint** | **Agent runs the pre-review self-check (mechanical + semantic), records its disclosure in the delta's `## Review Disclosure` section, then assembles an ephemeral summary (never a file, FB-016) surfacing Assumptions Made / Source Mapping / Cross-Story Conflict Scan; human confirms Behavior Delta + SDD Delta + contract differences + clarifies all `[NEEDS CLARIFICATION]`. On verdict, route each item to its home (see Templates close-out table)** |
 | Test Scaffolding | Based on scenario `Test Level` fields and Parameters tables in the Behavior Delta, output corresponding test level scaffolding (red light) with machine-readable Spec/Scenario headers |
 | Implementation | Implementation to pass tests → Refactor (includes self-correction loop, see below) |
 | AST Linting | After each Implementation iteration, run syntax-level checks; failure does not enter Verify |
@@ -142,13 +142,13 @@ Linting tools are configured by each project in the Step rules table of the [Pro
 
 ### Delta Spec Lifecycle
 
-Delta Spec is the structured incremental-update format (ADDED / MODIFIED / REMOVED). Each Story's delta file `docs/deltas/US-XXX.md` carries **two delta sections**: the **Behavior Delta** (Requirements + scenarios, produced at the BDD step) and the **SDD Delta** (modules + data model, produced at the SDD step). Complete templates are in the Behavior Spec and SDD sections of the [Templates document](Templates.md).
+Delta Spec is the structured incremental-update format (ADDED / MODIFIED / REMOVED). Each Story's delta file `docs/deltas/US-XXX.md` carries **three top-level sections**: the **Behavior Delta** (Requirements + scenarios, produced at the BDD step), the **SDD Delta** (modules + data model, produced at the SDD step), and the **Review Disclosure** (Assumptions Made / Source Mapping / Cross-Story Conflict Scan, built incrementally; merge-skipped, archived with the delta — FB-016). Complete templates are in the Behavior Spec and SDD sections of the [Templates document](Templates.md).
 
 The workflow in micro-waterfall:
 
 1. **Output at BDD / SDD steps**: agent outputs the Behavior Delta for observable behavior changes, then analyzes affected modules and outputs the SDD Delta
 2. **Review at Review Checkpoint**: humans review the deltas (what changed) rather than entire documents (what they look like now)
-3. **Merge during Verify step**: after confirming implementation is complete, the Behavior Delta merges into `docs/specs/<capability>.md` and the SDD Delta merges into the main SDD file — both at the same moment, so specs and SDD stay the single current truth (FB-012)
+3. **Merge during Verify step**: after confirming implementation is complete, the Behavior Delta merges into `docs/specs/<capability>.md` and the SDD Delta merges into the main SDD file — both at the same moment, so specs and SDD stay the single current truth (FB-012). The `## Review Disclosure` section is **not** merged (it is meta-rationale, FB-016) but is preserved when the whole delta file moves to `docs/deltas/archive/` (FB-015)
 4. **Archive on merge**: after merging, the Delta file moves to `docs/deltas/archive/{YYYY-MM-DD}-US-XXX.md` (FB-015). The active path `docs/deltas/US-XXX.md` exists only while a Story is in flight — its absence for a completed Story is the expected state, and file-presence checks can rely on it. The date prefix keeps reopen cycles from colliding. Per-Story rationale (`Reason:`/`Impact:`, previous-behavior notes) survives in the archive; projects that fully trust git history may delete instead (project-level choice)
 
 Projects using Change Folder isolation (medium to large, multi-agent collaboration) can place each Story's Delta Spec + corresponding tests in an independent folder `changes/US-XXX/`, merging back to main files after Review passes.
@@ -248,9 +248,9 @@ CC autonomously performs five checks:
 4. **Security Scan** — no secrets committed across any US (scan full repo), `.gitignore` covers all secret patterns, no credentials in logs/error messages/API responses
 5. **PROJECT_MEMORY Audit** — ISSUES accuracy, SYNC mappings, NEXT priorities
 
-Output: `review-report.md` (structured findings) + updated ISSUES in PROJECT_MEMORY.md. Each new ISSUE includes severity, description, and linked US (if identifiable).
+Output: `.ai/review-report.md` (structured findings) + updated ISSUES in PROJECT_MEMORY.md. Each new ISSUE includes severity, description, and linked US (if identifiable).
 
-**Review works on any project:** ACF projects get the full review + triage + re-entry cycle. Non-ACF projects get a standalone review-report.md + ISSUES list — the lowest-cost entry point to ACF.
+**Review works on any project:** ACF projects get the full review + triage + re-entry cycle. Non-ACF projects get a standalone `.ai/review-report.md` + ISSUES list — the lowest-cost entry point to ACF.
 
 **Review Session is Full Mode only** for ACF projects. Lite Mode projects skip it — the per-US Verify step is sufficient for small scope.
 
@@ -425,3 +425,4 @@ Different project types (Go container service, WordPress CMS, Astro + WordPress 
 | v0.9 | 2026-02-27 | FB-011: Security Principle — Verify extended from 3 to 4 checks (add Security: no hardcoded secrets, .gitignore coverage, mock credentials in tests); Review Session extended from 4 to 5 checks (add Security Scan: full-repo secret scan, credential leak in logs/responses) |
 | v0.10 | 2026-06-11 | FB-012~014: BDD step now outputs a Behavior Delta (ADDED/MODIFIED/REMOVED Requirements with embedded scenarios) instead of `.feature` files; per-Story delta file carries Behavior Delta + SDD Delta, both merge at Verify pass (Behavior → `docs/specs/<capability>.md`); Verify Completeness becomes Requirement-ID-based (grep `Spec:` headers); Review Checkpoint gains pre-review self-check (mechanical + semantic) and agent disclosure (Assumptions / Source Mapping / Conflict Scan); scenario tagging → `Test Level` field (`integration`/`component`/`e2e`, no `unit` at spec scope) + NFR ID tags; `[NEEDS CLARIFICATION]` upgraded to numbered answerable TBD-N |
 | v0.11 | 2026-06-12 | FB-015: delta disposition — Verify moves the merged delta to `docs/deltas/archive/{date}-US-XXX.md`; active path exists only while a Story is in flight; date prefix prevents reopen-cycle collisions; delete remains a project-level option |
+| v0.12 | 2026-06-13 | FB-016: delta gains a `## Review Disclosure` section (Assumptions / Source Mapping / Conflict Scan); merge skips it but archive preserves it; Review Checkpoint summary is an ephemeral assembled view, never a file; close-out routes each item to its home (Templates convergence table) |

@@ -1,6 +1,6 @@
 # Document Templates Reference
 
-> Derived from: Templates v0.14 (2026-06-12)
+> Derived from: Templates v0.15 (2026-06-13)
 
 Condensed templates and writing guidelines for each framework document type. Use this
 when producing any framework document.
@@ -180,6 +180,10 @@ passes, then the delta file moves to `docs/deltas/archive/{date}-US-{id}.md` —
 path exists only while the Story is in flight. No `.feature` files (Gherkin is opt-in only
 when the stack executes it).
 
+The delta file has three top-level sections: `## Behavior Delta`, `## SDD Delta`, and
+`## Review Disclosure` (FB-016). The merge applies the first two and **skips** the third;
+all three travel to the archive together, so the change's rationale is preserved with it.
+
 ```markdown
 ## Behavior Delta — US-XXX <Story Title>
 
@@ -209,11 +213,25 @@ The system SHALL <behavior>.
 
 ### REMOVED Requirements
 - [R-<CAP>-NNN] <reason>
+
+## Review Disclosure — US-XXX <Story Title>
+
+### Assumptions Made
+| # | Assumption | Basis |
+|---|-----------|-------|
+
+### Source Mapping
+| Source Item | Handling | Note |
+|-------------|----------|------|
+
+### Cross-Story Conflict Scan
+- <conflict vs existing specs — or "None found">
 ```
 
 **Key rules:**
 
 - One Requirement ID = one independently verifiable behavior = one test; IDs stable across Stories
+- The `## Review Disclosure` section is built incrementally (behavior assumptions at bdd, architecture assumptions + conflict scan at sdd-delta, finalized at Review) and is merge-skipped but archived with the delta (FB-016)
 - Specs hold externally observable behavior only — unit-level GWT is test names in code
 - `Test Level` mandatory per scenario (`integration`, `component`, `e2e`); NFR tags (`@perf(ID)`, `@secure(ID)`) attach to the Scenario label
 - One scenario verifies one thing (max 3 Thens); label scenarios by product-semantic branches, not boundary values
@@ -424,6 +442,8 @@ coverage), Generic (prefer existing solutions).
 
 ## Review Checkpoint
 
+**The summary is an ephemeral view, not a file (FB-016).** Assemble it from the delta and present it in chat / the orchestrator message — never write `docs/review/` or `.ai/REVIEW.md`. The durable disclosure already lives in the delta's `## Review Disclosure` section (which rides to the archive on merge). Assumptions / Source Mapping / Conflict Scan below are *read from there*, not authored fresh.
+
 **Pre-review self-check first** (don't send a review request that fails the mechanical pass):
 - Mechanical: Requirement ID format, delta template compliance, `Test Level` on every scenario, no API details in scenarios
 - Semantic: scenario executability, boundary sanity, Error Case coverage, cross-Story conflict, source coverage
@@ -466,6 +486,8 @@ coverage), Generic (prefer existing solutions).
 ```
 
 Reviewer entry point: Assumptions Made → Pending Clarification → spot-check the deltas.
+
+On the human's verdict, route each item home (the summary dissolves): challenged assumption → edit delta + update Review Disclosure; TBD answered → into delta/spec, drop from ISSUES; TBD unanswered → stays in ISSUES; deferred item → Memory NEXT; confirmed conflict → fix delta or log to ISSUES.
 
 ---
 

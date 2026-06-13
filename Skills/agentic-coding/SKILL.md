@@ -192,6 +192,9 @@ project-root/
 - **Never commit secrets** — API keys, tokens, passwords, connection strings must never
   appear in source code. Use environment variables or placeholders (`YOUR_API_KEY_HERE`).
   Check `.gitignore` before committing config files.
+- **Never write the Review Checkpoint summary to a file** — it is an ephemeral view assembled
+  from the delta and shown in chat. The durable disclosure lives in the delta's
+  `## Review Disclosure` section, which rides to `docs/deltas/archive/` on merge (FB-016).
 
 ## ACF Version
 
@@ -204,7 +207,7 @@ the full migration model.
 
 If the human or orchestrator triggers a **Review Session**, you perform five checks:
 Code Review, Spec-Code Coherence, Regression, Security Scan, and Memory Audit. Output
-a `review-report.md` and update ISSUES. This is analysis only — no mutations to code.
+a `.ai/review-report.md` and update ISSUES. This is analysis only — no mutations to code.
 
 If you're asked to **reopen a completed US** (via triage), treat it like resuming from
 the rollback target step: read existing specs/SDD/tests, modify incrementally (not rewrite),

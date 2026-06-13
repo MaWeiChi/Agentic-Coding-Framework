@@ -252,6 +252,8 @@ The system SHALL <behavior>.
 
 ### Behavior Delta Template (per Story, inside docs/deltas/US-{id}.md)
 
+The delta file holds three top-level sections: the Behavior Delta (below), the SDD Delta (see SDD section), and the Review Disclosure (FB-016). Only the first two merge on Verify pass; the third rides to `docs/deltas/archive/` with the file.
+
 ```markdown
 ## Behavior Delta — US-XXX <Story Title>
 
@@ -263,6 +265,27 @@ The system SHALL <behavior>.
 
 ### REMOVED Requirements
 - [R-<CAP>-NNN] <reason for removal>
+```
+
+### Review Disclosure Template (delta section, FB-016)
+
+A third top-level section of the same delta file, built incrementally (behavior assumptions at the `bdd` step, architecture assumptions + conflict scan at `sdd-delta`, finalized at Review Checkpoint). **The merge skips this section** — it is meta-rationale, not behavior or architecture — but it travels to `docs/deltas/archive/` with the delta, so the *why* behind the change is preserved next to the *what*.
+
+```markdown
+## Review Disclosure — US-XXX <Story Title>
+
+### Assumptions Made
+| # | Assumption | Basis |
+|---|-----------|-------|
+| 1 | <what was inferred> | <defensible source hint> |
+
+### Source Mapping
+| Source Item | Handling | Note |
+|-------------|----------|------|
+| <story item> | Converted → R-<CAP>-NNN / Deferred | <reason if deferred> |
+
+### Cross-Story Conflict Scan
+- <redundancy / contradiction / undeclared dependency vs existing specs — or "None found">
 ```
 
 ### Writing Principles
@@ -422,8 +445,8 @@ When a Story causes SDD changes, use the Delta Spec format to record changes rat
 Delta Spec lifecycle:
 1. **Generated**: Each story's SDD incremental update generates a Delta Spec simultaneously
 2. **Reviewed**: Humans review Delta Spec during Review Checkpoint to confirm change scope
-3. **Merged**: After review approval, Delta content merges into SDD main document
-4. **Archived**: Delta file moves to `docs/deltas/` or deleted (per project preference)
+3. **Merged**: After review approval, Delta content merges into SDD main document (the `## Review Disclosure` section is merge-skipped — FB-016)
+4. **Archived**: After merge, the delta file moves to `docs/deltas/archive/{YYYY-MM-DD}-US-XXX.md` (FB-015); projects that fully trust git history may delete instead
 
 ### [NEEDS CLARIFICATION] Tag (applies to SDD)
 
@@ -1017,7 +1040,11 @@ Place in `docs/constitution.md` or embed in project entry document. Recommend st
 
 ### Positioning
 
-Review Checkpoint is the human review point before implementation in micro waterfall. Orchestrator (or agent) produces structured Review summary at this step, letting humans quickly judge if the direction is correct.
+Review Checkpoint is the human review point before implementation in micro waterfall. At this step the agent assembles a structured Review summary, letting humans quickly judge if the direction is correct.
+
+**The summary is an ephemeral view, not an artifact (FB-016).** It is assembled from the delta — Change Summary counts derived from it, the Review Disclosure section (Assumptions Made / Source Mapping / Cross-Story Conflict Scan) surfaced, Pending Clarifications collected from `[NEEDS CLARIFICATION]` markers — and presented in chat or the orchestrator message. **Never write it to a file** (no `docs/review/`, no `.ai/REVIEW.md`). The durable record is the Review Disclosure section inside the delta, which rides to `docs/deltas/archive/` on merge. (This is distinct from the on-demand `.ai/review-report.md` of a Review Session, which is a real artifact consumed by triage.)
+
+The template below is the *shape of that view*. The Assumptions / Source Mapping / Conflict Scan blocks are read from the delta's Review Disclosure section, not authored fresh here.
 
 ### Pre-Review Self-Check (FB-014)
 
@@ -1080,6 +1107,17 @@ Before producing the Review summary, the agent runs two checklist passes on its 
 **Comes with suggestions**: Each `[NEEDS CLARIFICATION]` item includes agent's suggested solution; human only needs to confirm or correct, not think from scratch.
 
 **Review conclusion is checklist**: Humans can just check; reduces cognitive load of reviewing.
+
+**Close-out convergence (FB-016)**: When the human's verdict comes back, route each item to its home — the summary itself dissolves:
+
+| Outcome | Action |
+|---------|--------|
+| Assumption challenged/rejected | Edit the delta to match; update its Review Disclosure entry |
+| TBD answered | Apply into the delta/spec; remove from Memory ISSUES |
+| TBD unanswered | Stays in Memory ISSUES |
+| Source Mapping item deferred | Record in Memory NEXT |
+| Conflict confirmed | Fix the delta now, or log to Memory ISSUES |
+| Accepted as-is | Already captured in the delta's Review Disclosure — nothing to copy |
 
 ---
 
@@ -1176,3 +1214,4 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.12 | 2026-02-27 | Constitution template: add "No Hardcoded Secrets" as default security principle (item 6); writing principles add "Security is a default" note — pre-populated, applies to both Full and Lite mode (FB-011) |
 | v0.13 | 2026-06-11 | FB-012~014: BDD Scenario Template → Behavior Spec Template — OpenSpec-style `### Requirement:` [R-<CAP>-NNN] + `#### Scenario:` in `docs/specs/<capability>.md`, Behavior Delta (ADDED/MODIFIED/REMOVED) per Story merged on Verify pass, Gherkin/`.feature` demoted to opt-in, unit-level scenarios exit spec, Scenario Outline retired; add Parameters Table guide (8 columns, Counter/Gauge/UpDownCounter typology, `0 - (none)` notation, usage/limit separation, type abstraction, mechanical boundary expansion); scenario exemption rule; `[NEEDS CLARIFICATION]` upgraded to numbered answerable `TBD-N`; no API details in scenarios; event trigger discipline; Test Scaffolding headers → machine-readable Spec/Scenario/Test Level/assertion_type; Review Checkpoint adds Pre-Review Self-Check + Assumptions Made + Source Mapping + Cross-Story Conflict Scan |
 | v0.14 | 2026-06-12 | FB-015: Behavior Spec positioning — merged delta moves to `docs/deltas/archive/{date}-US-{id}.md`; active delta path exists only while the Story is in flight |
+| v0.15 | 2026-06-13 | FB-016: add Review Disclosure Template as a third delta section (Assumptions Made / Source Mapping / Cross-Story Conflict Scan), built incrementally, merge-skipped, archived with the delta; Review Checkpoint repositioned — summary is an ephemeral view assembled from the delta, never written to a file (distinct from `.ai/review-report.md`); add close-out convergence table |
