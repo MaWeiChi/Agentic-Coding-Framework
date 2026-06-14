@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.21, Lifecycle v0.12, Protocol v0.16, Templates v0.15 (2026-06-13)
+> Derived from: Framework v0.22, Lifecycle v0.12, Protocol v0.17, Templates v0.15 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.

@@ -13,7 +13,8 @@ Discussion Summary | February 2026
 | This Document | Framework Foundation: Layered Definition, Core Principles, Process | Read Every Conversation |
 | [Lifecycle.md](Lifecycle.md) | Operating Mechanism: Iteration Model, Test Strategy, CI/CD Interface | Load When Planning Iteration or Setting Up CI |
 | [Templates.md](Templates.md) | Framework Details: Document Templates for Each Layer, Writing Guidelines, Examples | Load When Writing BDD/SDD/Contract/Memory |
-| [Protocol.md](Protocol.md) | Communication Protocol: State Management and Automation Between Orchestrator ↔ Executor | Load When Setting Up Automation or Integrating Orchestrator |
+| [Protocol.md](Protocol.md) | Communication Protocol for the bespoke external orchestrator (legacy/optional — see Execution Substrate; prefer native modes) | Load only when building provider-agnostic or fully-custom automation |
+| [Protocol-Advanced.md](Protocol-Advanced.md) | Multi-executor collaboration + reference implementations (legacy/optional — prefer native Agent Teams / Workflows) | Load only when building provider-agnostic or fully-custom automation |
 | PROJECT_MEMORY.md (Project Level) | Dynamic State Tracking: Progress, Tasks, Test Status, Git Verification | Read Every Conversation (Paired With Project Summary) |
 
 ---
@@ -184,6 +185,28 @@ Additional considerations for existing projects: Some implicit architectural dec
 
 ---
 
+## Execution Substrate (Where ACF Runs)
+
+ACF is a **methodology**, not a runtime: Behavior Specs + Delta→merge, the per-Story step sequence, four-check Verify, Review Disclosure, and the memory conventions are independent of *where* the agent runs. The framework is substrate-agnostic — pick the cheapest substrate that fits how hands-on you want to be.
+
+**Default: one interactive session.** A single interactive Claude Code (or equivalent) session, driven by the `agentic-coding` skill, walks the whole per-Story pipeline end to end. The cache stays warm across steps and the work is covered by your plan's interactive subscription. For solo and personal projects this is the cheapest and simplest substrate — start here.
+
+**Unattended / remote: native modes.** When you need the pipeline to run without you driving it, use the host tool's native execution features rather than a custom dispatch loop:
+
+| Need | Native mechanism (Claude Code) |
+|------|-------------------------------|
+| Scheduled / triggered unattended runs (cloud) | **Routines** (cron / webhook / GitHub; counts against subscription usage) |
+| Parallel local runs with file isolation | **Agent View** (`claude agents`) |
+| Nudge a running session while away from the terminal | **Channels** |
+| Multi-agent fan-out within a Story | **Agent Teams / Workflows** |
+| Human review gate | Interactive: converse. Routine: review completed work in the UI |
+
+**Cost note.** Interactive sessions draw on your plan's subscription. Headless `claude -p` / Agent SDK usage is metered against a **separate credit pool**, and each fresh `-p` process starts with a cold prompt cache — so an automation built as a *pile of per-step `-p` dispatches* is the expensive path. Prefer the interactive session or a native unattended mode; don't hand-roll a dispatch loop to save money, because it no longer does.
+
+**Legacy: the bespoke external orchestrator.** The [Protocol document](Protocol.md) describes a custom external orchestrator (STATE.json state machine + hooks + per-step `claude -p` dispatch). It predates the native modes above and was built when subscriptions did not permit that kind of automation. It is now **optional/legacy** — retained for one genuine niche: provider-agnostic automation (Channels/Routines are unavailable on Bedrock/Vertex/Foundry) or a fully-custom external state machine. Most users should use the interactive session or a native mode instead.
+
+---
+
 ## Core Principles
 
 | Principle | Explanation |
@@ -269,3 +292,4 @@ The following topics can be explored more deeply in subsequent discussions:
 | v0.19 | 2026-02-25 | New project flow table add Verify, Commit, Update Memory steps; pipeline now 10 steps aligned with Protocol v0.11 |
 | v0.20 | 2026-02-25 | Checklist system: each story auto-generates `.ai/CHECKLIST.md` for progress tracking; aligned with Protocol v0.12. Rollback and pre-dispatch prerequisite checks added to orchestrator capabilities |
 | v0.21 | 2026-06-11 | FB-012~014: BDD layer redefined as Behavior Specs (`docs/specs/<capability>.md`, OpenSpec-style Requirement [R-<CAP>-NNN] + embedded Scenarios) with per-Story Behavior Delta merged on Verify pass; `.feature` files retired (Gherkin opt-in only); scenario `Test Level` field replaces test-level tags (unit-level GWT moves into code); Verify aligned to four-point including ID-based Completeness and Security (FB-011 catch-up); `[NEEDS CLARIFICATION]` upgraded to numbered answerable TBD-N with Assumptions Made disclosure |
+| v0.22 | 2026-06-13 | FB-017: add "Execution Substrate" section — ACF is substrate-agnostic; interactive single session is the default (subscription-covered, warm cache), native modes (Routines / Agent View / Channels / Agent Teams / Workflows) are the recommended unattended substrate, the bespoke external orchestrator (Protocol.md) is demoted to legacy/optional (provider-agnostic niche). Cost note: headless `-p` is separately billed + cold-cached. Related Documents entry for Protocol.md reframed |

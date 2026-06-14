@@ -33,8 +33,8 @@ Each User Story runs through Layers 2–4 as an independent micro-waterfall cycl
 | [Framework](Framework/Framework.md)                 | Core concepts: layered definitions, principles, workflow                         | Every conversation                                       |
 | [Lifecycle](Framework/Lifecycle.md)                 | Operating mechanism: iteration model, test strategy, CI/CD                       | When planning iterations or CI setup                     |
 | [Templates](Framework/Templates.md)                 | Concrete templates: BDD, SDD, API contract, Memory, DDD                          | When writing any framework document                      |
-| [Protocol](Framework/Protocol.md)                   | Orchestrator ↔ Executor communication: state management, dispatch, hooks        | When setting up automation or multi-agent flows          |
-| [Protocol-Advanced](Framework/Protocol-Advanced.md) | Multi-executor collaboration, OpenClaw and Agent Teams reference implementations | Only when building multi-executor or custom orchestrator |
+| [Protocol](Framework/Protocol.md)                   | Bespoke external orchestrator (legacy/optional — prefer the interactive default or native modes; see Execution Substrate) | Only for provider-agnostic / fully-custom automation     |
+| [Protocol-Advanced](Framework/Protocol-Advanced.md) | Multi-executor collaboration + reference implementations (legacy/optional — prefer native Agent Teams / Workflows)        | Only for provider-agnostic / fully-custom automation     |
 | [Refinement](Framework/Refinement.md)               | Refinement tracking: what was evaluated, what was incorporated                   | Reference only                                           |
 
 ## Key Design Decisions
@@ -58,14 +58,15 @@ The framework starts minimal and scales up as complexity demands:
 - **Constitution** — Inviolable architectural principles (e.g., "no direct cross-module DB access"). Agents check these before every design decision.
 - **NFR** (Non-Functional Requirements) — Performance, security, availability thresholds with unique IDs referenced by BDD scenario tags.
 
-## Protocol: Multi-Agent Automation
+## Where ACF Runs (Execution Substrate)
 
-The [Protocol document](Framework/Protocol.md) defines how an external orchestrator can automate the micro-waterfall cycle:
+ACF is a methodology, not a runtime — it runs on whatever substrate fits how hands-on you want to be:
 
-- **Three-layer architecture**: External Orchestrator → Story-Level Coordinator → Executor group
-- **Three-file protocol**: `STATE.json` (machine state) + `HANDOFF.md` (context) + `PROJECT_MEMORY.md` (cross-tool state)
-- **Progressive adoption**: Level 0 (fully manual) → Level 1 (semi-automated hooks) → Level 2 (fully automated dispatch)
-- **Complexity-based dispatch**: Simple stories get a single executor; complex stories get a coordinated team with role-based context isolation
+- **Default — one interactive session.** A single interactive Claude Code session, driven by the `agentic-coding` skill, walks the whole per-Story pipeline. Warm cache throughout, covered by your interactive subscription. Best for solo/personal projects — start here.
+- **Unattended / remote — native modes.** Run the pipeline without you driving it via **Routines** (cloud, cron/webhook/GitHub; counts against subscription usage), **Agent View** (`claude agents`, parallel local), or **Agent Teams / Workflows** (fan-out). **Channels** is a related but different tool — it pushes events (a nudge) into an *already-running* session rather than running a Story on its own. All are native (no custom code); Channels is a research preview.
+- **Legacy/optional — bespoke orchestrator.** The [Protocol document](Framework/Protocol.md) describes a custom external orchestrator (STATE.json + hooks + per-step `claude -p` dispatch). It predates the native modes and was a workaround for subscriptions that once disallowed such automation. Headless `-p` is now separately billed and cold-cached per dispatch, so this is no longer the cheap path — keep it only for provider-agnostic automation (native modes are unavailable on Bedrock/Vertex/Foundry) or a fully-custom state machine.
+
+The full per-Story methodology (BDD → SDD → Review → TDD → Verify) is identical across all three — only the substrate differs.
 
 ## Quick Start (5 Steps to Your First Story)
 
@@ -164,7 +165,7 @@ your-project/
 │   └── ddd/                           # DDD strategic design (if needed)
 │       ├── context-map.md
 │       └── glossary.md
-├── .ai/                               # Protocol files (if using orchestrator)
+├── .ai/                               # Orchestrator files (legacy/optional — see Execution Substrate)
 │   ├── STATE.json
 │   └── HANDOFF.md
 └── tests/                             # Layer 4: Test files
@@ -183,12 +184,12 @@ This framework was designed through comparative analysis with established method
 
 | Document          | Version | Date       |
 | ----------------- | ------- | ---------- |
-| Framework         | v0.18   | 2026-02-16 |
-| Lifecycle         | v0.4    | 2026-02-16 |
-| Templates         | v0.9    | 2026-02-16 |
-| Protocol          | v0.10   | 2026-02-24 |
+| Framework         | v0.22   | 2026-06-13 |
+| Lifecycle         | v0.12   | 2026-06-13 |
+| Templates         | v0.15   | 2026-06-13 |
+| Protocol          | v0.17   | 2026-06-13 |
 | Protocol-Advanced | v0.8    | 2026-02-17 |
-| Refinement        | v0.9    | 2026-02-17 |
+| Refinement        | v0.18   | 2026-06-13 |
 
 ## License
 

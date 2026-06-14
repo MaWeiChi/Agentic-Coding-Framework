@@ -2,6 +2,8 @@
 
 **Multi-Executor Collaboration, Reference Implementations, and Experimental Features**
 
+> **Legacy / optional (FB-017).** These are extensions of the bespoke external orchestrator (see the banner in [Protocol.md](Protocol.md)). For multi-agent fan-out, prefer native **Agent Teams / Workflows** over a custom multi-executor coordinator — see "Execution Substrate" in [Framework.md](Framework.md). Retained for provider-agnostic or fully-custom setups.
+
 This document contains advanced protocol extensions split from [Protocol.md](Protocol.md). Most projects do not need these features — start with single-executor mode and upgrade when you need multi-Story parallelism or multi-executor collaboration.
 
 ---

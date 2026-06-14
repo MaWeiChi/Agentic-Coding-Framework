@@ -1132,6 +1132,58 @@ Note the pre-review self-check (FB-014, mechanical + semantic passes) stays ephe
 
 ---
 
+### FB-017: Execution-Substrate Repositioning — Methodology vs. Where It Runs
+
+**Date:** 2026-06-13
+**Context:** Two facts landed at once. (1) `claude -p` / headless / Agent SDK usage moved off the interactive subscription onto a **separately-metered credit pool** — the *number* of fresh headless dispatches now carries real cost, and each fresh `-p` process is a cold prompt cache (5-min TTL, no carry-over across invocations). (2) Claude Code shipped native remote-control and unattended-execution modes — **Agent View** (`claude agents`, local background-session dispatcher), **Channels** (event-push into a running session, research preview), **Routines** (cloud-hosted, cron/webhook/GitHub-triggered, counts against subscription usage), plus **Agent Teams** and **Workflows** for fan-out.
+
+The bespoke external orchestrator (Protocol layer: STATE.json state machine + hooks + per-step `claude -p` dispatch) was originally built as a workaround for one thing: subscription plans did not permit OpenClaw-style automation. **Both of its justifications are now gone** — the limit it escaped is covered by native modes, and the headless dispatch it relies on is the billed-and-cold-cache path.
+
+#### The Separation This Forces
+
+ACF conflated two things that are now cleanly separable:
+
+| Layer | What it is | Status |
+|-------|-----------|--------|
+| **ACF methodology** (durable core) | Behavior Specs + Delta→merge, per-Story step semantics, four-check Verify, Review Disclosure, memory conventions | Substrate-agnostic; runs end-to-end in **one interactive session** (skill-driven), subscription-covered, no `-p` billing |
+| **Execution substrate** (was bespoke) | How to run the methodology unattended / remote / parallel | Native modes now supersede the bespoke orchestrator |
+
+Responsibility → native replacement:
+
+| Bespoke orchestrator did | Native replacement |
+|--------------------------|--------------------|
+| per-Story state machine / step sequencing | interactive session walks it via the skill; or a Routine prompt |
+| unattended / scheduled / triggered runs | **Routines** (cloud, cron/webhook/GitHub) |
+| parallel local runs + file isolation | **Agent View** (`claude agents`) |
+| remote nudge while away from terminal | **Channels** |
+| multi-agent fan-out | **Agent Teams / Workflows** |
+| human review gate | interactive: just converse; Routine: review completed work in UI |
+
+#### Decision (scope A — measured repositioning)
+
+1. The default substrate is the **interactive single session** (skill drives the whole pipeline, warm cache throughout, subscription-covered). State this as ACF's primary "how to run it."
+2. Recommended unattended substrates are the **native modes** (Routines / Agent View / Channels / Agent Teams / Workflows), not a custom dispatch loop.
+3. The **bespoke external orchestrator is demoted to legacy/optional** — content retained, banner added. It still has one genuine niche: **provider-agnostic** automation (Channels/Routines are unavailable on Bedrock/Vertex/Foundry) and fully-custom external state machines.
+4. **Cost note** added: interactive = subscription; headless `-p` = separately-billed credit pool with cold cache per dispatch → do not architect automation as a pile of `-p` dispatches.
+
+#### Considered and Deferred
+
+The earlier cost micro-optimizations for the bespoke path (coalesce bdd+sdd-delta+contract into one "spec" dispatch and commit+update-memory into one "finalize" dispatch; per-step `model:` sizing — Haiku for mechanical steps; push more validation into hooks to avoid cold-cache retries; one warm long-lived session instead of per-step fresh `-p`) are recorded as FN-005. They only matter to whoever stays on the bespoke headless path, so they are not on the main line.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token / cost** | ⭐⭐⭐ Points users at the subscription-covered interactive path and native substrates instead of a billed `-p` dispatch pile — the dominant cost lever |
+| **Quality** | ⭐⭐ Clean methodology-vs-substrate split; the framework stops conflating "what ACF is" with "the one way to automate it" |
+| **Autonomy** | ⭐ Native unattended modes are more capable and less brittle than the bespoke loop |
+
+**Verdict: Must-Do** (cost ⭐⭐⭐ alone)
+
+**Status:** ✅ Incorporated (2026-06-13) into Framework v0.22 (new "Execution Substrate" section + mapping tables + cost note), Protocol v0.17 (legacy banner), Protocol-Advanced (legacy banner), README, and Skill (SKILL.md interactive-default note).
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1142,6 +1194,7 @@ Items identified as potential improvements but not yet prioritized for design or
 | FN-002 | **Estimation** | Complexity estimation at BDD stage (S/M/L) based on scenario count, module coupling, and history of similar US. Could inform sprint planning and token budget prediction | Low — useful but not blocking |
 | FN-003 | **Cross-Project Learning** | Mechanism for patterns learned in one project (e.g. "WebRTC US needs deeper SDD") to transfer to new projects. Could be a shared knowledge base or agent memory that spans projects | Low — single-project workflow is solid first |
 | FN-004 | **Skill ↔ Framework derivation** | `Skills/agentic-coding/` is a hand-maintained condensed copy of `Framework/` (~25KB vs ~160KB, a real token-budget consumer — unlike `.feature`, it has a consumer, so it stays). But every feedback round (FB-012~016) re-edits both sides by hand: the same double-maintenance failure mode FB-012 removed for `.feature`. This is the one redundancy that *grows with every FB*. Options: (a) a **derivation lint** that flags when a Framework section changes without its skill counterpart (cheapest — catches drift, keeps hand-authoring); (b) **semi-automatic export** that regenerates the skill from tagged Framework regions; (c) a single source with build-time condensation. The skill carries a `Derived from: <versions>` provenance line already — a lint could key off it | Medium — compounds every feedback round; start with the lint |
+| FN-005 | **Bespoke-path cost optimizations** | Only relevant if a project still runs the legacy headless orchestrator (FB-017 demoted it). Now that each `claude -p` dispatch is billed and cold-cached: coalesce `bdd`+`sdd-delta`+`contract` into one "spec" dispatch and `commit`+`update-memory` into one "finalize" dispatch (8→~4 dispatches/Story, at the cost of coarser rollback granularity); add a per-step `model:` key (Haiku for mechanical steps, Opus/Sonnet for impl/verify); push more pre-dispatch validation into hooks/`post_check` so retries don't pay cold-cache re-establishment; or run one warm long-lived session that advances internally instead of per-step fresh `-p` (biggest saving, trades away the hook-driven tool-agnostic state machine) | Low — most users move to native substrates (FB-017); these are for the legacy-path holdouts |
 
 ---
 
@@ -1166,3 +1219,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.15 | 2026-06-12 | FB-015: delta disposition — archive-on-merge replaces "archive or delete"; Verify moves the active delta to `docs/deltas/archive/{date}-US-{id}.md` so path encodes in-flight vs merged state; rationale (Reason/Impact) preserved; delete remains project option; open follow-up recorded (post-merge reopen should read docs/specs/ instead of old delta). Incorporated into Lifecycle v0.11, Protocol v0.15, Templates v0.14, Skill |
 | v0.16 | 2026-06-13 | FB-016: Review Disclosure (Assumptions Made / Source Mapping / Cross-Story Conflict Scan) becomes a third top-level section of the delta file, built incrementally and finalized at Review Checkpoint; merge skips it (rides to archive with the delta, FB-015); the Review Checkpoint summary is an ephemeral assembled view, never written to a file (distinct from FB-009's `.ai/review-report.md`); Step 4 close-out convergence rules made explicit. Incorporated into Lifecycle v0.12, Protocol v0.16, Templates v0.15, Skill |
 | v0.17 | 2026-06-13 | FN-004 added: Skill ↔ Framework derivation is hand-maintained double-maintenance that grows with every FB (the one redundancy `.feature` removal did not eliminate); options recorded (derivation lint / semi-auto export / single-source build), starting with a lint keyed off the skill's `Derived from:` provenance line |
+| v0.18 | 2026-06-13 | FB-017: execution-substrate repositioning. Headless `-p` now separately billed + cold-cached, and native modes (Agent View / Channels / Routines / Agent Teams / Workflows) cover remote+unattended under subscription — both original justifications for the bespoke orchestrator are gone. Separate ACF methodology (durable, substrate-agnostic) from execution substrate; interactive single session is the default, native modes the recommended unattended substrate, bespoke orchestrator demoted to legacy/optional (provider-agnostic niche retained). FN-005 added (bespoke-path cost optimizations). Incorporated into Framework v0.22, Protocol v0.17, Protocol-Advanced, README, Skill |

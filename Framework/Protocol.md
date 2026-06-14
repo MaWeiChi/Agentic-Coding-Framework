@@ -2,7 +2,9 @@
 
 **Orchestrator × Executor Communication Protocol and Automation Process**
 
-This document is the fourth core document of the [Agentic Coding Framework](Framework.md), defining how the orchestrator and executor communicate, how state is passed, and how steps advance automatically.
+> **Legacy / optional (FB-017).** This document describes a *bespoke external orchestrator* (STATE.json state machine + hooks + per-step `claude -p` dispatch). It was built when subscriptions did not permit OpenClaw-style automation. Two things have since changed: headless `-p` is now metered against a separate billed credit pool (and each fresh dispatch is a cold cache), and Claude Code ships native unattended/remote modes (Routines, Agent View, Channels, Agent Teams, Workflows). **Most users should run ACF in one interactive session (the default) or via a native mode — see "Execution Substrate" in [Framework.md](Framework.md).** Keep this orchestrator only for a genuine niche: provider-agnostic automation (native modes are unavailable on Bedrock/Vertex/Foundry) or a fully-custom external state machine. The methodology it sequences is unchanged; only the substrate is demoted.
+
+This document defines how the orchestrator and executor communicate, how state is passed, and how steps advance automatically.
 
 ---
 
@@ -1016,3 +1018,4 @@ Most projects do not need these advanced features. Start with single-executor mo
 | v0.14 | 2026-06-11 | FB-012: bdd step output changes from `docs/bdd/US-{story}.md` to the Behavior Delta section of `docs/deltas/US-{story}.md` (post_check greps for `## Behavior Delta`); sdd-delta appends the SDD Delta to the same file; scaffold reads the delta file (Test Level fields + Parameters tables) and emits machine-readable Spec/Scenario test headers; verify becomes ID-based Completeness + merges Behavior Delta → `docs/specs/` and SDD Delta → `docs/sdd.md` on pass; bootstrap creates `docs/specs/` instead of `docs/bdd/`; step instructions updated (TBD-N clarification phrasing, four-check verify); rollback heuristic example updated. Pipeline step IDs unchanged |
 | v0.15 | 2026-06-12 | FB-015: verify moves the merged delta to `docs/deltas/archive/{date}-US-{story}.md` (claude_writes + step instruction updated); active delta path becomes a reliable in-flight signal for pre-dispatch checks and rollback suggestions |
 | v0.16 | 2026-06-13 | FB-016: bdd/sdd-delta step instructions seed and extend the delta's `## Review Disclosure` section; verify merge explicitly skips it; `review` step `claude_writes: []` documented as intentional (ephemeral summary, disclosure lives in the delta) |
+| v0.17 | 2026-06-13 | FB-017: legacy/optional banner added — this bespoke external orchestrator is superseded for most users by the interactive single-session default and native unattended modes (Routines / Agent View / Channels / Agent Teams / Workflows); headless `-p` is now separately billed + cold-cached. Retained for provider-agnostic / fully-custom automation. See "Execution Substrate" in Framework.md. Protocol semantics unchanged |
