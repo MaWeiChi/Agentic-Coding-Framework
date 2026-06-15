@@ -875,8 +875,11 @@ Reopens a completed User Story at a specified pipeline step.
 - Validates that `story-id` matches a previously completed story (checks `.ai/history.md`)
 - Sets STATE.json: `story → story-id`, `step → target`, `status → pending`, `attempt → 1`
 - Appends to `.ai/history.md`: `US-XXX reopened — reason: [human_note or ISSUE description]`
-- Preserves existing BDD/SDD/test files — executor modifies incrementally, not rewrites
 - Step 0 Safety Net Check applies on re-entry
+
+**`claude_reads` substitution for a merged US (FB-018):** a completed US has no active `docs/deltas/US-{story}.md` — it was archived on merge (FB-015). For re-entry, each step's `claude_reads` substitutes the **merged truth** for the active delta: read `docs/specs/` (current behavior) + `docs/sdd.md` (current architecture) + the existing tests; `docs/deltas/archive/{date}-US-{story}.md` is available read-only for original context. The pre-dispatch prereq check treats active-delta absence for a completed US as expected, not a missing-file error.
+- **Behavior-changing reopen** → re-enter at `bdd`, author a **fresh** active delta covering only the fix (it archives with a new date prefix on merge — no collision).
+- **Code-only fix** (regression / flaky test / missed Error Case) → re-enter at `scaffold` / `impl` / `verify` against `docs/specs/` + tests; no new delta.
 
 **Guardrail — auto-escalation on repeated failure:**
 - If a reopened US fails Verify after fix → auto-escalate rollback one level deeper
@@ -1019,3 +1022,4 @@ Most projects do not need these advanced features. Start with single-executor mo
 | v0.15 | 2026-06-12 | FB-015: verify moves the merged delta to `docs/deltas/archive/{date}-US-{story}.md` (claude_writes + step instruction updated); active delta path becomes a reliable in-flight signal for pre-dispatch checks and rollback suggestions |
 | v0.16 | 2026-06-13 | FB-016: bdd/sdd-delta step instructions seed and extend the delta's `## Review Disclosure` section; verify merge explicitly skips it; `review` step `claude_writes: []` documented as intentional (ephemeral summary, disclosure lives in the delta) |
 | v0.17 | 2026-06-13 | FB-017: legacy/optional banner added — this bespoke external orchestrator is superseded for most users by the interactive single-session default and native unattended modes (Routines / Agent View / Channels / Agent Teams / Workflows); headless `-p` is now separately billed + cold-cached. Retained for provider-agnostic / fully-custom automation. See "Execution Substrate" in Framework.md. Protocol semantics unchanged |
+| v0.18 | 2026-06-13 | FB-018: `reopen` gains a `claude_reads` substitution for merged US — re-entry reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) since the active delta is archived (FB-015); behavior-changing reopen re-enters at `bdd` with a fresh delta, code-only fix at scaffold/impl/verify; active-delta absence on a completed US is expected (not a prereq-check error) |

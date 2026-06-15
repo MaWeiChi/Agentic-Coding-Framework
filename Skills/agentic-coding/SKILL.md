@@ -219,5 +219,10 @@ Code Review, Spec-Code Coherence, Regression, Security Scan, and Memory Audit. O
 a `.ai/review-report.md` and update ISSUES. This is analysis only — no mutations to code.
 
 If you're asked to **reopen a completed US** (via triage), treat it like resuming from
-the rollback target step: read existing specs/SDD/tests, modify incrementally (not rewrite),
-and re-run the pipeline from that step. Add a history entry: `US-XXX reopened — reason: ...`
+the rollback target step. A completed US has **no active delta** — it was archived on merge
+(`docs/deltas/archive/`). So read the **merged truth**: `docs/specs/` (current behavior) +
+`docs/sdd.md` (current architecture) + the existing tests; the archived delta is read-only
+context, the spec is the contract. If the reopen **changes behavior**, re-enter at `bdd` and
+write a **fresh** delta covering only the fix; if it only **fixes code to match the spec**
+(regression, flaky test), re-enter at scaffold/impl/verify against the spec — no new delta.
+Modify incrementally (not rewrite). Add a history entry: `US-XXX reopened — reason: ...`

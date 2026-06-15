@@ -1066,9 +1066,9 @@ Company- or domain-mandated requirement formats stay out of scope. If an upstrea
 3. **Date prefix** handles reopen cycles: a US reopened at `bdd` produces a fresh active delta covering only the fix; on its merge, the second archive entry does not collide with the first.
 4. **Delete remains a project-level option** for projects that fully trust git history; the default is archive.
 
-#### Open Follow-Up
+#### Open Follow-Up — ✅ Resolved by FB-018
 
-Post-merge reopen at steps that read the delta (`scaffold`, `verify`) should arguably read `docs/specs/` (the merged truth) rather than the old delta — "make code match spec" re-entry. This changes per-step `claude_reads` semantics in Protocol and is deferred; for now, reopen at those steps may consult `docs/deltas/archive/` read-only for context, or roll back to `bdd`.
+Post-merge reopen at steps that read the delta (`scaffold`, `verify`) should read `docs/specs/` (the merged truth) rather than the old delta — "make code match spec" re-entry. **Resolved by FB-018**: re-entry on a merged US reads `docs/specs/` + `docs/sdd.md` + tests in place of the (archived) active delta; a behavior-changing reopen re-enters at `bdd` with a fresh delta.
 
 #### Impact Assessment (Token / Quality / Autonomy)
 
@@ -1184,6 +1184,42 @@ The earlier cost micro-optimizations for the bespoke path (coalesce bdd+sdd-delt
 
 ---
 
+### FB-018: Reopen Reads Merged Truth — Resolving the FB-015 Open Follow-Up
+
+**Date:** 2026-06-13
+**Context:** FB-015 made the active delta move to `docs/deltas/archive/` on merge, and recorded an open follow-up: re-entry steps (`reopen` from FB-009's Review → Triage → Re-entry) still read the *active* delta, which no longer exists once a Story is merged. This closes that gap.
+
+#### The Gap
+
+`reopen --target <step>` re-enters a **completed (merged)** US at a pipeline step. Several steps' `claude_reads` point at `docs/deltas/US-{story}.md` — but for a merged US that file has moved to `docs/deltas/archive/{date}-US-{id}.md` (FB-015). So:
+- A reopen at `scaffold` / `impl` / `verify` would read a path that no longer exists; the pre-dispatch prereq check would warn on the missing file.
+- More importantly, the contract the code must now satisfy is no longer "the old delta" — it is the **current behavior truth** in `docs/specs/` (+ `docs/sdd.md` for architecture). The merged spec, not the historical change, is what re-entry should read.
+
+#### Design
+
+For a **reopened (merged) US**, re-entry reads the merged truth in place of the (absent) active delta:
+
+1. **Re-entry steps read `docs/specs/` + `docs/sdd.md` + the existing tests** instead of the active delta. The archived delta (`docs/deltas/archive/`) is available read-only for original change context, but the spec is the contract.
+2. **A reopen that changes behavior re-enters at `bdd`** and authors a **fresh active delta** covering only the fix. On its merge it archives with a new date prefix — FB-015's date prefix already anticipated this, so there is no archive collision.
+3. **A reopen that only fixes code to match the existing spec** (regression, flaky test, missed Error Case) re-enters at `scaffold` / `impl` / `verify` reading `docs/specs/` + tests; no new delta is needed.
+4. **Pre-dispatch prereq check:** active-delta absence for a completed US is expected, not an error (already stated by FB-015) — reopen must not be blocked by it.
+
+The reopen flow lives in two places: the legacy Protocol orchestrator (FB-017) and the skill's interactive Review → Triage → Re-entry. The skill (the live path) is the one that matters most; both are aligned here.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ Re-entry reads one merged spec instead of hunting a moved/absent delta |
+| **Quality** | ⭐⭐ Re-entry validates code against current truth, not a historical change; closes a correctness gap FB-015 opened |
+| **Autonomy** | ⭐ File-presence ambiguity on reopen removed; the agent knows where to read |
+
+**Verdict: Worth-Doing** (correctness fix; the gap was self-inflicted by FB-015)
+
+**Status:** ✅ Incorporated (2026-06-13) into Lifecycle v0.13 (Re-entry clause), Protocol v0.18 (reopen `claude_reads` substitution), and Skill (SKILL.md reopen note + workflow.md derivation). FB-015's open follow-up is resolved.
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1221,3 +1257,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.17 | 2026-06-13 | FN-004 added: Skill ↔ Framework derivation is hand-maintained double-maintenance that grows with every FB (the one redundancy `.feature` removal did not eliminate); options recorded (derivation lint / semi-auto export / single-source build), starting with a lint keyed off the skill's `Derived from:` provenance line |
 | v0.18 | 2026-06-13 | FB-017: execution-substrate repositioning. Headless `-p` now separately billed + cold-cached, and native modes (Agent View / Channels / Routines / Agent Teams / Workflows) cover remote+unattended under subscription — both original justifications for the bespoke orchestrator are gone. Separate ACF methodology (durable, substrate-agnostic) from execution substrate; interactive single session is the default, native modes the recommended unattended substrate, bespoke orchestrator demoted to legacy/optional (provider-agnostic niche retained). FN-005 added (bespoke-path cost optimizations). Incorporated into Framework v0.22, Protocol v0.17, Protocol-Advanced, README, Skill |
 | v0.19 | 2026-06-13 | FN-004 option (a) implemented: `scripts/check-skill-derivation.py` version-drift lint (skill `Derived from:` provenance vs each doc's changelog tail; zero false positives, exit 1 on drift); documented in CONTRIBUTING.md Skill Reference Sync; FN-004 priority lowered to Low |
+| v0.20 | 2026-06-13 | FB-018: resolves FB-015's open follow-up — reopen of a merged US reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) in place of the archived active delta; behavior-changing reopen re-enters at `bdd` with a fresh delta; pre-dispatch active-delta absence is expected, not an error. Incorporated into Lifecycle v0.13, Protocol v0.18, Skill |
