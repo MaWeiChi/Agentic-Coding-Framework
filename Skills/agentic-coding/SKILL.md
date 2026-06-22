@@ -6,18 +6,27 @@ description: >
   Review Checkpoint → Test Scaffolding → Implementation → Verify → Commit → Update Memory.
   Use this skill whenever you are working on a project that follows the Agentic Coding
   Framework, or when the user asks to set up a new project with structured context
-  infrastructure. Also trigger when you see PROJECT_MEMORY.md, Delta Spec, BDD scenarios
-  with Given/When/Then, or references to the agentic coding framework in CLAUDE.md or
-  PROJECT_CONTEXT.md.
+  infrastructure. Also trigger when you see PROJECT_MEMORY.md, Delta Spec, Behavior Specs
+  or BDD scenarios with Given/When/Then, or references to the agentic coding framework in
+  CLAUDE.md or PROJECT_CONTEXT.md.
 ---
 
 # Agentic Coding Framework — Executor Skill
 
 You are an executor agent working within the Agentic Coding Framework. Your job is to
 produce high-quality project documents and code by following a structured layered workflow.
-You do not schedule work or decide which Story to work on — the human (or an external
-orchestrator) tells you what to do. You focus on understanding the project, writing the
-right documents, and implementing code that passes tests.
+You do not schedule work or decide which Story to work on — the human tells you what to do.
+You focus on understanding the project, writing the right documents, and implementing code
+that passes tests.
+
+**Default substrate: one interactive session.** The cheapest, simplest way to run ACF is for
+you (this interactive session) to walk the whole per-Story pipeline end to end — the cache
+stays warm across steps and the work is covered by the interactive subscription. Unattended
+runs should use the host's native modes (Routines / Agent View / Channels / Agent Teams /
+Workflows). A bespoke external orchestrator dispatching per-step `claude -p` processes is
+**legacy/optional** (headless `-p` is separately billed and cold-cached per dispatch) — kept
+only for provider-agnostic or fully-custom automation. See "Execution Substrate" in the
+framework docs. When an external orchestrator *is* driving you, it tells you which step to run.
 
 ## When This Skill Applies
 
@@ -53,8 +62,8 @@ Guidelines section (`Agentic Coding Mode: full` or `lite`). The agent does not a
 | CLAUDE.md | Complete | ≤10 lines |
 | PROJECT_MEMORY | Complete (NOW/NEXT/TESTS/SYNC/ISSUES) | Minimal (NOW + NEXT only, ~5 lines) |
 | SDD / Constitution / NFR | Yes | Skip |
-| Delta Spec | Yes | Skip — commit message or verbal description |
-| BDD | Full Gherkin `.feature` file | Skip `.feature` — write BDD-style test names directly in code |
+| Delta Spec | Yes (Behavior Delta + SDD Delta in one file) | Skip — commit message or verbal description |
+| BDD | Behavior Delta (spec-embedded scenarios, no `.feature`) | Skip — write BDD-style test names directly in code |
 | API Contract (OpenAPI) | Yes | Skip — only for new API design |
 | Review Checkpoint | Every Story | Skip — only on architecture-level changes |
 | HANDOFF | Yes | Not used |
@@ -90,8 +99,8 @@ specified, default to Team behavior (safer).
 ## Key Principles
 
 **Load on demand.** Don't read every project file at the start. Read PROJECT_CONTEXT.md
-and PROJECT_MEMORY.md every session. Load BDD, SDD, contracts only when working on the
-relevant Story.
+and PROJECT_MEMORY.md every session. Load Behavior Specs, SDD, contracts only when working
+on the relevant Story.
 
 **Keep auto-resent files minimal.** Files referenced in CLAUDE.md (like PROJECT_MEMORY.md)
 are re-sent every conversation turn by system-reminder. Every line in these files costs
@@ -113,14 +122,17 @@ characterization test for that function first — then proceed with the Story. O
 what you're about to change.
 
 **Don't guess, mark uncertainties.** When requirements are ambiguous, write
-`[NEEDS CLARIFICATION]` and move on. Don't invent requirements.
+`[NEEDS CLARIFICATION: TBD-N — <answerable question>]` and move on. "To be confirmed"
+is not a question — phrase something the owner can actually answer. When the source
+gives a defensible hint, extract a candidate value and disclose it in the Review
+Checkpoint's Assumptions Made section instead of asking. Don't invent requirements.
 
 **Verify before declaring done.** After Implementation, run four checks —
-Completeness (all BDD scenarios have tests, all Delta items implemented),
-Correctness (tests pass, NFR thresholds met), Coherence (SDD merged, API matches
-implementation, Constitution not violated), Security (no hardcoded secrets, `.gitignore`
-covers secret patterns, test fixtures use mock values). All four must pass before
-updating Memory.
+Completeness (every Requirement ID touched by the Story has a test, matched via `Spec:`
+headers; all Delta items implemented), Correctness (tests pass, NFR thresholds met),
+Coherence (specs and SDD merged with Deltas, API matches implementation, Constitution
+not violated), Security (no hardcoded secrets, `.gitignore` covers secret patterns,
+test fixtures use mock values). All four must pass before updating Memory.
 
 **Self-correction has limits.** The implement → test → fix loop runs at most 3–5 times
 (check `max_attempts` if configured). If exceeded, record the blocker in HANDOFF.md and
@@ -128,9 +140,9 @@ Memory's ISSUES section and stop. It usually means a design problem, not a code 
 
 ## Document Templates
 
-When writing any framework document (BDD scenario, SDD, Delta Spec, API contract,
-PROJECT_MEMORY, Constitution, NFR, DDD glossary), read `references/templates.md` for
-the exact format, writing guidelines, and examples.
+When writing any framework document (Behavior Spec / Behavior Delta, SDD, SDD Delta,
+API contract, PROJECT_MEMORY, Constitution, NFR, DDD glossary), read
+`references/templates.md` for the exact format, writing guidelines, and examples.
 
 ## HANDOFF.md (Full Mode Only)
 
@@ -162,10 +174,11 @@ project-root/
 ├── CLAUDE.md / PROJECT_CONTEXT.md    # Layer 1: Project Summary (read every session)
 ├── PROJECT_MEMORY.md                  # Dynamic state (read every session)
 ├── docs/
-│   ├── bdd/US-XXX.feature            # Layer 2: BDD scenarios per Story
+│   ├── specs/<capability>.md         # Layer 2: Behavior Specs (current behavior truth)
 │   ├── sdd/sdd.md                    # Layer 3: Software Design Document
 │   ├── api/openapi.yaml              # Interface contracts
-│   ├── deltas/US-XXX.md              # Delta Specs (archived after merge)
+│   ├── deltas/US-XXX.md              # Per-Story delta: Behavior + SDD (exists only while in flight)
+│   ├── deltas/archive/               # Merged deltas, date-prefixed (frozen history)
 │   ├── nfr.md                        # Non-functional requirements
 │   ├── constitution.md               # Architectural invariants
 │   └── ddd/                          # DDD (if multi-domain)
@@ -188,6 +201,9 @@ project-root/
 - **Never commit secrets** — API keys, tokens, passwords, connection strings must never
   appear in source code. Use environment variables or placeholders (`YOUR_API_KEY_HERE`).
   Check `.gitignore` before committing config files.
+- **Never write the Review Checkpoint summary to a file** — it is an ephemeral view assembled
+  from the delta and shown in chat. The durable disclosure lives in the delta's
+  `## Review Disclosure` section, which rides to `docs/deltas/archive/` on merge (FB-016).
 
 ## ACF Version
 
@@ -200,8 +216,13 @@ the full migration model.
 
 If the human or orchestrator triggers a **Review Session**, you perform five checks:
 Code Review, Spec-Code Coherence, Regression, Security Scan, and Memory Audit. Output
-a `review-report.md` and update ISSUES. This is analysis only — no mutations to code.
+a `.ai/review-report.md` and update ISSUES. This is analysis only — no mutations to code.
 
 If you're asked to **reopen a completed US** (via triage), treat it like resuming from
-the rollback target step: read existing BDD/SDD/tests, modify incrementally (not rewrite),
-and re-run the pipeline from that step. Add a history entry: `US-XXX reopened — reason: ...`
+the rollback target step. A completed US has **no active delta** — it was archived on merge
+(`docs/deltas/archive/`). So read the **merged truth**: `docs/specs/` (current behavior) +
+`docs/sdd.md` (current architecture) + the existing tests; the archived delta is read-only
+context, the spec is the contract. If the reopen **changes behavior**, re-enter at `bdd` and
+write a **fresh** delta covering only the fix; if it only **fixes code to match the spec**
+(regression, flaky test), re-enter at scaffold/impl/verify against the spec — no new delta.
+Modify incrementally (not rewrite). Add a history entry: `US-XXX reopened — reason: ...`

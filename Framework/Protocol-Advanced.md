@@ -2,6 +2,8 @@
 
 **Multi-Executor Collaboration, Reference Implementations, and Experimental Features**
 
+> **Legacy / optional (FB-017).** These are extensions of the bespoke external orchestrator (see the banner in [Protocol.md](Protocol.md)). For multi-agent fan-out, prefer native **Agent Teams / Workflows** over a custom multi-executor coordinator — see "Execution Substrate" in [Framework.md](Framework.md). Retained for provider-agnostic or fully-custom setups.
+
 This document contains advanced protocol extensions split from [Protocol.md](Protocol.md). Most projects do not need these features — start with single-executor mode and upgrade when you need multi-Story parallelism or multi-executor collaboration.
 
 ---
@@ -76,7 +78,7 @@ impl:
         - "*.tsx"
     test:
       claude_reads:
-        - docs/bdd/US-{story}.md
+        - docs/deltas/US-{story}.md   # Behavior Delta (Test Level fields + Parameters tables)
         - docs/api/openapi.yaml
         - docs/nfr.md
       claude_writes:
@@ -84,8 +86,8 @@ impl:
         - "*.spec.ts"
     verify:
       claude_reads:
-        - docs/bdd/US-{story}.md
-        - docs/deltas/US-{story}.md
+        - docs/deltas/US-{story}.md   # Behavior Delta + SDD Delta
+        - docs/specs/
         - docs/api/openapi.yaml
         - docs/constitution.md
       claude_writes: []
@@ -360,7 +362,7 @@ You are the TEAM LEAD. Create an agent team to parallelize this step.
 - Spawn prompt: ...
 
 ### Teammate: test
-- Reads: docs/bdd/US-007.md, docs/api/openapi.yaml, docs/nfr.md
+- Reads: docs/deltas/US-007.md, docs/api/openapi.yaml, docs/nfr.md
 - Writes: *_test.go, *.spec.ts
 - Spawn prompt: ...
 

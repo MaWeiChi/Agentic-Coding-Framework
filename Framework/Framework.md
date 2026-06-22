@@ -13,7 +13,8 @@ Discussion Summary | February 2026
 | This Document | Framework Foundation: Layered Definition, Core Principles, Process | Read Every Conversation |
 | [Lifecycle.md](Lifecycle.md) | Operating Mechanism: Iteration Model, Test Strategy, CI/CD Interface | Load When Planning Iteration or Setting Up CI |
 | [Templates.md](Templates.md) | Framework Details: Document Templates for Each Layer, Writing Guidelines, Examples | Load When Writing BDD/SDD/Contract/Memory |
-| [Protocol.md](Protocol.md) | Communication Protocol: State Management and Automation Between Orchestrator ↔ Executor | Load When Setting Up Automation or Integrating Orchestrator |
+| [Protocol.md](Protocol.md) | Communication Protocol for the bespoke external orchestrator (legacy/optional — see Execution Substrate; prefer native modes) | Load only when building provider-agnostic or fully-custom automation |
+| [Protocol-Advanced.md](Protocol-Advanced.md) | Multi-executor collaboration + reference implementations (legacy/optional — prefer native Agent Teams / Workflows) | Load only when building provider-agnostic or fully-custom automation |
 | PROJECT_MEMORY.md (Project Level) | Dynamic State Tracking: Progress, Tasks, Test Status, Git Verification | Read Every Conversation (Paired With Project Summary) |
 
 ---
@@ -29,7 +30,7 @@ The framework supports two modes. The user specifies the mode in CLAUDE.md's Age
 | PROJECT_MEMORY | Complete (NOW/NEXT/TESTS/SYNC/ISSUES) | Minimal (NOW + NEXT only, ~5 lines) |
 | SDD / Constitution / NFR | Yes | Skip |
 | Delta Spec | Yes | Verbal or commit message |
-| BDD | Full Gherkin | Write tests directly |
+| BDD | Behavior Delta (spec-embedded scenarios) | Write tests directly |
 | HANDOFF (Full Mode Only) | Yes | Not used |
 
 Lite mode is an **on-ramp to Full** — projects that start in Lite can upgrade later when the Bootstrap cost becomes justified. Even one-off tasks benefit from a minimal NOW + NEXT in case follow-up sessions occur.
@@ -78,7 +79,7 @@ In Lite Mode, PROJECT_MEMORY contains only NOW + NEXT (~5 lines). In Full Mode, 
 
 Describes user behavior and expected results using Given / When / Then format. Particularly useful for agents because it simultaneously serves as both requirements specification and acceptance criteria—agents can directly verify their code against BDD scenarios after writing.
 
-Coarser granularity, corresponding to user scenarios. BDD scenarios use RFC 2119 keywords (SHALL/MUST/SHOULD/MAY) to distinguish requirement strength, and include test level tags (`@unit`, `@integration`, `@component`, `@e2e`, `@perf`, `@load`). Performance and security tags support NFR ID syntax (such as `@perf(PERF-01)`, `@secure(SEC-01)`), and agents look up the NFR table during Test Scaffolding to get thresholds. When requirements are unclear, agents mark `[NEEDS CLARIFICATION]` to pause that scenario pending Review Checkpoint clarification. Details see the test strategy section in the [Lifecycle Document](Lifecycle.md) and BDD/NFR templates in the [Templates Document](Templates.md).
+Coarser granularity, corresponding to user scenarios. Behavior lives in **Behavior Specs** (`docs/specs/<capability>.md`): OpenSpec-style `### Requirement:` blocks with stable IDs (`[R-<CAP>-NNN]`) and embedded `#### Scenario:` Given/When/Then — the current behavior truth of the system. Each Story contributes a **Behavior Delta** (ADDED/MODIFIED/REMOVED Requirements) that merges into the specs when Verify passes; no standalone `.feature` files. Requirements use RFC 2119 keywords (SHALL/MUST/SHOULD/MAY) to distinguish strength. Scenarios carry a `Test Level` field (`integration`, `component`, `e2e` — unit-level GWT lives as test names in code, not in specs); performance and security tags use NFR ID syntax (such as `@perf(PERF-01)`, `@secure(SEC-01)`), and agents look up the NFR table during Test Scaffolding to get thresholds. When requirements are unclear, agents mark `[NEEDS CLARIFICATION: TBD-N — <answerable question>]` to pause that scenario pending Review Checkpoint clarification. Details see the test strategy section in the [Lifecycle Document](Lifecycle.md) and Behavior Spec/NFR templates in the [Templates Document](Templates.md).
 
 ### Layer Three: SDD (Software Design Document)
 
@@ -98,11 +99,11 @@ A clear review point before entering implementation. At this point, BDD, SDD, an
 
 Divided into two clear steps:
 
-**Test Scaffolding (Red Light):** Based on BDD scenario tags and API contracts, first produce corresponding level test file skeletons. At this point, there is no implementation code; all tests fail. The value of this step is proving the agent understands the requirements.
+**Test Scaffolding (Red Light):** Based on scenario `Test Level` fields, Parameters tables, and API contracts, first produce corresponding level test file skeletons with machine-readable headers tracing back to Requirement IDs. At this point, there is no implementation code; all tests fail. The value of this step is proving the agent understands the requirements.
 
 **Implementation (Green Light):** Agents read SDD, API contracts, and failing test logs, writing minimal code to pass tests, then refactor. Each round, agents can run tests themselves to verify without human intervention, which is the most token-efficient place.
 
-**Verify (Quality Gate):** After Implementation completes and before updating Memory, agents automatically execute three-point verification—Completeness (all BDD scenarios have tests, all Delta Specs are implemented), Correctness (tests pass, NFRs meet threshold), Coherence (SDD merged with Delta, API contracts consistent with implementation, Constitution not violated). All three must pass before proceeding. Details see the Verify step in the [Lifecycle Document](Lifecycle.md).
+**Verify (Quality Gate):** After Implementation completes and before updating Memory, agents automatically execute four-point verification—Completeness (every Requirement ID touched by the Story has a corresponding test, all Delta items are implemented), Correctness (tests pass, NFRs meet threshold), Coherence (specs and SDD merged with Deltas, API contracts consistent with implementation, Constitution not violated), Security (no hardcoded secrets, `.gitignore` coverage, mock credentials in tests). All four must pass before proceeding. Details see the Verify step in the [Lifecycle Document](Lifecycle.md).
 
 ---
 
@@ -184,6 +185,28 @@ Additional considerations for existing projects: Some implicit architectural dec
 
 ---
 
+## Execution Substrate (Where ACF Runs)
+
+ACF is a **methodology**, not a runtime: Behavior Specs + Delta→merge, the per-Story step sequence, four-check Verify, Review Disclosure, and the memory conventions are independent of *where* the agent runs. The framework is substrate-agnostic — pick the cheapest substrate that fits how hands-on you want to be.
+
+**Default: one interactive session.** A single interactive Claude Code (or equivalent) session, driven by the `agentic-coding` skill, walks the whole per-Story pipeline end to end. The cache stays warm across steps and the work is covered by your plan's interactive subscription. For solo and personal projects this is the cheapest and simplest substrate — start here.
+
+**Unattended / remote: native modes.** When you need the pipeline to run without you driving it, use the host tool's native execution features rather than a custom dispatch loop:
+
+| Need | Native mechanism (Claude Code) |
+|------|-------------------------------|
+| Scheduled / triggered unattended runs (cloud) | **Routines** (cron / webhook / GitHub; counts against subscription usage) |
+| Parallel local runs with file isolation | **Agent View** (`claude agents`) |
+| Nudge a running session while away from the terminal | **Channels** |
+| Multi-agent fan-out within a Story | **Agent Teams / Workflows** |
+| Human review gate | Interactive: converse. Routine: review completed work in the UI |
+
+**Cost note.** Interactive sessions draw on your plan's subscription. Headless `claude -p` / Agent SDK usage is metered against a **separate credit pool**, and each fresh `-p` process starts with a cold prompt cache — so an automation built as a *pile of per-step `-p` dispatches* is the expensive path. Prefer the interactive session or a native unattended mode; don't hand-roll a dispatch loop to save money, because it no longer does.
+
+**Legacy: the bespoke external orchestrator.** The [Protocol document](Protocol.md) describes a custom external orchestrator (STATE.json state machine + hooks + per-step `claude -p` dispatch). It predates the native modes above and was built when subscriptions did not permit that kind of automation. It is now **optional/legacy** — retained for one genuine niche: provider-agnostic automation (Channels/Routines are unavailable on Bedrock/Vertex/Foundry) or a fully-custom external state machine. Most users should use the interactive session or a native mode instead.
+
+---
+
 ## Core Principles
 
 | Principle | Explanation |
@@ -195,7 +218,7 @@ Additional considerations for existing projects: Some implicit architectural dec
 | Dual reporting | Simultaneously serve AI agents and human team members |
 | ADR / NFR / DDD can be iteratively supplemented | No need to pursue completeness at start; supplement when hitting issues |
 | Scale determines depth | Small CRUD needs only four layers; distributed systems need more documents |
-| Don't guess, mark uncertainties | When encountering ambiguity, mark `[NEEDS CLARIFICATION]`, don't self-infer requirements |
+| Don't guess, mark uncertainties | When encountering ambiguity, mark `[NEEDS CLARIFICATION: TBD-N — <answerable question>]`, don't self-infer requirements; when the source gives a defensible hint, extract a candidate and disclose it in Assumptions Made instead of asking |
 | Incremental not rewrite | SDD updates use Delta Spec format, avoiding full rewrites losing decisions |
 
 ---
@@ -268,3 +291,5 @@ The following topics can be explored more deeply in subsequent discussions:
 | v0.18 | 2026-02-16 | Field feedback (pilot project US-001): Add Full/Lite mode with scenario table and mode switching; add "keep auto-resent files minimal" and "touch it, test it" principles; DONE/LOG moved to .ai/history.md; existing project flow changed from one-time characterization tests to per-Story Step 0 |
 | v0.19 | 2026-02-25 | New project flow table add Verify, Commit, Update Memory steps; pipeline now 10 steps aligned with Protocol v0.11 |
 | v0.20 | 2026-02-25 | Checklist system: each story auto-generates `.ai/CHECKLIST.md` for progress tracking; aligned with Protocol v0.12. Rollback and pre-dispatch prerequisite checks added to orchestrator capabilities |
+| v0.21 | 2026-06-11 | FB-012~014: BDD layer redefined as Behavior Specs (`docs/specs/<capability>.md`, OpenSpec-style Requirement [R-<CAP>-NNN] + embedded Scenarios) with per-Story Behavior Delta merged on Verify pass; `.feature` files retired (Gherkin opt-in only); scenario `Test Level` field replaces test-level tags (unit-level GWT moves into code); Verify aligned to four-point including ID-based Completeness and Security (FB-011 catch-up); `[NEEDS CLARIFICATION]` upgraded to numbered answerable TBD-N with Assumptions Made disclosure |
+| v0.22 | 2026-06-13 | FB-017: add "Execution Substrate" section — ACF is substrate-agnostic; interactive single session is the default (subscription-covered, warm cache), native modes (Routines / Agent View / Channels / Agent Teams / Workflows) are the recommended unattended substrate, the bespoke external orchestrator (Protocol.md) is demoted to legacy/optional (provider-agnostic niche). Cost note: headless `-p` is separately billed + cold-cached. Related Documents entry for Protocol.md reframed |

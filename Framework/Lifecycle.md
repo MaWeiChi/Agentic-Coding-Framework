@@ -68,7 +68,7 @@ Users can switch modes (Lite ↔ Full) by editing CLAUDE.md or by verbal instruc
 **Downgrade (Full → Lite):**
 1. Update CLAUDE.md mode line to `lite`
 2. Slim PROJECT_MEMORY to NOW + NEXT only
-3. Stop maintaining SDD, HANDOFF, Delta Spec, BDD
+3. Stop maintaining SDD, HANDOFF, Delta Spec, Behavior Specs
 4. Existing docs remain (not deleted), just no longer actively maintained
 
 ### Iterative Execution (One Cycle per User Story)
@@ -78,11 +78,11 @@ After Bootstrap is complete, each User Story enters one independent micro-waterf
 | Step | Description |
 |------|-------------|
 | Step 0 (Full Mode, existing codebases) | Safety Net Check: verify test coverage for functions being modified; add characterization tests if missing |
-| BDD (Full Mode) / Write Tests Directly (Lite Mode) | Write behavior scenarios **only for the current Story** (use RFC 2119 language, mark `[NEEDS CLARIFICATION]`). Lite Mode: skip Gherkin, write test files directly, then skip to Implementation |
-| SDD Incremental Update | Append or modify affected modules and architecture sections, output **Delta Spec** (ADDED/MODIFIED/REMOVED), don't rewrite the entire SDD |
+| BDD (Full Mode) / Write Tests Directly (Lite Mode) | Output a **Behavior Delta** (ADDED/MODIFIED/REMOVED Requirements with embedded scenarios, **only for the current Story**; use RFC 2119 language, mark `[NEEDS CLARIFICATION: TBD-N — <answerable question>]`). No `.feature` file — see Behavior Spec template in [Templates document](Templates.md). Lite Mode: skip the Behavior Delta, write test files directly, then skip to Implementation |
+| SDD Incremental Update | Append or modify affected modules and architecture sections, output **SDD Delta** (ADDED/MODIFIED/REMOVED), don't rewrite the entire SDD |
 | API Contract Incremental Update | Add or adjust affected endpoints / events, don't rewrite the entire contract |
-| **Review Checkpoint** | **Human confirms current BDD + Delta Spec + contract differences + clarifies all `[NEEDS CLARIFICATION]`** |
-| Test Scaffolding | Based on current BDD scenario tags, output corresponding test level scaffolding (red light) |
+| **Review Checkpoint** | **Agent runs the pre-review self-check (mechanical + semantic), records its disclosure in the delta's `## Review Disclosure` section, then assembles an ephemeral summary (never a file, FB-016) surfacing Assumptions Made / Source Mapping / Cross-Story Conflict Scan; human confirms Behavior Delta + SDD Delta + contract differences + clarifies all `[NEEDS CLARIFICATION]`. On verdict, route each item to its home (see Templates close-out table)** |
+| Test Scaffolding | Based on scenario `Test Level` fields and Parameters tables in the Behavior Delta, output corresponding test level scaffolding (red light) with machine-readable Spec/Scenario headers |
 | Implementation | Implementation to pass tests → Refactor (includes self-correction loop, see below) |
 | AST Linting | After each Implementation iteration, run syntax-level checks; failure does not enter Verify |
 | Component Test | Validate front-end component behavior (Playwright component testing) |
@@ -108,7 +108,7 @@ Verify is the quality gate for each Story's micro-waterfall, executed after all 
 
 | Check Dimension | Content | Determination Method | Action on Failure |
 |-----------------|---------|---------------------|------------------|
-| **Completeness** | Are all BDD scenarios covered by corresponding tests? Have all ADDED items in Delta Spec been implemented? Are there any unresolved `[NEEDS CLARIFICATION]` remaining? | **Semi-deterministic**: test existence can be confirmed by grep; "all implemented" requires LLM judgment | Return to corresponding step to complete |
+| **Completeness** | Does every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) have a corresponding test (matched via the `Spec:` header)? Have all ADDED items in the SDD Delta been implemented? Are there any unresolved `[NEEDS CLARIFICATION]` remaining? | **Semi-deterministic**: ID ↔ test matching can be confirmed by grep on `Spec:` headers; "all implemented" requires LLM judgment | Return to corresponding step to complete |
 | **Correctness** | Do all tests pass? Are NFR thresholds met? | **Deterministic**: `go test` / `npm test` exit code + numerical results from NFR tools | Return to Implementation to fix |
 | **Coherence** | Has the main SDD file merged Delta Spec? Does the API contract match the implementation? Are Constitution principles violated? | **LLM-dependent**: executor needs to read multiple documents and compare semantic consistency | Fix inconsistencies |
 | **Security** | No hardcoded secrets in committed files? `.gitignore` covers secret file patterns? Test fixtures use mock values, not real credentials? | **Semi-deterministic**: grep for common secret patterns (`password=`, `apikey=`, `token=`, `BEGIN RSA PRIVATE KEY`), check `.gitignore` entries | Return to Implementation to fix |
@@ -142,14 +142,14 @@ Linting tools are configured by each project in the Step rules table of the [Pro
 
 ### Delta Spec Lifecycle
 
-Delta Spec is the structured format for SDD incremental updates (ADDED / MODIFIED / REMOVED), with complete template in the SDD template section of the [Templates document](Templates.md).
+Delta Spec is the structured incremental-update format (ADDED / MODIFIED / REMOVED). Each Story's delta file `docs/deltas/US-XXX.md` carries **three top-level sections**: the **Behavior Delta** (Requirements + scenarios, produced at the BDD step), the **SDD Delta** (modules + data model, produced at the SDD step), and the **Review Disclosure** (Assumptions Made / Source Mapping / Cross-Story Conflict Scan, built incrementally; merge-skipped, archived with the delta — FB-016). Complete templates are in the Behavior Spec and SDD sections of the [Templates document](Templates.md).
 
 The workflow in micro-waterfall:
 
-1. **Output when updating SDD**: agent analyzes affected modules based on BDD scenarios and outputs Delta Spec
-2. **Review at Review Checkpoint**: humans review Delta Spec (what changed) rather than entire SDD (what it looks like now)
-3. **Merge during Verify step**: after confirming implementation is complete, Delta content is formally merged into the main SDD file
-4. **Archive or delete**: after merging, Delta file moves to `docs/deltas/US-XXX.md` (traceable) or is directly deleted (saves space)
+1. **Output at BDD / SDD steps**: agent outputs the Behavior Delta for observable behavior changes, then analyzes affected modules and outputs the SDD Delta
+2. **Review at Review Checkpoint**: humans review the deltas (what changed) rather than entire documents (what they look like now)
+3. **Merge during Verify step**: after confirming implementation is complete, the Behavior Delta merges into `docs/specs/<capability>.md` and the SDD Delta merges into the main SDD file — both at the same moment, so specs and SDD stay the single current truth (FB-012). The `## Review Disclosure` section is **not** merged (it is meta-rationale, FB-016) but is preserved when the whole delta file moves to `docs/deltas/archive/` (FB-015)
+4. **Archive on merge**: after merging, the Delta file moves to `docs/deltas/archive/{YYYY-MM-DD}-US-XXX.md` (FB-015). The active path `docs/deltas/US-XXX.md` exists only while a Story is in flight — its absence for a completed Story is the expected state, and file-presence checks can rely on it. The date prefix keeps reopen cycles from colliding. Per-Story rationale (`Reason:`/`Impact:`, previous-behavior notes) survives in the archive; projects that fully trust git history may delete instead (project-level choice)
 
 Projects using Change Folder isolation (medium to large, multi-agent collaboration) can place each Story's Delta Spec + corresponding tests in an independent folder `changes/US-XXX/`, merging back to main files after Review passes.
 
@@ -248,9 +248,9 @@ CC autonomously performs five checks:
 4. **Security Scan** — no secrets committed across any US (scan full repo), `.gitignore` covers all secret patterns, no credentials in logs/error messages/API responses
 5. **PROJECT_MEMORY Audit** — ISSUES accuracy, SYNC mappings, NEXT priorities
 
-Output: `review-report.md` (structured findings) + updated ISSUES in PROJECT_MEMORY.md. Each new ISSUE includes severity, description, and linked US (if identifiable).
+Output: `.ai/review-report.md` (structured findings) + updated ISSUES in PROJECT_MEMORY.md. Each new ISSUE includes severity, description, and linked US (if identifiable).
 
-**Review works on any project:** ACF projects get the full review + triage + re-entry cycle. Non-ACF projects get a standalone review-report.md + ISSUES list — the lowest-cost entry point to ACF.
+**Review works on any project:** ACF projects get the full review + triage + re-entry cycle. Non-ACF projects get a standalone `.ai/review-report.md` + ISSUES list — the lowest-cost entry point to ACF.
 
 **Review Session is Full Mode only** for ACF projects. Lite Mode projects skip it — the per-US Verify step is sufficient for small scope.
 
@@ -286,7 +286,9 @@ After a Review Session produces updated ISSUES, CC classifies each unfixed item:
 
 Once the triage plan is approved:
 
-- **Reopened US:** STATE.json is overwritten with the target step (`status: pending`). Previous completion record stays in `.ai/history.md`. A new entry is added: `US-XXX reopened — reason: [ISSUE description]`. Existing BDD/SDD/test files are preserved — CC modifies them incrementally, not rewrites.
+- **Reopened US:** STATE.json is overwritten with the target step (`status: pending`). Previous completion record stays in `.ai/history.md`. A new entry is added: `US-XXX reopened — reason: [ISSUE description]`.
+- **Reopen reads merged truth (FB-018):** a completed US has no active delta — it was archived on merge (FB-015). Re-entry reads `docs/specs/` (current behavior) + `docs/sdd.md` (current architecture) + the existing tests, with the archived delta (`docs/deltas/archive/`) available read-only for original context. The current spec, not the historical change, is the contract. (Active-delta absence here is expected, not a missing-file error.)
+- **Behavior change vs code fix:** if the reopen *changes behavior*, re-enter at `bdd` and author a **fresh active delta** covering only the fix (it archives with a new date prefix on merge — no collision). If it only *fixes code to match the existing spec* (regression, flaky test, missed Error Case), re-enter at `scaffold` / `impl` / `verify` against `docs/specs/` + tests — no new delta needed.
 - **New US:** Enters the standard pipeline from `bootstrap` or `bdd`.
 - **Step 0 applies:** When reopening, the Safety Net Check (touch-it-test-it) still applies — verify test coverage before modifying.
 
@@ -324,39 +326,33 @@ Practically, this means the SDD file should have clear module boundary demarcati
 
 ## Testing Strategy
 
-### BDD Scenario Tagging
+### Scenario Test Levels
 
-BDD scenarios should be tagged with test level markers (tags), allowing agents to automatically output corresponding test-level scaffolding during Test Scaffolding phase. One scenario can have multiple tags, meaning it needs validation at different levels.
+Behavior Spec scenarios carry test level markers, allowing agents to automatically output corresponding test-level scaffolding during the Test Scaffolding phase.
 
-Tags come in two syntaxes:
+Two kinds of markers attach to the Scenario label:
 
-- **Simple tags** (`@unit`, `@e2e`): define test level, agent outputs test scaffolding by level.
-- **ID-bearing tags** (`@perf(PERF-01)`, `@secure(SEC-01)`): simultaneously define test level and reference specific thresholds in NFR table. Agent looks up NFR table during Test Scaffolding to get threshold, tool, scope, and directly fills in test script.
+- **`Test Level` field** (`integration`, `component`, `e2e`): defines the test level; agent outputs test scaffolding by level. Mandatory on every scenario.
+- **ID-bearing NFR tags** (`@perf(PERF-01)`, `@secure(SEC-01)`, `@load(LOAD-01)`): reference specific thresholds in the NFR table. Agent looks up the NFR table during Test Scaffolding to get threshold, tool, scope, and directly fills in the test script.
 
-```gherkin
-@unit @component
-Scenario: Show error message when user enters invalid email
-  Given user is on the registration page
-  When input "not-an-email" to email field
-  Then display "Please enter a valid email address"
+```markdown
+#### Scenario: invalid email shows error message (Test Level: component)
+- Given user is on the registration page
+- When input "not-an-email" to email field
+- Then display "Please enter a valid email address"
 
-@e2e
-Scenario: User completes full registration flow
-  Given user is on homepage
-  When click registration button
-  And fill all required fields
-  And submit form
-  Then redirect to welcome page
-  And receive confirmation email
+#### Scenario: full registration flow (Test Level: e2e)
+- Given user is on homepage
+- When user registers with all required fields and submits
+- Then redirect to welcome page and receive confirmation email
 
-@perf(PERF-02) @secure(SEC-01)
-Scenario: Product search maintains response time under high concurrency
-  Given system under load of 1000 concurrent users
-  When send search requests simultaneously
-  Then search results return normally without errors
+#### Scenario: search under high concurrency (Test Level: integration) @perf(PERF-02) @secure(SEC-01)
+- Given system under load of 1000 concurrent users
+- When send search requests simultaneously
+- Then search results return normally without errors
 ```
 
-Available tags: `@unit`, `@integration`, `@component`, `@e2e`, `@perf(<NFR-ID>)`, `@load(<NFR-ID>)`, `@secure(<NFR-ID>)`. Specific thresholds for ID-bearing tags are defined in the NFR document; the NFR table is the single source of truth (see NFR template in [Templates document](Templates.md)).
+Note there is no `unit` level at spec scope: unit-level GWT lives as BDD-style test names directly in code, written during implementation — specs collect externally observable behavior only (FB-012). NFR thresholds are defined in the NFR document; the NFR table is the single source of truth (see NFR template in [Templates document](Templates.md)).
 
 ### Testing Pyramid
 
@@ -372,11 +368,11 @@ Available tags: `@unit`, `@integration`, `@component`, `@e2e`, `@perf(<NFR-ID>)`
 
 Testing executes in two phases within micro-waterfall:
 
-**TDD phase (within Story, fast loop):** Unit Test + API Integration Test. This is the agent's self-correction loop; runs with every implementation, feedback must be fast. Primarily backend-focused, doesn't depend on front-end environment. Agent sees `@unit` and `@integration` tagged BDD scenarios and outputs corresponding Go test scaffolding.
+**TDD phase (within Story, fast loop):** Unit Test + API Integration Test. This is the agent's self-correction loop; runs with every implementation, feedback must be fast. Primarily backend-focused, doesn't depend on front-end environment. Integration tests scaffold from scenarios with `Test Level: integration`; unit tests accompany implementation directly with BDD-style names (not scaffolded from the spec).
 
-**After Implementation (within Story, front-end validation):** Component Test. Validates front-end component behavior for the Story, uses Playwright component testing for isolated execution, doesn't require full application environment. Agent sees `@component` tagged scenarios and outputs Playwright tests.
+**After Implementation (within Story, front-end validation):** Component Test. Validates front-end component behavior for the Story, uses Playwright component testing for isolated execution, doesn't require full application environment. Agent sees scenarios with `Test Level: component` and outputs Playwright tests.
 
-**Milestone (cross-Story):** Full E2E Test + Performance Test. After accumulating multiple related completed Stories, run unified Playwright full browser test and k6/vegeta stress test. This level requires both front-end and back-end to be ready, unsuitable for every Story. Scenarios marked `@e2e` and `@perf` execute at this phase.
+**Milestone (cross-Story):** Full E2E Test + Performance Test. After accumulating multiple related completed Stories, run unified Playwright full browser test and k6/vegeta stress test. This level requires both front-end and back-end to be ready, unsuitable for every Story. Scenarios with `Test Level: e2e` and `@perf(...)` tags execute at this phase.
 
 ### Relationship of Tests to Other Documents
 
@@ -388,15 +384,15 @@ Functional test standards come from BDD scenarios; performance test standards co
 
 This section defines CI/CD's relationship to other framework parts, not covering concrete pipeline implementation or deployment target configuration.
 
-### CI: BDD Tag-Driven Automated Testing
+### CI: Test-Level-Driven Automated Testing
 
-CI is the execution engine of testing strategy. BDD scenario tags simultaneously drive two things: which tests the agent outputs during Test Scaffolding, and which tests CI runs and when.
+CI is the execution engine of testing strategy. Test levels (from scenario `Test Level` fields and NFR tags) simultaneously drive two things: which tests the agent outputs during Test Scaffolding, and which tests CI runs and when.
 
-| Trigger Event | Test Tags Executed | Corresponding Framework Phase |
+| Trigger Event | Test Levels Executed | Corresponding Framework Phase |
 |---------------|-------------------|------------------------------|
-| PR / Push | `@unit` + `@integration` + `@component` | Micro-waterfall TDD + Component Test |
-| Merge to main branch | Above + `@e2e` | Cross-Story milestone validation |
-| Scheduled / Manual | `@perf` + `@load` | NFR validation |
+| PR / Push | unit + integration + component | Micro-waterfall TDD + Component Test |
+| Merge to main branch | Above + e2e | Cross-Story milestone validation |
+| Scheduled / Manual | `@perf(...)` + `@load(...)` | NFR validation |
 
 CI simultaneously provides regression protection: as Stories accumulate, previously passing tests rerun with each PR, ensuring new Stories don't break existing functionality. This extends the agent self-correction loop—agent runs one round locally, CI runs another before merge ensuring no environment differences.
 
@@ -429,3 +425,7 @@ Different project types (Go container service, WordPress CMS, Astro + WordPress 
 | v0.7 | 2026-02-26 | FB-009: Review → Triage → Re-entry feedback loop. On-demand Review Session (code review, spec-code coherence, regression, memory audit). Triage classifies unfixed ISSUES into reopen (linked US) or create (new US) with rollback target determination and auto-escalation guardrails. Human-gated triage plan. Review works on non-ACF projects as ACF on-ramp |
 | v0.8 | 2026-02-27 | FB-010: Framework Version Migration — CLAUDE.md records `ACF Version`, CC proposes new features at natural touchpoints (session start, story completion, Review, Triage), backward-compatible design, CC as migration engine (no external tooling). CC backfills `linked` on ISSUES automatically during Triage and Review |
 | v0.9 | 2026-02-27 | FB-011: Security Principle — Verify extended from 3 to 4 checks (add Security: no hardcoded secrets, .gitignore coverage, mock credentials in tests); Review Session extended from 4 to 5 checks (add Security Scan: full-repo secret scan, credential leak in logs/responses) |
+| v0.10 | 2026-06-11 | FB-012~014: BDD step now outputs a Behavior Delta (ADDED/MODIFIED/REMOVED Requirements with embedded scenarios) instead of `.feature` files; per-Story delta file carries Behavior Delta + SDD Delta, both merge at Verify pass (Behavior → `docs/specs/<capability>.md`); Verify Completeness becomes Requirement-ID-based (grep `Spec:` headers); Review Checkpoint gains pre-review self-check (mechanical + semantic) and agent disclosure (Assumptions / Source Mapping / Conflict Scan); scenario tagging → `Test Level` field (`integration`/`component`/`e2e`, no `unit` at spec scope) + NFR ID tags; `[NEEDS CLARIFICATION]` upgraded to numbered answerable TBD-N |
+| v0.11 | 2026-06-12 | FB-015: delta disposition — Verify moves the merged delta to `docs/deltas/archive/{date}-US-XXX.md`; active path exists only while a Story is in flight; date prefix prevents reopen-cycle collisions; delete remains a project-level option |
+| v0.12 | 2026-06-13 | FB-016: delta gains a `## Review Disclosure` section (Assumptions / Source Mapping / Conflict Scan); merge skips it but archive preserves it; Review Checkpoint summary is an ephemeral assembled view, never a file; close-out routes each item to its home (Templates convergence table) |
+| v0.13 | 2026-06-13 | FB-018: Re-entry clause — reopen of a merged US reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) since its active delta is archived (FB-015); behavior-changing reopen re-enters at `bdd` with a fresh delta, code-only fix re-enters at scaffold/impl/verify against the spec; active-delta absence is expected, not an error |

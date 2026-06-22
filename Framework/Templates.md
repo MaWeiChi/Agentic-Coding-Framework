@@ -209,53 +209,98 @@ Place in the project root as the first document agents read for every conversati
 
 ---
 
-## BDD Scenario Template
+## Behavior Spec Template (BDD)
 
 ### Positioning
 
-One or a set of BDD scenario files per User Story, placed in `docs/bdd/` or `features/` directory.
+Behavior specs are the **current behavior truth** of the system: the externally observable behavior that users or downstream systems rely on. One spec file per capability, placed in `docs/specs/<capability>.md` (e.g. `docs/specs/auth.md`, `docs/specs/cart.md`).
 
-### Template
+Behavior changes arrive per Story as a **Behavior Delta** (ADDED / MODIFIED / REMOVED Requirements) inside the Story's delta file `docs/deltas/US-{id}.md`, alongside the SDD delta. When Verify passes, the Behavior Delta merges into `docs/specs/` at the same moment the SDD delta merges into the SDD — specs stay the single current truth — and the delta file moves to `docs/deltas/archive/{YYYY-MM-DD}-US-{id}.md`. The active delta path exists only while a Story is in flight. (FB-012, FB-015)
 
-```gherkin
-# Story: <US-XXX> <Story Title>
+> **Legacy note:** earlier versions produced Gherkin `.feature` files in `docs/bdd/`. These are retired — see "Gherkin opt-in" below. Existing `.feature` files are archived, not deleted.
 
-## Preconditions (Shared)
-# If multiple scenarios share the same preconditions, describe them collectively here.
+### Spec Template
 
-@unit @integration
-Scenario: <Behavior description for the happy path>
-  Given <System or user initial state>
-  When <User action or system event>
-  Then <Expected result or state change>
-  And <Additional verification points>
+```markdown
+# Spec: <Capability Name>
 
-@unit
-Scenario: <Behavior description for boundary condition or error path>
-  Given <Initial state>
-  When <Action that triggers boundary condition>
-  Then <Expected error handling behavior>
+## Purpose
+<One paragraph: what this capability does, for whom>
 
-@e2e
-Scenario: <Complete user flow>
-  Given <User is on some page or state>
-  When <Series of operation steps>
-  Then <Final expected result>
+## Requirements
 
-@perf(PERF-02) @secure(SEC-01)
-Scenario: <Performance or security related scenario>
-  Given <Load condition or security premise>
-  When <Trigger action>
-  Then <Expected result (consult NFR table for specific thresholds)>
+### Requirement: <Short behavior statement> [R-<CAP>-NNN]
+The system SHALL <behavior>.
+
+#### Scenario: <product-semantic branch label> (Test Level: integration)
+- Given <system or user initial state>
+- When <user action or system event>
+- Then <expected result or state change>
+
+#### Scenario: <other branch label> (Test Level: e2e) @perf(PERF-02)
+- Given <load condition or premise>
+- When <trigger action>
+- Then <expected result (consult NFR table for thresholds)>
+
+**Parameters**: (only for requirements with configurable values — see Parameters Table below)
+| Parameter | Type | Unit | Range | Default | Example | R/W | Notes |
+|-----------|------|------|-------|---------|---------|-----|-------|
+| timeout   | integer | s | 1-300 | 30 | 60 | RW | Takes effect on next request |
+
+**Error Cases**: <invalid input / permission denied / missing resource / concurrency>
+```
+
+### Behavior Delta Template (per Story, inside docs/deltas/US-{id}.md)
+
+The delta file holds three top-level sections: the Behavior Delta (below), the SDD Delta (see SDD section), and the Review Disclosure (FB-016). Only the first two merge on Verify pass; the third rides to `docs/deltas/archive/` with the file.
+
+```markdown
+## Behavior Delta — US-XXX <Story Title>
+
+### ADDED Requirements
+<Full Requirement blocks (statement + scenarios + Parameters/Error Cases), as they will appear in the spec>
+
+### MODIFIED Requirements
+<Restate the full updated Requirement block; note the previous behavior in one line>
+
+### REMOVED Requirements
+- [R-<CAP>-NNN] <reason for removal>
+```
+
+### Review Disclosure Template (delta section, FB-016)
+
+A third top-level section of the same delta file, built incrementally (behavior assumptions at the `bdd` step, architecture assumptions + conflict scan at `sdd-delta`, finalized at Review Checkpoint). **The merge skips this section** — it is meta-rationale, not behavior or architecture — but it travels to `docs/deltas/archive/` with the delta, so the *why* behind the change is preserved next to the *what*.
+
+```markdown
+## Review Disclosure — US-XXX <Story Title>
+
+### Assumptions Made
+| # | Assumption | Basis |
+|---|-----------|-------|
+| 1 | <what was inferred> | <defensible source hint> |
+
+### Source Mapping
+| Source Item | Handling | Note |
+|-------------|----------|------|
+| <story item> | Converted → R-<CAP>-NNN / Deferred | <reason if deferred> |
+
+### Cross-Story Conflict Scan
+- <redundancy / contradiction / undeclared dependency vs existing specs — or "None found">
 ```
 
 ### Writing Principles
 
-**One scenario verifies one thing**: Avoid stuffing too many Thens into a single scenario. If a scenario has more than three Thens, consider splitting it.
+**One Requirement ID = one independently verifiable behavior = one test**: The ID (`[R-<CAP>-NNN]`) lives in the Requirement heading and is stable across Stories. If a requirement bundles multiple independently verifiable behaviors, split it. Scaffolded tests reference the ID in a machine-readable header (see Test Scaffolding Template), so test impact on requirement change (keep / update / add / deprecate) is mechanical.
 
-**Tags are mandatory**: Each scenario must have at least one test level tag. This drives Test Scaffolding generation; scenarios without tags won't get automated tests generated. Tags come in two syntaxes: simple tags (`@unit`, `@e2e`) define test levels; tags with IDs (`@perf(PERF-01)`, `@secure(SEC-01)`) define test levels and reference specific thresholds from the NFR table.
+**Specs collect externally observable behavior only**: Unit-level GWT does not belong in the spec — it lives as BDD-style test names directly in code (the Lite-mode fast path, generalized). Spec scenarios carry `Test Level: integration | component | e2e`.
 
-**RFC 2119 keyword strength**: Use RFC 2119 keywords in BDD scenarios to distinguish requirement strength. This lets agents judge which are non-negotiable hard requirements and which are advisory.
+**Test Level is mandatory per scenario**: The `(Test Level: ...)` field on the Scenario label drives Test Scaffolding; scenarios without it won't get tests generated. NFR tags with IDs (`@perf(PERF-01)`, `@secure(SEC-01)`) attach to the Scenario label and reference thresholds from the NFR table.
+
+**Scenario labels name product-semantic branches**: Label scenarios by mutually exclusive behavior branches (enabled/disabled, DHCP/Static), not by boundary permutations (0, 1, 99, 100, 101). Boundary values belong in the Parameters table and expand into table-driven tests mechanically.
+
+**Scenario exemption rule**: Pure parameter/field/range requirements do not get forced GWT — the Parameters table + Error Cases suffice. Keep the scenario position present with an explicit reason: `Scenarios: Not needed — <reason>` or `Scenarios: Deferred — blocked by TBD-N`. Forcing GWT onto non-behavioral requirements produces scenarios with no test value.
+
+**RFC 2119 keyword strength**: Use RFC 2119 keywords in requirement statements and scenarios to distinguish requirement strength. This lets agents judge which are non-negotiable hard requirements and which are advisory.
 
 | Keyword | Meaning | Agent Behavior |
 |--------|---------|-----------|
@@ -263,31 +308,24 @@ Scenario: <Performance or security related scenario>
 | `SHOULD` | Strongly recommended unless good reason otherwise | Implement by default; skipping requires documenting reason in ADR |
 | `MAY` | Optional feature | Agent can decide whether to implement |
 
-Example:
-```gherkin
-@unit
-Scenario: Password strength validation
-  Given User is on the registration page
-  When Entering password
-  Then Password SHALL be at least 8 characters
-  And Password SHOULD contain mixed case
-  And Password MAY support special character hint
-```
+**[NEEDS CLARIFICATION] must be numbered and answerable**: When requirement descriptions are ambiguous, tag `[NEEDS CLARIFICATION: TBD-N — <question the owner can actually answer>]` rather than guessing. "To be confirmed" is not a question; "Which relevance method applies — TF-IDF, sales-weighted, or manual recommendation?" is. Distinguish from **disclosed assumptions**: when the source gives a defensible hint, extract a candidate value and disclose it in the Review Checkpoint's Assumptions Made section (FB-014) instead of asking.
 
-**[NEEDS CLARIFICATION] tag**: When requirement descriptions are ambiguous or lack sufficient detail, agents must tag `[NEEDS CLARIFICATION]` rather than guessing. After tagging, pause subsequent steps for that scenario (SDD/TDD) and wait for humans to clarify during the next Review Checkpoint.
-
-```gherkin
-@unit
-Scenario: Product search results sorting
-  Given User searches for "phone"
-  When Search results return
-  Then Results SHALL be sorted by relevance [NEEDS CLARIFICATION: relevance calculation method undefined—TF-IDF? Sales-weighted? Manual recommendation?]
+```markdown
+#### Scenario: results sorted by relevance (Test Level: integration)
+- Given user searches for "phone"
+- When search results return
+- Then results SHALL be sorted by relevance
+  [NEEDS CLARIFICATION: TBD-1 — which relevance method applies: TF-IDF, sales-weighted, or manual recommendation?]
 ```
 
 Agent handling rules:
-- When encountering `[NEEDS CLARIFICATION]` in scenarios, Test Scaffolding still generates the skeleton but marks tests as `t.Skip("NEEDS CLARIFICATION")` rather than `t.Fatal("Not implemented")`
+- When a scenario carries `[NEEDS CLARIFICATION]`, Test Scaffolding still generates the skeleton but marks tests as `t.Skip("NEEDS CLARIFICATION")` rather than `t.Fatal("Not implemented")`
 - Add pending clarification items to Memory's `ISSUES` section
 - During Review Checkpoint when human clarifies, remove the tag and complete the scenario
+
+**No API details in scenarios**: Scenarios state behavior intent; endpoint paths, HTTP status codes, and JSON field names belong to the API Contract step. Optionally add one line `API Reference: METHOD /path (see openapi.yaml)` under a Requirement to link it to its endpoint — it adds traceability, not new test semantics.
+
+**Event trigger discipline**: Event-type requirements must state the precise **Trigger** condition, the explicit **NOT-Triggered** condition, and the **message format + variables** with matching examples — not buried in a scenario `Then` clause.
 
 **Given describes state, When describes action, Then describes result**: Avoid putting operations in Given, expected results in When.
 
@@ -295,25 +333,11 @@ Agent handling rules:
 
 **Declarative first**: Prefer declarative Given/When/Then that describe "what state" and "what result," avoiding UI operation details (which button to click, which field to enter). Declarative scenarios don't break when the UI changes. Good example: "When user submits form with invalid email." Bad example: "When user clicks email field and types abc then presses submit button."
 
-**Scenario Outline (parameterized scenarios)**: When the same behavior needs to be verified with multiple input/output combinations, use Scenario Outline with Examples table instead of copying multiple Scenarios. One Outline replaces N repeated scenarios, saving tokens and covering more boundary conditions.
+**Non-Goals (optional but recommended)**: List things explicitly not included in this story in the Behavior Delta opening or corresponding SDD Delta. Agents check during Implementation whether changes touch Non-Goals and tag with `[SCOPE WARNING]` if they do.
 
-```gherkin
-@unit
-Scenario Outline: Password strength validation
-  Given User is on the registration page
-  When Entering password "<password>"
-  Then Display validation result "<result>"
+**Gherkin opt-in**: Produce `.feature` files only when the project stack actually executes them (cucumber/behave/pytest-bdd). In that case `.feature` is a **test-layer artifact derived from the spec** — the spec remains the behavior truth.
 
-  Examples:
-    | password     | result           |
-    | abc          | At least 8 characters       |
-    | abcdefgh     | Need to contain numbers      |
-    | Abcdefg1     | Pass             |
-```
-
-**Non-Goals (optional but recommended)**: List things explicitly not included in this story in the BDD file opening or corresponding Delta Spec. Agents check during Implementation whether changes touch Non-Goals and tag with `[SCOPE WARNING]` if they do.
-
-**Common BDD anti-patterns agents make**:
+**Common behavior-spec anti-patterns agents make**:
 
 | Anti-pattern | Problem | Correct Approach |
 |--------|------|---------|
@@ -321,6 +345,29 @@ Scenario Outline: Password strength validation
 | Data transfer between scenarios | Data created in Scenario A used in Scenario B | Each scenario is independent; Given creates preconditions itself |
 | Incidental Details | Given stuffed with details unrelated to verification | Given describes only the minimum preconditions affecting Then results |
 | Multiple Thens | One scenario verifies too many things | One scenario verifies one thing; Then not more than three items |
+| Boundary enumeration in scenarios | One scenario per boundary value (0, 1, 99, 100, 101) | Boundary values go in the Parameters table; expand via table-driven tests |
+| Forced GWT on parameter rules | Scenarios restating "value must be 1-100" | Apply the scenario exemption rule: Parameters table + Error Cases |
+| Unit-level scenarios in spec | Spec describes implementation-internal behavior | Unit GWT lives as test names in code; spec keeps observable behavior |
+
+### Parameters Table
+
+For requirements with configurable or reported values, the Parameters table is a first-class artifact equal to scenarios — boundary tests derive from it mechanically. Eight columns: **Parameter / Type / Unit / Range / Default / Example / R/W / Notes**.
+
+**Value-change typology** determines how Range is written:
+
+| Kind | Meaning | Range Convention |
+|------|---------|------------------|
+| **Counter** | Monotonic increment only (e.g. total requests) | `0 - (none)`; describe wrap/saturate behavior in Notes |
+| **UpDownCounter** | Increments and decrements (e.g. active sessions) | `0 - <max>` if a real max exists, else `0 - (none)` |
+| **Gauge** | Point-in-time sample (e.g. CPU %, temperature) | Real requirement/physical bound (`0-100`, `-40-85`) |
+
+**Unbounded notation**: Never write type ceilings (`2^63-1`) as Range — they are not requirement constraints and boundary tests cannot validate them. Write `0 - (none)`.
+
+**usage/limit separation**: Device- or environment-dependent ceilings split into two parameters: `xxxUsage` (Range = `0 - (xxxLimit)`) and `xxxLimit` (the actual ceiling). This isolates environment variance from the behavior contract.
+
+**Type abstraction**: Use requirement-level categories only (`integer`, `number`, `string`, `boolean`, `enum<...>`). OpenAPI `format` modifiers (int32, int64, float) belong to the API contract, never the spec.
+
+**Boundary tests derive mechanically**: Range and Error Cases expand into table-driven tests (see Test Scaffolding Template). This replaces the former Scenario Outline + Examples pattern — hand-filling boundary permutations into a behavior document is test-plan work, not requirement writing.
 
 ---
 
@@ -398,8 +445,8 @@ When a Story causes SDD changes, use the Delta Spec format to record changes rat
 Delta Spec lifecycle:
 1. **Generated**: Each story's SDD incremental update generates a Delta Spec simultaneously
 2. **Reviewed**: Humans review Delta Spec during Review Checkpoint to confirm change scope
-3. **Merged**: After review approval, Delta content merges into SDD main document
-4. **Archived**: Delta file moves to `docs/deltas/` or deleted (per project preference)
+3. **Merged**: After review approval, Delta content merges into SDD main document (the `## Review Disclosure` section is merge-skipped — FB-016)
+4. **Archived**: After merge, the delta file moves to `docs/deltas/archive/{YYYY-MM-DD}-US-XXX.md` (FB-015); projects that fully trust git history may delete instead
 
 ### [NEEDS CLARIFICATION] Tag (applies to SDD)
 
@@ -644,14 +691,16 @@ This ensures: performance standards can always be reviewed in one document, agen
 
 ### Positioning
 
-Test skeletons generated from BDD scenario tags, with all initial test states being failing (red).
+Test skeletons generated from Behavior Spec scenarios (`Test Level` fields) and Parameters tables, with all initial test states being failing (red). Unit-level tests are not scaffolded from the spec — they accompany implementation directly, using BDD-style names.
 
-### Template (Go Backend Unit/Integration)
+Each test file opens with a machine-readable header tracing back to the Requirement ID: `Spec:` (the ID + statement), `Scenario:` (branch label), `Test Level`, and `assertion_type` (`behavior` for GWT scenarios, `parameter` for Parameters-table expansion). This makes test impact on requirement change mechanical (FB-012).
+
+### Template (Go Backend Integration)
 
 ```go
 // <module>_test.go
-// Generated from: BDD US-XXX — <Scenario Description>
-// Tags: @unit
+// Spec: R-CART-001 — <Requirement statement>
+// Scenario: <branch label> | Test Level: integration | assertion_type: behavior
 
 func TestXxx_GivenCondition_WhenAction_ThenResult(t *testing.T) {
 	// Given: <Copy precondition from BDD scenario>
@@ -669,8 +718,8 @@ func TestXxx_GivenCondition_WhenAction_ThenResult(t *testing.T) {
 
 ```typescript
 // <component>.spec.ts
-// Generated from: BDD US-XXX — <Scenario Description>
-// Tags: @component
+// Spec: R-CART-002 — <Requirement statement>
+// Scenario: <branch label> | Test Level: component | assertion_type: behavior
 
 import { test, expect } from '@playwright/experimental-ct-react';
 import { ComponentName } from './ComponentName';
@@ -709,11 +758,12 @@ func TestCart_GivenEmptyCart_WhenAddItem_ThenHasOneItem(t *testing.T) {
 }
 ```
 
-**Table-Driven Tests** (corresponds to BDD Scenario Outline):
+**Table-Driven Tests** (derived from the Parameters table — Range and Error Cases expand into cases; `assertion_type: parameter`):
 
 ```go
 func TestPasswordStrength(t *testing.T) {
-    // Generated from: BDD US-002 — Scenario Outline: Password strength validation
+    // Spec: R-AUTH-003 — Password strength validation
+    // Parameters: password | assertion_type: parameter
     tests := []struct {
         name     string
         password string
@@ -732,7 +782,7 @@ func TestPasswordStrength(t *testing.T) {
 }
 ```
 
-**Suite Pattern** (corresponds to BDD Background shared preconditions):
+**Suite Pattern** (for shared preconditions across scenarios):
 
 ```go
 type CartTestSuite struct {
@@ -759,8 +809,8 @@ func TestCartSuite(t *testing.T) {
 
 ```typescript
 // e2e/<flow-name>.spec.ts
-// Generated from: BDD US-XXX — <Complete user flow description>
-// Tags: @e2e
+// Spec: R-CART-005 — <Complete user flow requirement>
+// Scenario: <flow label> | Test Level: e2e | assertion_type: behavior
 // Milestone: <Milestone Name>
 
 import { test, expect } from '@playwright/test';
@@ -789,7 +839,7 @@ E2E tests run when crossing Story milestones (not per Story), covering complete 
 
 ### Writing Principles
 
-**BDD scenarios traceable**: Each test file opening should note the source BDD scenario number and tags, establishing bidirectional tracing.
+**Requirement IDs traceable**: Each test file opening carries the machine-readable header (`Spec:` Requirement ID, `Scenario:` label, `Test Level`, `assertion_type`), establishing bidirectional tracing between spec and tests.
 
 **Naming from scenarios**: Test function names use Given/When/Then combinations; don't invent test names independently.
 
@@ -990,7 +1040,18 @@ Place in `docs/constitution.md` or embed in project entry document. Recommend st
 
 ### Positioning
 
-Review Checkpoint is the human review point before implementation in micro waterfall. Orchestrator (or agent) produces structured Review summary at this step, letting humans quickly judge if the direction is correct.
+Review Checkpoint is the human review point before implementation in micro waterfall. At this step the agent assembles a structured Review summary, letting humans quickly judge if the direction is correct.
+
+**The summary is an ephemeral view, not an artifact (FB-016).** It is assembled from the delta — Change Summary counts derived from it, the Review Disclosure section (Assumptions Made / Source Mapping / Cross-Story Conflict Scan) surfaced, Pending Clarifications collected from `[NEEDS CLARIFICATION]` markers — and presented in chat or the orchestrator message. **Never write it to a file** (no `docs/review/`, no `.ai/REVIEW.md`). The durable record is the Review Disclosure section inside the delta, which rides to `docs/deltas/archive/` on merge. (This is distinct from the on-demand `.ai/review-report.md` of a Review Session, which is a real artifact consumed by triage.)
+
+The template below is the *shape of that view*. The Assumptions / Source Mapping / Conflict Scan blocks are read from the delta's Review Disclosure section, not authored fresh here.
+
+### Pre-Review Self-Check (FB-014)
+
+Before producing the Review summary, the agent runs two checklist passes on its own output — review requests that fail the mechanical pass should not reach the human:
+
+- **Mechanical pass:** Requirement ID format and placement (`[R-<CAP>-NNN]` in headings), template compliance (Behavior Delta sections, Parameters table columns), `Test Level` present on every scenario, no API details in scenarios.
+- **Semantic pass:** scenario executability (can each Given/When/Then become a test assertion?), boundary sanity (Ranges/Defaults make sense semantically, not just schema-complete), Error Case coverage (permission / invalid input / missing resource / concurrency), cross-Story conflict and redundancy against existing specs, full coverage of the source Story.
 
 ### Template
 
@@ -998,15 +1059,29 @@ Review Checkpoint is the human review point before implementation in micro water
 # Review Checkpoint — US-XXX <Story Title>
 
 ## Change Summary
-- **BDD Scenario Count**: N (N @unit, N @integration, N @e2e)
-- **Delta Spec**: N ADDED, N MODIFIED, N REMOVED
+- **Behavior Delta**: N ADDED, N MODIFIED, N REMOVED Requirements (N scenarios: N integration, N component, N e2e)
+- **SDD Delta**: N ADDED, N MODIFIED, N REMOVED
 - **Contract Changes**: N new endpoints, N modified
+
+## Assumptions Made
+| # | Assumption | Basis |
+|---|-----------|-------|
+| 1 | Coupon discount rounds half-up | Story mentions "standard rounding"; finance glossary defines it as half-up |
 
 ## Pending Clarification Items
 | # | Source | Issue | Suggestion |
 |---|------|------|------|
-| 1 | BDD scenario 3 | [NEEDS CLARIFICATION] Relevance sorting method undefined | Suggest TF-IDF |
-| 2 | SDD Delta | [NEEDS CLARIFICATION] Multiple coupon stacking rules | Suggest take best |
+| 1 | R-SEARCH-002 | [NEEDS CLARIFICATION: TBD-1 — which relevance method: TF-IDF, sales-weighted, or manual?] | Suggest TF-IDF |
+| 2 | SDD Delta | [NEEDS CLARIFICATION: TBD-2 — coupon stacking: take best, sequential, or exclusive?] | Suggest take best |
+
+## Source Mapping
+| Source Item | Handling | Note |
+|-------------|----------|------|
+| Story: discount calculation | Converted → R-CART-012 | |
+| Story: admin override | Deferred | Out of scope this US; recorded in NEXT |
+
+## Cross-Story Conflict Scan
+- <Redundancy, contradiction, or undeclared dependency against existing specs — or "None found">
 
 ## Non-Goals Confirmation
 - This story doesn't handle: <list>
@@ -1016,8 +1091,9 @@ Review Checkpoint is the human review point before implementation in micro water
 - <Identified risks or dependencies>
 
 ## Review Conclusion
-- [ ] BDD scenarios direction is correct
-- [ ] Delta Spec scope is reasonable
+- [ ] Behavior Delta direction is correct
+- [ ] Assumptions Made are acceptable
+- [ ] SDD Delta scope is reasonable
 - [ ] Contract changes are non-breaking
 - [ ] Pending clarifications addressed
 ```
@@ -1026,9 +1102,22 @@ Review Checkpoint is the human review point before implementation in micro water
 
 **Scannable**: Humans should grasp the Review focus in 30 seconds. List pending clarifications in tables, not long descriptions.
 
+**Assumptions first**: The reviewer's entry point is Assumptions Made → Pending Clarification → spot-check the deltas. Disclosing what the agent inferred turns review from "find all bugs" into "challenge listed assumptions" (FB-014). Same philosophy as Triage: agent recommends and discloses, human confirms.
+
 **Comes with suggestions**: Each `[NEEDS CLARIFICATION]` item includes agent's suggested solution; human only needs to confirm or correct, not think from scratch.
 
 **Review conclusion is checklist**: Humans can just check; reduces cognitive load of reviewing.
+
+**Close-out convergence (FB-016)**: When the human's verdict comes back, route each item to its home — the summary itself dissolves:
+
+| Outcome | Action |
+|---------|--------|
+| Assumption challenged/rejected | Edit the delta to match; update its Review Disclosure entry |
+| TBD answered | Apply into the delta/spec; remove from Memory ISSUES |
+| TBD unanswered | Stays in Memory ISSUES |
+| Source Mapping item deferred | Record in Memory NEXT |
+| Conflict confirmed | Fix the delta now, or log to Memory ISSUES |
+| Accepted as-is | Already captured in the delta's Review Disclosure — nothing to copy |
 
 ---
 
@@ -1123,3 +1212,6 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.10 | 2026-02-26 | ISSUES format: add optional `linked: US-XXX` suffix for triage traceability (FB-009); agent-written entries must include explicit link, human-written entries may omit for CC inference; update Section Explanation table with linked field semantics |
 | v0.11 | 2026-02-27 | CLAUDE.md template: add `ACF Version` line to Agent Guidelines in both Full and Lite mode variants (FB-010); CC reads this to determine which framework capabilities are available for the project |
 | v0.12 | 2026-02-27 | Constitution template: add "No Hardcoded Secrets" as default security principle (item 6); writing principles add "Security is a default" note — pre-populated, applies to both Full and Lite mode (FB-011) |
+| v0.13 | 2026-06-11 | FB-012~014: BDD Scenario Template → Behavior Spec Template — OpenSpec-style `### Requirement:` [R-<CAP>-NNN] + `#### Scenario:` in `docs/specs/<capability>.md`, Behavior Delta (ADDED/MODIFIED/REMOVED) per Story merged on Verify pass, Gherkin/`.feature` demoted to opt-in, unit-level scenarios exit spec, Scenario Outline retired; add Parameters Table guide (8 columns, Counter/Gauge/UpDownCounter typology, `0 - (none)` notation, usage/limit separation, type abstraction, mechanical boundary expansion); scenario exemption rule; `[NEEDS CLARIFICATION]` upgraded to numbered answerable `TBD-N`; no API details in scenarios; event trigger discipline; Test Scaffolding headers → machine-readable Spec/Scenario/Test Level/assertion_type; Review Checkpoint adds Pre-Review Self-Check + Assumptions Made + Source Mapping + Cross-Story Conflict Scan |
+| v0.14 | 2026-06-12 | FB-015: Behavior Spec positioning — merged delta moves to `docs/deltas/archive/{date}-US-{id}.md`; active delta path exists only while the Story is in flight |
+| v0.15 | 2026-06-13 | FB-016: add Review Disclosure Template as a third delta section (Assumptions Made / Source Mapping / Cross-Story Conflict Scan), built incrementally, merge-skipped, archived with the delta; Review Checkpoint repositioned — summary is an ephemeral view assembled from the delta, never written to a file (distinct from `.ai/review-report.md`); add close-out convergence table |

@@ -1,6 +1,6 @@
 # Document Templates Reference
 
-> Derived from: Templates v0.9 (2026-02-17)
+> Derived from: Templates v0.15 (2026-06-13)
 
 Condensed templates and writing guidelines for each framework document type. Use this
 when producing any framework document.
@@ -172,43 +172,84 @@ Fix login timeout bug | phase:implementation | blocker:none
 
 ---
 
-## BDD Scenarios
+## Behavior Spec / Behavior Delta
 
-```gherkin
-# Story: US-XXX <Title>
+Current behavior truth lives in `docs/specs/<capability>.md`. Each Story contributes a
+**Behavior Delta** inside `docs/deltas/US-{id}.md`; it merges into the specs when Verify
+passes, then the delta file moves to `docs/deltas/archive/{date}-US-{id}.md` — the active
+path exists only while the Story is in flight. No `.feature` files (Gherkin is opt-in only
+when the stack executes it).
 
-@unit @integration
-Scenario: <Happy path behavior>
-  Given <Initial state>
-  When <User action>
-  Then <Expected result>
+The delta file has three top-level sections: `## Behavior Delta`, `## SDD Delta`, and
+`## Review Disclosure` (FB-016). The merge applies the first two and **skips** the third;
+all three travel to the archive together, so the change's rationale is preserved with it.
 
-@unit
-Scenario: <Error path>
-  Given <State>
-  When <Boundary trigger>
-  Then <Error handling>
+```markdown
+## Behavior Delta — US-XXX <Story Title>
 
-@perf(PERF-01)
-Scenario Outline: <Parameterized>
-  Given <Precondition>
-  When <Action> with "<param>"
-  Then <Result> "<expected>"
+### ADDED Requirements
 
-  Examples:
-    | param | expected |
-    | ...   | ...      |
+### Requirement: <short behavior statement> [R-<CAP>-NNN]
+The system SHALL <behavior>.
+
+#### Scenario: <branch label> (Test Level: integration)
+- Given <initial state>
+- When <user action>
+- Then <expected result>
+
+#### Scenario: <other branch> (Test Level: e2e) @perf(PERF-01)
+- Given <precondition>
+- When <action>
+- Then <result>
+
+**Parameters**: (only if configurable values exist)
+| Parameter | Type | Unit | Range | Default | Example | R/W | Notes |
+|-----------|------|------|-------|---------|---------|-----|-------|
+
+**Error Cases**: <invalid input / permission / missing resource / concurrency>
+
+### MODIFIED Requirements
+<Restate full updated Requirement; note previous behavior in one line>
+
+### REMOVED Requirements
+- [R-<CAP>-NNN] <reason>
+
+## Review Disclosure — US-XXX <Story Title>
+
+### Assumptions Made
+| # | Assumption | Basis |
+|---|-----------|-------|
+
+### Source Mapping
+| Source Item | Handling | Note |
+|-------------|----------|------|
+
+### Cross-Story Conflict Scan
+- <conflict vs existing specs — or "None found">
 ```
 
 **Key rules:**
 
-- One scenario verifies one thing (max 3 Thens)
-- Tags are mandatory (`@unit`, `@integration`, `@component`, `@e2e`, `@perf(ID)`, `@secure(ID)`)
+- One Requirement ID = one independently verifiable behavior = one test; IDs stable across Stories
+- The `## Review Disclosure` section is built incrementally (behavior assumptions at bdd, architecture assumptions + conflict scan at sdd-delta, finalized at Review) and is merge-skipped but archived with the delta (FB-016)
+- Specs hold externally observable behavior only — unit-level GWT is test names in code
+- `Test Level` mandatory per scenario (`integration`, `component`, `e2e`); NFR tags (`@perf(ID)`, `@secure(ID)`) attach to the Scenario label
+- One scenario verifies one thing (max 3 Thens); label scenarios by product-semantic branches, not boundary values
+- **Scenario exemption:** pure parameter/range requirements → Parameters table + Error Cases, write `Scenarios: Not needed — <reason>`
 - RFC 2119 keywords: SHALL/MUST = hard requirement, SHOULD = recommended, MAY = optional
-- `[NEEDS CLARIFICATION]` when ambiguous — don't guess
+- `[NEEDS CLARIFICATION: TBD-N — <answerable question>]` when ambiguous — don't guess; if the source gives a defensible hint, extract a candidate and disclose it in Assumptions Made instead
+- No API details (endpoints, status codes, JSON fields) in scenarios — optional `API Reference: METHOD /path` line for traceability
+- Event requirements state Trigger, NOT-Triggered condition, and message format + variables
 - Declarative style (describe state/result, not UI steps)
-- Use Scenario Outline for parameterized cases
 - Include Non-Goals section
+
+**Parameters table rules:**
+
+- Counter (increment-only): Range `0 - (none)`, wrap/saturate in Notes; Gauge (point-in-time): real bound (`0-100`); UpDownCounter: `0 - <max>` or `0 - (none)`
+- Never write type ceilings (`2^63-1`) as Range — use `0 - (none)`
+- Device-dependent ceilings split into `xxxUsage` (Range `0 - (limit)`) + `xxxLimit`
+- Type is requirement-level only (`integer`, `number`, `string`, `boolean`, `enum`) — no OpenAPI formats
+- Boundary tests derive mechanically from Range/Error Cases via table-driven tests (replaces Scenario Outline)
 
 **Anti-patterns to avoid:**
 
@@ -218,13 +259,18 @@ Scenario Outline: <Parameterized>
 | Data shared between scenarios | Each scenario sets up its own Given |
 | Incidental details in Given | Only minimum preconditions affecting Then |
 | Multiple unrelated Thens | Split into separate scenarios |
+| Boundary enumeration in scenarios | Parameters table + table-driven tests |
+| Forced GWT on parameter rules | Scenario exemption: table + Error Cases |
+| Unit-level scenarios in spec | Unit GWT lives as test names in code |
 
 ---
 
 ## SDD Delta Spec
 
+Appended to the same `docs/deltas/US-{id}.md` file as the Behavior Delta.
+
 ```markdown
-## Delta: US-XXX <Story Title>
+## SDD Delta — US-XXX <Story Title>
 
 ### Non-Goals
 - <What this story explicitly doesn't do>
@@ -279,8 +325,8 @@ Scenario Outline: <Parameterized>
 ```
 
 **Key rules:** Every entry has an ID. NFR table is the single source of truth for
-thresholds — don't override in BDD. Scope must be precise (regex/path). Tool must be
-specified. Start with 3 entries, expand as needed.
+thresholds — don't override in scenarios. Scope must be precise (regex/path). Tool must
+be specified. Start with 3 entries, expand as needed.
 
 ---
 
@@ -289,8 +335,8 @@ specified. Start with 3 entries, expand as needed.
 ### Go Backend (testify)
 
 ```go
-// Generated from: BDD US-XXX — <Scenario>
-// Tags: @unit
+// Spec: R-CART-001 — <Requirement statement>
+// Scenario: <branch label> | Test Level: integration | assertion_type: behavior
 
 func TestXxx_GivenCondition_WhenAction_ThenResult(t *testing.T) {
     // Given — require (precondition, stop on fail)
@@ -306,7 +352,7 @@ func TestXxx_GivenCondition_WhenAction_ThenResult(t *testing.T) {
 }
 ```
 
-**Table-Driven** (for Scenario Outline):
+**Table-Driven** (derived from the Parameters table — Range boundaries + Error Cases as cases; `assertion_type: parameter`):
 ```go
 tests := []struct {
     name     string
@@ -326,8 +372,9 @@ for _, tt := range tests {
 ### Playwright Component Test
 
 ```typescript
-// Tags: @component
-test('<BDD scenario description>', async ({ mount }) => {
+// Spec: R-CART-002 — <Requirement statement>
+// Scenario: <branch label> | Test Level: component | assertion_type: behavior
+test('<scenario description>', async ({ mount }) => {
   const component = await mount(<Component />);
   // assertions
   test.fail(); // RED phase
@@ -337,9 +384,10 @@ test('<BDD scenario description>', async ({ mount }) => {
 ### Playwright E2E Test
 
 ```typescript
-// Tags: @e2e — runs at milestone, not per Story
+// Spec: R-CART-005 — <Requirement statement>
+// Scenario: <flow label> | Test Level: e2e | assertion_type: behavior — runs at milestone, not per Story
 test.describe('<User Flow>', () => {
-  test('<BDD scenario>', async ({ page }) => {
+  test('<scenario>', async ({ page }) => {
     // full user journey
     test.fail(); // RED phase
   });
@@ -348,8 +396,9 @@ test.describe('<User Flow>', () => {
 
 **Key rules:**
 
-- BDD traceable: note source scenario at top of each test file
+- Requirement-ID traceable: machine-readable `Spec:` header at top of each test file (id, scenario label, Test Level, assertion_type)
 - Names from scenarios: `Given_When_Then` naming
+- Unit tests are not scaffolded from the spec — they accompany implementation with BDD-style names
 - All red: every test must fail initially
 - `require` for Given (stop on fail), `assert` for Then (report all)
 - Extract helpers when 2+ tests share setup or 3+ share assertions
@@ -393,28 +442,52 @@ coverage), Generic (prefer existing solutions).
 
 ## Review Checkpoint
 
+**The summary is an ephemeral view, not a file (FB-016).** Assemble it from the delta and present it in chat / the orchestrator message — never write `docs/review/` or `.ai/REVIEW.md`. The durable disclosure already lives in the delta's `## Review Disclosure` section (which rides to the archive on merge). Assumptions / Source Mapping / Conflict Scan below are *read from there*, not authored fresh.
+
+**Pre-review self-check first** (don't send a review request that fails the mechanical pass):
+- Mechanical: Requirement ID format, delta template compliance, `Test Level` on every scenario, no API details in scenarios
+- Semantic: scenario executability, boundary sanity, Error Case coverage, cross-Story conflict, source coverage
+
 ```markdown
 # Review Checkpoint — US-XXX <Title>
 
 ## Change Summary
-- BDD: N scenarios (N @unit, N @integration, N @e2e)
-- Delta: N ADDED, N MODIFIED, N REMOVED
+- Behavior Delta: N ADDED, N MODIFIED, N REMOVED Requirements (N scenarios: N integration, N component, N e2e)
+- SDD Delta: N ADDED, N MODIFIED, N REMOVED
 - Contract: N new endpoints, N modified
+
+## Assumptions Made
+| # | Assumption | Basis |
+|---|-----------|-------|
+| 1 | <what was inferred> | <why it's defensible> |
 
 ## Pending Clarification
 | # | Source | Issue | Suggestion |
 |---|--------|-------|-----------|
-| 1 | BDD #3 | [NEEDS CLARIFICATION] ... | Suggest ... |
+| 1 | R-CART-012 | [NEEDS CLARIFICATION: TBD-1 — <answerable question>] | Suggest ... |
+
+## Source Mapping
+| Source Item | Handling | Note |
+|-------------|----------|------|
+| <story item> | Converted → R-XXX-NNN / Deferred | <reason if deferred> |
+
+## Cross-Story Conflict Scan
+- <conflicts/redundancy against existing specs — or "None found">
 
 ## Non-Goals Confirmation
 - This story doesn't handle: ...
 
 ## Review Conclusion
-- [ ] BDD direction correct
-- [ ] Delta scope reasonable
+- [ ] Behavior Delta direction correct
+- [ ] Assumptions Made acceptable
+- [ ] SDD Delta scope reasonable
 - [ ] Contract changes non-breaking
 - [ ] Clarifications addressed
 ```
+
+Reviewer entry point: Assumptions Made → Pending Clarification → spot-check the deltas.
+
+On the human's verdict, route each item home (the summary dissolves): challenged assumption → edit delta + update Review Disclosure; TBD answered → into delta/spec, drop from ISSUES; TBD unanswered → stays in ISSUES; deferred item → Memory NEXT; confirmed conflict → fix delta or log to ISSUES.
 
 ---
 

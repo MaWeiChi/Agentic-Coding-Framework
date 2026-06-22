@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.20, Lifecycle v0.9, Protocol v0.13, Templates v0.12 (2026-02-27)
+> Derived from: Framework v0.22, Lifecycle v0.13, Protocol v0.18, Templates v0.15 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -20,7 +20,7 @@ when you need specifics on what to read, produce, and check at each step.
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
 5. `.ai/history.md` — Empty file (will hold DONE, LOG, and session history)
 6. `.ai/HANDOFF.md` — Empty file
-7. Directory structure: `docs/bdd/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
+7. Directory structure: `docs/specs/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
 
 **Lite Mode — Produce:**
 1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.9`
@@ -40,7 +40,7 @@ existing code at this stage — use the Step 0 "touch it, test it" approach per 
 
 **Goal:** Ensure the code you're about to change has test coverage before you change it.
 
-**Read:** PROJECT_MEMORY.md (NOW), BDD scenarios or Story description, source code of affected modules
+**Read:** PROJECT_MEMORY.md (NOW), Behavior Delta or Story description, source code of affected modules
 
 **Produce:** Characterization tests for uncovered functions (if needed)
 
@@ -55,50 +55,88 @@ This step is skipped in Lite Mode (tests are written directly without distinguis
 
 ---
 
-### Step 1: BDD (Full Mode) / Write Tests Directly (Lite Mode)
+### Step 1: BDD — Behavior Delta (Full Mode) / Write Tests Directly (Lite Mode)
 
-**Lite Mode fast path:** Skip the `.feature` file entirely — no Gherkin, no separate BDD
+**Lite Mode fast path:** Skip the Behavior Delta entirely — no separate behavior
 document. Write test files directly from the Story description using BDD-style function
-names (`Given_When_Then`). Then skip Steps 2–4 (Delta Spec, API Contract, Review
+names (`Given_When_Then`). Then skip Steps 2–4 (SDD Delta, API Contract, Review
 Checkpoint) and jump straight to Step 5 (Test Scaffolding) or Step 6 (Implementation)
 if tests are already written. Constitution and NFR checks are also skipped in Lite Mode.
 
-**Full Mode — Read:** PROJECT_CONTEXT.md, PROJECT_MEMORY.md (NOW + NEXT), existing SDD (affected modules), HANDOFF.md (if exists)
+**Full Mode — Read:** PROJECT_CONTEXT.md, PROJECT_MEMORY.md (NOW + NEXT), existing Behavior Specs in `docs/specs/` (affected capabilities), existing SDD (affected modules), HANDOFF.md (if exists)
 
-**Produce:** `docs/bdd/US-{id}.feature`
+**Produce:** the **Behavior Delta** section of `docs/deltas/US-{id}.md` (ADDED / MODIFIED / REMOVED Requirements with embedded scenarios). No `.feature` file — Gherkin is opt-in only when the project stack actually executes it (cucumber/behave/pytest-bdd), and then it is a test-layer artifact derived from the spec.
 
 **Rules:**
-- Write scenarios **only** for the current Story
+- Write Requirements **only** for the current Story; specs collect **externally observable behavior** — unit-level GWT lives as test names in code, not here
+- One Requirement ID (`[R-<CAP>-NNN]`) = one independently verifiable behavior = one test; IDs are stable across Stories
 - Use RFC 2119 language (SHALL / MUST / SHOULD / MAY)
-- Tag each scenario with test levels: `@unit`, `@integration`, `@component`, `@e2e`
-- For NFR-related scenarios, use ID-bearing tags: `@perf(PERF-01)`, `@secure(SEC-01)`
-- Mark unclear requirements with `[NEEDS CLARIFICATION]`
-- Use Scenario Outline for parameterized cases
+- Every scenario carries a `Test Level` field: `integration`, `component`, or `e2e` (no `unit` at spec scope)
+- For NFR-related scenarios, attach ID-bearing tags to the Scenario label: `@perf(PERF-01)`, `@secure(SEC-01)`
+- Label scenarios by product-semantic branches (enabled/disabled, DHCP/Static), not boundary permutations — boundary values go in the **Parameters table** and expand into table-driven tests
+- **Scenario exemption:** pure parameter/field/range requirements need no GWT — Parameters table + Error Cases suffice; write `Scenarios: Not needed — <reason>`
+- No API details (endpoints, status codes, JSON field names) in scenarios — those belong to Step 3
+- Event-type requirements state precise **Trigger**, **NOT-Triggered** condition, and message format + variables
+- Mark unclear requirements with `[NEEDS CLARIFICATION: TBD-N — <answerable question>]`; when the source gives a defensible hint, extract a candidate and disclose it as an assumption at Step 4 instead of asking
+- Seed the `## Review Disclosure` section of the delta file with behavior-level Assumptions Made — this section is finalized at Step 4 and is merge-skipped at Step 7 (FB-016)
 
 **Template:**
-```gherkin
-@unit @component
-Scenario: Short description of expected behavior
-  Given [precondition]
-  When [action]
-  Then [expected result]
+```markdown
+## Behavior Delta — US-{id}: {Story Title}
 
-@perf(PERF-01)
-Scenario Outline: Parameterized scenario
-  Given <precondition>
-  When <action> with <parameter>
-  Then <expected_result>
+### ADDED Requirements
 
-  Examples:
-    | precondition | parameter | expected_result |
-    | ...          | ...       | ...             |
+### Requirement: {short behavior statement} [R-{CAP}-{NNN}]
+The system SHALL {behavior}.
+
+#### Scenario: {branch label} (Test Level: integration)
+- Given {precondition}
+- When {action}
+- Then {expected result}
+
+#### Scenario: {other branch} (Test Level: e2e) @perf(PERF-01)
+- Given {precondition}
+- When {action}
+- Then {expected result}
+
+**Parameters**: (only if configurable values exist)
+| Parameter | Type | Unit | Range | Default | Example | R/W | Notes |
+|-----------|------|------|-------|---------|---------|-----|-------|
+
+**Error Cases**: {invalid input / permission / missing resource / concurrency}
+
+### MODIFIED Requirements
+{Restate the full updated Requirement block; note previous behavior in one line}
+
+### REMOVED Requirements
+- [R-{CAP}-{NNN}] {reason}
 ```
+
+After the Behavior Delta, append the Review Disclosure stub to the same file (finalized at Step 4):
+
+```markdown
+## Review Disclosure — US-{id}: {Story Title}
+
+### Assumptions Made
+| # | Assumption | Basis |
+|---|-----------|-------|
+
+### Source Mapping
+| Source Item | Handling | Note |
+|-------------|----------|------|
+
+### Cross-Story Conflict Scan
+- (filled at sdd-delta / Step 4)
+```
+
+See `references/templates.md` for the Parameters table rules (Counter/Gauge typology,
+`0 - (none)` notation, usage/limit separation).
 
 ### Step 2: SDD Delta
 
-**Read:** PROJECT_MEMORY.md, existing SDD, BDD scenarios for current Story, HANDOFF.md
+**Read:** PROJECT_MEMORY.md, existing SDD, the Behavior Delta for current Story, HANDOFF.md
 
-**Produce:** `docs/deltas/US-{id}.md`
+**Produce:** the **SDD Delta** section appended to `docs/deltas/US-{id}.md` (same file as the Behavior Delta)
 
 **Rules:**
 - Output **Delta Spec** format: ADDED / MODIFIED / REMOVED sections
@@ -106,27 +144,28 @@ Scenario Outline: Parameterized scenario
 - Reference affected SDD modules by name
 - If touching data model, ensure Source of Truth is clear (which module owns the data)
 - Include Non-Goals / Out of Scope section
+- Extend the `## Review Disclosure` section: add architecture-level assumptions and run the Cross-Story Conflict Scan against existing specs (FB-016)
 
 **Template:**
 ```markdown
-# Delta Spec — US-{id}: {Story Title}
+## SDD Delta — US-{id}: {Story Title}
 
-## ADDED
-### Module: {ModuleName}
+### ADDED
+#### Module: {ModuleName}
 - **Purpose:** ...
 - **Interface:** ...
 - **Data model:** ...
 
-## MODIFIED
-### Module: {ExistingModuleName}
+### MODIFIED
+#### Module: {ExistingModuleName}
 - **Change:** ...
 - **Reason:** ...
 - **Impact:** ...
 
-## REMOVED
+### REMOVED
 (Nothing removed in this Story)
 
-## Non-Goals / Out of Scope
+### Non-Goals / Out of Scope
 - ...
 ```
 
@@ -143,30 +182,50 @@ Scenario Outline: Parameterized scenario
 
 ### Step 4: Review Checkpoint
 
-**You don't produce anything here.** The human reviews BDD + Delta Spec + contract changes. Wait for human confirmation. If the human has modification requests, they'll come via HANDOFF.md's human_note or direct instruction.
+**Before requesting review, run the pre-review self-check** (FB-014):
+- **Mechanical pass:** Requirement ID format and placement, Behavior/SDD Delta template compliance, `Test Level` present on every scenario, no API details in scenarios
+- **Semantic pass:** scenario executability (each Given/When/Then can become a test assertion), boundary sanity (Ranges/Defaults make sense semantically), Error Case coverage (permission / invalid input / missing resource / concurrency), cross-Story conflict against existing specs, full coverage of the source Story
+
+**Finalize the `## Review Disclosure` section** in the delta (Assumptions Made / Source Mapping / Cross-Story Conflict Scan) — this is the durable record; it rides to `docs/deltas/archive/` on merge (FB-016).
+
+**Then assemble an ephemeral Review summary** (see Review Checkpoint template in `references/templates.md`) — Change Summary counts derived from the delta, the Review Disclosure surfaced, Pending Clarifications collected from `[NEEDS CLARIFICATION]` markers. **Present it in chat / the orchestrator message — never write it to a file** (no `docs/review/`, no `.ai/REVIEW.md`). It is a view, not an artifact.
+
+The human reviews the Behavior Delta + SDD Delta + contract changes, entering via
+Assumptions Made → Pending Clarifications → spot-check. Wait for human confirmation.
+If the human has modification requests, they'll come via HANDOFF.md's human_note or
+direct instruction.
 
 If any `[NEEDS CLARIFICATION]` items exist, the human clarifies them at this point.
 
+**On the human's verdict, route each item to its home** (the summary dissolves):
+- Assumption challenged → edit the delta to match + update its Review Disclosure entry
+- TBD answered → apply into the delta/spec + remove from Memory ISSUES
+- TBD unanswered → stays in Memory ISSUES
+- Source Mapping deferred → record in Memory NEXT
+- Conflict confirmed → fix the delta now, or log to Memory ISSUES
+
 ### Step 5: Test Scaffolding (Red)
 
-**Read:** BDD scenarios (with tags), NFR table, API contracts, HANDOFF.md
+**Read:** Behavior Delta (scenarios with `Test Level` fields + Parameters tables), NFR table, API contracts, HANDOFF.md
 
 **Produce:** Test file skeletons in `tests/` (all tests must fail)
 
 **Rules:**
-- Map BDD scenario tags to test levels:
-  - `@unit` → unit test files
-  - `@integration` → API integration test files
-  - `@component` → Playwright component test files
-  - `@e2e` → Playwright browser test files
-  - `@perf(ID)` → look up NFR table for threshold, tool, scope
+- Map scenario `Test Level` fields to test levels:
+  - `integration` → API integration test files
+  - `component` → Playwright component test files
+  - `e2e` → Playwright browser test files
+  - `@perf(ID)` / `@secure(ID)` → look up NFR table for threshold, tool, scope
+- Parameters tables expand into table-driven tests (Range boundaries + Error Cases as cases; `assertion_type: parameter`)
+- Unit tests are NOT scaffolded from the spec — they accompany implementation directly with BDD-style names
+- Each test file opens with a machine-readable header: `Spec:` (Requirement ID + statement), `Scenario:` (branch label), `Test Level`, `assertion_type`
 - Use project's test framework conventions as defined in PROJECT_CONTEXT.md
 - All tests should fail at this point — no implementation code yet
 - Extract helper function patterns early if multiple tests share setup
 
 ### Step 6: Implementation (Green)
 
-**Read:** Failing test output, SDD, API contracts, BDD scenarios, HANDOFF.md
+**Read:** Failing test output, SDD, API contracts, Behavior Delta, HANDOFF.md
 
 **Produce:** Source code that makes tests pass
 
@@ -181,24 +240,31 @@ If any `[NEEDS CLARIFICATION]` items exist, the human clarifies them at this poi
 
 ### Step 7: Verify (Quality Gate)
 
-**Read:** BDD scenarios, Delta Spec, SDD, API contracts, Constitution, test results, HANDOFF.md
+**Read:** `docs/deltas/US-{id}.md` (Behavior Delta + SDD Delta), `docs/specs/` (affected capabilities), SDD, API contracts, Constitution, test results, HANDOFF.md
 
-**Produce:** Nothing (check only). If passing, proceed. If failing, return to relevant step.
+**Produce:** Nothing until checks pass; then perform the merges below. If failing, return to relevant step.
 
 **Four checks:**
 
 | Check | What to Verify | On Failure |
 |-------|---------------|-----------|
-| **Completeness** | All BDD scenarios have tests? All ADDED items in Delta implemented? No unresolved `[NEEDS CLARIFICATION]`? | Return to the step that's incomplete |
+| **Completeness** | Every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) has a corresponding test, matched via `Spec:` headers (grep-checkable)? All ADDED items in the SDD Delta implemented? No unresolved `[NEEDS CLARIFICATION]`? | Return to the step that's incomplete |
 | **Correctness** | All tests pass? NFR thresholds met? | Return to Implementation |
-| **Coherence** | Main SDD merged with Delta? API contract matches implementation? Constitution not violated? | Fix the inconsistency |
+| **Coherence** | Specs and main SDD merged with their Deltas? API contract matches implementation? Constitution not violated? | Fix the inconsistency |
 | **Security** | No hardcoded secrets in committed files? `.gitignore` covers secret patterns (`.env`, `*.key`, `credentials.json`, `*.pem`)? Test fixtures use mock values? | Return to Implementation |
 
 After all four pass:
 
-1. **Merge Delta into SDD** — Apply ADDED/MODIFIED/REMOVED from Delta Spec into the
-   main `docs/sdd.md`. This is when the SDD becomes the single source of truth again.
-2. **Archive Delta** — Keep `docs/deltas/US-{id}.md` as historical record.
+1. **Merge Behavior Delta into specs** — Apply ADDED/MODIFIED/REMOVED Requirements into
+   `docs/specs/<capability>.md`. Specs become the current behavior truth again.
+2. **Merge SDD Delta into SDD** — Apply ADDED/MODIFIED/REMOVED into the main `docs/sdd.md`.
+   Both merges happen at the same moment (FB-012). **Skip the `## Review Disclosure` section** —
+   it is meta-rationale, not behavior/architecture; it stays in the delta file (FB-016).
+3. **Archive Delta** — Move `docs/deltas/US-{id}.md` to `docs/deltas/archive/{YYYY-MM-DD}-US-{id}.md`.
+   The Review Disclosure rides along, preserving the *why* next to the *what*.
+   The active delta path exists only while a Story is in flight — its absence for a completed
+   Story is expected. The date prefix prevents reopen-cycle collisions. (Projects that fully
+   trust git history may delete instead; archive is the default.)
 
 ### Step 8: Commit Changes
 
@@ -313,7 +379,7 @@ When the agent detects a mode change (reading CLAUDE.md or verbal instruction), 
 
 1. Update CLAUDE.md mode line to `lite`
 2. Slim PROJECT_MEMORY to NOW + NEXT only (remove TESTS/SYNC/ISSUES)
-3. Stop maintaining SDD, HANDOFF, Delta Spec, BDD
+3. Stop maintaining SDD, HANDOFF, Delta Spec, Behavior Specs
 4. Existing docs remain (not deleted), just no longer actively maintained
 
 ---

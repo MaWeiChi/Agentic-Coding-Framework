@@ -911,6 +911,315 @@ Even Lite Mode projects benefit from the security principle. Since Lite Mode ski
 
 ---
 
+### FB-012: Spec-Embedded Scenarios — Behavior Specs Replace `.feature` Files
+
+**Date:** 2026-06-11
+**Context:** Field feedback from BDD-structured requirement-writing practice, plus a review of OpenSpec's spec-driven development model. ACF's BDD step produces standalone Gherkin files (`docs/bdd/US-{id}.feature`) per Story. Two structural issues surfaced: the `.feature` files have no consumer in ACF's actual loop, and per-Story scenario files never consolidate into a "current behavior" truth — unlike the SDD, which has a Delta → merge lifecycle.
+
+#### The Gap
+
+1. **`.feature` files have no consumer.** The framework scaffolds testify/Playwright/pytest tests manually from scenarios (Test Scaffolding step); no Gherkin runner (cucumber/behave/pytest-bdd) executes them, and reviewers read markdown. The `.feature` file is a behavior document in a different syntax — a middleman artifact.
+2. **Scenarios have no stable IDs.** Traceability is a comment (`// Generated from: BDD US-XXX — <Scenario>`) — story-level only, not behavior-level, and not machine-checkable.
+3. **No current-behavior truth.** `docs/bdd/` accumulates per-Story snapshots; after 20 Stories, answering "how does the system behave today?" means replaying all of them. The SDD solves exactly this with Delta → merge; behavior scenarios never got the same treatment.
+4. **Lite Mode already proved `.feature` is droppable** — it writes BDD-style test names directly in code and works.
+
+#### Design: OpenSpec-Style Behavior Specs with the Same Delta → Merge Lifecycle as the SDD
+
+```
+docs/specs/<capability>.md     # current behavior truth: Requirements + embedded Scenarios
+docs/deltas/US-{id}.md         # per-Story delta: SDD delta + Behavior delta (ADDED/MODIFIED/REMOVED Requirements)
+```
+
+1. **Step 1 (BDD) produces a Behavior Delta, not a `.feature`:** ADDED / MODIFIED / REMOVED Requirements, each Requirement carrying its scenarios inline.
+2. **Spec format (OpenSpec-style):**
+
+```markdown
+### Requirement: <short behavior statement> [R-<CAP>-NNN]
+The system SHALL ...
+
+#### Scenario: <branch label> (Test Level: integration)
+- Given <precondition>
+- When <trigger>
+- Then <expected result>
+```
+
+3. **Stable behavior-level IDs.** One Requirement ID = one independently verifiable behavior = one test. Scaffolded tests carry a machine-readable header (`id`, `given/when/then`, `assertion_type`) instead of a free-text comment.
+4. **Test-level tags become spec fields** (`Test Level: integration | component | e2e`); NFR tags (`@perf(PERF-01)`, `@secure(SEC-01)`) attach to the Scenario label.
+5. **Unit-level scenarios exit the spec entirely.** Specs collect externally observable behavior only; unit-level GWT lives as test names in code (generalizes the Lite-mode fast path to Full Mode). Behavior documents must not describe implementation-internal behavior.
+6. **Scenario Outline / Examples retired** — parameterized cases derive mechanically from the Parameters table (see FB-013) via table-driven tests / parametrize.
+7. **Merge on Verify pass (Step 7):** the Behavior delta merges into `docs/specs/` at the same moment the SDD delta merges into the SDD. Specs are the single current truth; deltas archive as history.
+8. **Gherkin becomes opt-in:** only when the project stack actually executes `.feature` (cucumber/behave/pytest-bdd). In that case `.feature` is a **test-layer artifact derived from the spec**; the spec remains the behavior truth.
+9. **Verify Completeness check becomes ID-based:** every Requirement ID touched by the Story has a corresponding test — mechanically checkable, replacing "all BDD scenarios have tests".
+
+#### Design Decisions
+
+**1. Why Requirement + Scenario structure instead of bare scenario lists?**
+The Requirement is the addressable unit — it carries the ID, appears in deltas, and maps to tests. A flat scenario list has nothing stable to reference when behavior changes across Stories.
+
+**2. Why give behavior specs the SDD's merge lifecycle?**
+Symmetry keeps the framework coherent: one delta per Story covering both architecture and behavior, one merge point, one answer to "what is current truth." This is the part of OpenSpec's model that per-Story `.feature` files structurally cannot replicate.
+
+**3. ACF stays self-contained — no upstream-document dependency.**
+Company- or domain-mandated requirement formats stay out of scope. If an upstream document exists, the Behavior Delta may cite it as a source, but ACF's pipeline reads and writes only its own specs. What is adopted here are format conventions, not a tool dependency — no OpenSpec CLI required.
+
+**4. Migration**
+`docs/bdd/` is retired from the project structure; existing `.feature` files are archived (not deleted — history matters). Adoption follows FB-010's versioned migration path at natural touchpoints.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐⭐ One fewer artifact to write and keep in sync per Story; no GWT duplication; "current behavior" lookup is one file, not N snapshots |
+| **Quality** | ⭐⭐⭐ Single source of truth for behavior; behavior-level traceability survives requirement churn |
+| **Autonomy** | ⭐⭐ ID-based Completeness check is mechanically verifiable; agent self-checks coverage without human cross-reading two documents |
+
+**Verdict: Must-Do**
+
+**Status:** ✅ Incorporated (2026-06-11) into Framework v0.21, Lifecycle v0.10, Protocol v0.14, Templates v0.13, README, and Skill (SKILL.md + workflow.md + templates.md re-derived). `.feature` retired; specs self-contained with no upstream-document dependency; `docs/bdd/` → `docs/specs/`.
+
+---
+
+### FB-013: Requirement-Semantics Rules for Behavior Specs
+
+**Date:** 2026-06-11
+**Context:** Field feedback from BDD-structured requirement-writing practice surfaced requirement-semantics rules that ACF's BDD/Templates layer lacks. Without them, agents produce "fake BDD" for parameter-type stories, hand-fill boundary values into Examples tables, and leak API details into scenarios.
+
+#### Items
+
+**1. Scenario exemption rule.** Pure parameter/field/range requirements do not get forced GWT — a Parameters table + Error Cases suffice. The scenario field stays present with an explicit reason: `Not needed — <reason>`, or `Deferred — blocked by TBD-N`. Forcing GWT onto non-behavioral requirements produces scenarios with no test value.
+
+**2. Parameters table as a first-class artifact.** Eight columns: Parameter / Type / Unit / Range / Default / Example / R/W / Notes. Key sub-rules:
+- **Counter / Gauge / UpDownCounter typology** — Counter Range is `0 - (none)` with wrap/saturate behavior in Notes; Gauge Range is the real requirement/physical bound (e.g. `0-100` %, `-40-85` °C).
+- **Unbounded notation** — never write type ceilings (`2^63-1`) as Range; they are not requirement constraints and boundary tests cannot validate them. Write `0 - (none)`.
+- **usage/limit separation** — device-dependent ceilings split into `xxxUsage` (Range = `0 - (limit)`) and `xxxLimit` (actual device value), isolating device variance.
+- **Type abstraction** — requirement-level categories only (`integer`, `number`, `string`, `boolean`, `enum`); OpenAPI `format` (int32, float…) never backfills into the spec.
+- **Boundary tests derive mechanically** from Range / Error Cases via table-driven tests / parametrize. This **replaces Scenario Outline + Examples** (Templates v0.7 item 4): hand-filling boundary permutations into a requirement document is test-plan work and an anti-pattern at spec level.
+
+**3. Answerable TBDs upgrade `[NEEDS CLARIFICATION]`.** Numbered `TBD-N`, phrased as a question the owner can actually answer (not "to be confirmed"). Distinguish from **disclosed assumptions**: when the source has a defensible hint, the agent extracts a candidate value and discloses it for challenge (see FB-014) instead of asking.
+
+**4. No API details in scenarios.** Scenarios state behavior intent; endpoint, HTTP status, JSON field names belong to the API Contract step. Optionally one line `API Reference: METHOD /path (see openapi.yaml)` links requirement → endpoint for traceability — it adds no new test semantics.
+
+**5. Event trigger discipline.** Event-type requirements must state: precise **Trigger** condition, explicit **NOT-Triggered** condition, and **message format + variables** with matching examples — not buried in a scenario `Then` clause.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐⭐ Kills fake-BDD bloat and Examples-table hand-expansion; boundary cases generated, not authored |
+| **Quality** | ⭐⭐⭐ Range/Default/boundary semantics become testable facts; event triggers become assertable |
+| **Autonomy** | ⭐⭐ Agent decides AC-vs-Parameters mechanically; boundary expansion needs no human input |
+
+**Verdict: Must-Do** (items 1–3); items 4–5 Worth-Doing alongside.
+
+**Status:** ✅ Incorporated (2026-06-11) into Templates v0.13 (Behavior Spec writing principles, Parameters Table guide, Scenario Outline retirement) and Skill workflow.md Step 1 / templates.md.
+
+---
+
+### FB-014: Agent-First Disclosure — Self-Check and Assumptions Before Review Checkpoint
+
+**Date:** 2026-06-11
+**Context:** Field feedback from BDD-structured requirement-writing practice: when the agent self-checks its output and discloses its assumptions *before* requesting review, human review shifts from "find all bugs" to "challenge listed assumptions" — materially cheaper and more targeted. ACF's Review Checkpoint has only a Pending Clarification table; the agent runs no self-check before requesting review and discloses no assumptions.
+
+#### Design
+
+**1. Pre-review self-check (before the Review Checkpoint):**
+- **Mechanical pass:** ID format and placement, template compliance, tag/Test-Level presence, no API details in scenarios (FB-013 item 4).
+- **Semantic pass:** scenario executability (can each Given/When/Then become a test assertion?), boundary sanity (Ranges/Defaults make sense semantically, not just schema-complete), Error Case coverage (permission / invalid input / missing resource / concurrency), cross-Story conflict and redundancy, full coverage of the source Story.
+
+**2. Review Checkpoint template gains three sections:**
+- **Assumptions Made** — what the agent inferred and on what basis, listed for challenge.
+- **Source Mapping** — which source items (Story description, referenced documents) were handled, partially handled, or deferred (with reason).
+- **Cross-Story Conflict Scan** — redundancy, contradiction, undeclared dependencies against existing specs.
+
+**3. Reviewer entry point becomes:** read Assumptions Made → TBD list → spot-check the spec body. Same philosophy as FB-009/FB-010: agent recommends and discloses, human confirms.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ A few lines per US; the self-check passes are checklist runs, not regeneration |
+| **Quality** | ⭐⭐ Undisclosed assumptions are today's silent failure mode at Review |
+| **Autonomy** | ⭐⭐⭐ Review round-trips drop; human attention goes only where the agent was uncertain |
+
+**Verdict: Must-Do** (Autonomy ⭐⭐⭐ is the framework's core dimension)
+
+**Status:** ✅ Incorporated (2026-06-11) into Templates v0.13 (Review Checkpoint template + Pre-Review Self-Check), Lifecycle v0.10 (Review Checkpoint row), and Skill workflow.md Step 4 / templates.md.
+
+---
+
+### FB-015: Delta Disposition — Archive-on-Merge Replaces "Archive or Delete"
+
+**Date:** 2026-06-12
+**Context:** FB-012 made the per-Story delta file (`docs/deltas/US-{id}.md`, Behavior Delta + SDD Delta) the BDD/SDD steps' working artifact, but left its post-merge disposition ambiguous: "archive in place or delete, project's choice."
+
+#### The Gap
+
+1. **State ambiguity.** A file at `docs/deltas/US-003.md` looks identical whether it is (a) the in-flight working draft of an active Story or (b) merged history from weeks ago. Tooling cannot treat file presence as a signal (the pre-dispatch check and rollback heuristic already try to), and an agent globbing `docs/deltas/` may misread a merged delta as pending work.
+2. **Delete loses the only home of per-Story rationale.** SDD Delta MODIFIED sections carry `Reason:`/`Impact:`; Behavior Delta MODIFIED notes previous behavior. None of this merges — specs/SDD store current state only, git diff shows what changed but not why, ADRs cover only architecture-level decisions.
+3. **Delete breaks mid-pipeline reopen.** `reopen --target scaffold|verify` steps list the active delta in `claude_reads`; deletion forces every reopen back to `bdd`.
+4. **The `.feature` analogy does not transfer.** `.feature` was a *live* second copy with ongoing sync cost; a merged delta is *frozen* — zero maintenance, not auto-resent, in no future Story's `claude_reads`. The real cost is ambiguity, not storage.
+
+#### Design: Archive-on-Merge (OpenSpec-style)
+
+1. **Verify step, after the dual merge passes:** move `docs/deltas/US-{id}.md` → `docs/deltas/archive/{YYYY-MM-DD}-US-{id}.md`.
+2. **Path encodes state:** the active path exists ⟺ the Story is in flight. Pre-dispatch file checks and the rollback heuristic become deterministic signals instead of heuristics; absence of an active delta for a completed Story is the expected state, not an error.
+3. **Date prefix** handles reopen cycles: a US reopened at `bdd` produces a fresh active delta covering only the fix; on its merge, the second archive entry does not collide with the first.
+4. **Delete remains a project-level option** for projects that fully trust git history; the default is archive.
+
+#### Open Follow-Up — ✅ Resolved by FB-018
+
+Post-merge reopen at steps that read the delta (`scaffold`, `verify`) should read `docs/specs/` (the merged truth) rather than the old delta — "make code match spec" re-entry. **Resolved by FB-018**: re-entry on a merged US reads `docs/specs/` + `docs/sdd.md` + tests in place of the (archived) active delta; a behavior-changing reopen re-enters at `bdd` with a fresh delta.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ Prevents agents loading stale deltas as pending work; archive is cold (never auto-read) |
+| **Quality** | ⭐⭐ Per-Story rationale preserved; active-vs-merged state unambiguous |
+| **Autonomy** | ⭐⭐ File-presence checks (pre-dispatch, rollback suggestion) become reliable signals |
+
+**Verdict: Worth-Doing** (two dimensions; incorporated immediately since the change is one move operation)
+
+**Status:** ✅ Incorporated (2026-06-12) into Lifecycle v0.11, Protocol v0.15, Templates v0.14, and Skill (SKILL.md structure, workflow.md Step 7).
+
+---
+
+### FB-016: Review Disclosure Lives in the Delta; the Review Summary Is Ephemeral
+
+**Date:** 2026-06-13
+**Context:** FB-014 added the Review Checkpoint summary (Change Summary, Assumptions Made, Source Mapping, Cross-Story Conflict Scan, Pending Clarification, Review Conclusion). But — exactly like the pre-FB-015 delta — its *disposition* was never defined: Templates gives a template, workflow.md says "produce the Review summary", and Protocol's `review` step has `claude_writes: []`. Each agent improvises (print to chat, write `docs/review/US-XXX.md`, stuff it into HANDOFF), and any agent that writes a file creates a permanently stale snapshot.
+
+Note: this is distinct from FB-009's on-demand `review-report.md`, which has a defined home (`.ai/`) and a defined consumer (triage). That artifact is fine. The gap is the per-Story Review *Checkpoint* summary.
+
+#### The Gap — where each block belongs after review ends
+
+| Summary block | Destination after review | Pre-FB-016 state |
+|---------------|--------------------------|------------------|
+| Change Summary (counts) | None — a view derived from the delta; discard | OK, nobody stored it |
+| **Assumptions Made** | **The only block with durable value** — accepted assumptions are the *rationale* behind requirements; must persist | ✗ no home, evaporates at review end |
+| Pending Clarification (TBD-N) | Answered → into delta/spec; unanswered → Memory ISSUES | OK, rule exists |
+| Source Mapping | Deferred items → Memory NEXT; rest discard | ⚠ NEXT convention exists but unwritten |
+| Cross-Story Conflict Scan | Fix delta now, or log to ISSUES | ⚠ same |
+| Review Conclusion (sign-off) | Orchestrated → STATE.json review pass; manual → history.md session block | OK |
+
+The decisive observation: **FB-015 already solved half of this.** Archive-on-merge gives every Story a frozen record; if the disclosure is written *into the delta*, it rides along to `docs/deltas/archive/` automatically — no separate review snapshot file is needed.
+
+#### Design: disclosure is a delta section; summary is an assembled view
+
+1. **The delta file gains a third top-level section** `## Review Disclosure — US-XXX` (Assumptions Made / Source Mapping / Cross-Story Conflict Scan), built incrementally: the `bdd` step records behavior-level assumptions, `sdd-delta` adds architecture assumptions and the conflict scan, and Step 4 finalizes it.
+2. **The merge reads only `## Behavior Delta` and `## SDD Delta`; it explicitly skips `## Review Disclosure`.** Specs/SDD store current behavior and architecture, not the meta-rationale. The whole delta file (disclosure included) then moves to `docs/deltas/archive/` per FB-015 — so the rationale is preserved as frozen history, co-located with the change it explains.
+3. **The Review Checkpoint summary becomes an ephemeral view**, assembled from the delta (Change Summary counts derived from it, Review Disclosure surfaced, Pending Clarifications collected from `[NEEDS CLARIFICATION]` markers) and presented in chat / the orchestrator message. It is **never written to a file** — no `docs/review/`, no `.ai/REVIEW.md`.
+4. **Convergence rules at Step 4 close-out** (now written explicitly, per the table above): a challenged assumption → edit the delta to match and update its Review Disclosure entry; an answered TBD → apply into the delta/spec and remove from Memory ISSUES; an unanswered TBD → stays in Memory ISSUES; a deferred Source Mapping item → Memory NEXT; a found conflict → fix the delta now or log to ISSUES.
+
+Note the pre-review self-check (FB-014, mechanical + semantic passes) stays ephemeral — those are *checks*, not artifacts. Only the disclosure (Assumptions / Source Mapping / Conflict Scan) becomes a delta section.
+
+#### Considered and Rejected
+
+- **Keep summary as a file for team audit (Team Size N):** real teams carry sign-off in PR review; STATE.json (orchestrated) and history.md (manual) already record the gate. A standalone review file would re-stale immediately.
+- **Merge the disclosure into specs:** specs are current-behavior truth; assumptions are meta. Mixing them pollutes the spec. The archived delta is the correct home (same reasoning as keeping `Reason:`/`Impact:` out of the merged SDD — FB-015).
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ No second artifact; summary is assembled on demand, never stored or re-read |
+| **Quality** | ⭐⭐ Requirement rationale (accepted assumptions) is preserved with the change, not lost at review end; no stale review snapshots |
+| **Autonomy** | ⭐⭐ Disposition is fully specified — the agent stops improvising where the summary goes |
+
+**Verdict: Worth-Doing** (Quality + Autonomy)
+
+**Status:** ✅ Incorporated (2026-06-13) into Lifecycle v0.12, Protocol v0.16, Templates v0.15, and Skill (workflow.md Steps 1/2/4/7, templates.md).
+
+---
+
+### FB-017: Execution-Substrate Repositioning — Methodology vs. Where It Runs
+
+**Date:** 2026-06-13
+**Context:** Two facts landed at once. (1) `claude -p` / headless / Agent SDK usage moved off the interactive subscription onto a **separately-metered credit pool** — the *number* of fresh headless dispatches now carries real cost, and each fresh `-p` process is a cold prompt cache (5-min TTL, no carry-over across invocations). (2) Claude Code shipped native remote-control and unattended-execution modes — **Agent View** (`claude agents`, local background-session dispatcher), **Channels** (event-push into a running session, research preview), **Routines** (cloud-hosted, cron/webhook/GitHub-triggered, counts against subscription usage), plus **Agent Teams** and **Workflows** for fan-out.
+
+The bespoke external orchestrator (Protocol layer: STATE.json state machine + hooks + per-step `claude -p` dispatch) was originally built as a workaround for one thing: subscription plans did not permit OpenClaw-style automation. **Both of its justifications are now gone** — the limit it escaped is covered by native modes, and the headless dispatch it relies on is the billed-and-cold-cache path.
+
+#### The Separation This Forces
+
+ACF conflated two things that are now cleanly separable:
+
+| Layer | What it is | Status |
+|-------|-----------|--------|
+| **ACF methodology** (durable core) | Behavior Specs + Delta→merge, per-Story step semantics, four-check Verify, Review Disclosure, memory conventions | Substrate-agnostic; runs end-to-end in **one interactive session** (skill-driven), subscription-covered, no `-p` billing |
+| **Execution substrate** (was bespoke) | How to run the methodology unattended / remote / parallel | Native modes now supersede the bespoke orchestrator |
+
+Responsibility → native replacement:
+
+| Bespoke orchestrator did | Native replacement |
+|--------------------------|--------------------|
+| per-Story state machine / step sequencing | interactive session walks it via the skill; or a Routine prompt |
+| unattended / scheduled / triggered runs | **Routines** (cloud, cron/webhook/GitHub) |
+| parallel local runs + file isolation | **Agent View** (`claude agents`) |
+| remote nudge while away from terminal | **Channels** |
+| multi-agent fan-out | **Agent Teams / Workflows** |
+| human review gate | interactive: just converse; Routine: review completed work in UI |
+
+#### Decision (scope A — measured repositioning)
+
+1. The default substrate is the **interactive single session** (skill drives the whole pipeline, warm cache throughout, subscription-covered). State this as ACF's primary "how to run it."
+2. Recommended unattended substrates are the **native modes** (Routines / Agent View / Channels / Agent Teams / Workflows), not a custom dispatch loop.
+3. The **bespoke external orchestrator is demoted to legacy/optional** — content retained, banner added. It still has one genuine niche: **provider-agnostic** automation (Channels/Routines are unavailable on Bedrock/Vertex/Foundry) and fully-custom external state machines.
+4. **Cost note** added: interactive = subscription; headless `-p` = separately-billed credit pool with cold cache per dispatch → do not architect automation as a pile of `-p` dispatches.
+
+#### Considered and Deferred
+
+The earlier cost micro-optimizations for the bespoke path (coalesce bdd+sdd-delta+contract into one "spec" dispatch and commit+update-memory into one "finalize" dispatch; per-step `model:` sizing — Haiku for mechanical steps; push more validation into hooks to avoid cold-cache retries; one warm long-lived session instead of per-step fresh `-p`) are recorded as FN-005. They only matter to whoever stays on the bespoke headless path, so they are not on the main line.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token / cost** | ⭐⭐⭐ Points users at the subscription-covered interactive path and native substrates instead of a billed `-p` dispatch pile — the dominant cost lever |
+| **Quality** | ⭐⭐ Clean methodology-vs-substrate split; the framework stops conflating "what ACF is" with "the one way to automate it" |
+| **Autonomy** | ⭐ Native unattended modes are more capable and less brittle than the bespoke loop |
+
+**Verdict: Must-Do** (cost ⭐⭐⭐ alone)
+
+**Status:** ✅ Incorporated (2026-06-13) into Framework v0.22 (new "Execution Substrate" section + mapping tables + cost note), Protocol v0.17 (legacy banner), Protocol-Advanced (legacy banner), README, and Skill (SKILL.md interactive-default note).
+
+---
+
+### FB-018: Reopen Reads Merged Truth — Resolving the FB-015 Open Follow-Up
+
+**Date:** 2026-06-13
+**Context:** FB-015 made the active delta move to `docs/deltas/archive/` on merge, and recorded an open follow-up: re-entry steps (`reopen` from FB-009's Review → Triage → Re-entry) still read the *active* delta, which no longer exists once a Story is merged. This closes that gap.
+
+#### The Gap
+
+`reopen --target <step>` re-enters a **completed (merged)** US at a pipeline step. Several steps' `claude_reads` point at `docs/deltas/US-{story}.md` — but for a merged US that file has moved to `docs/deltas/archive/{date}-US-{id}.md` (FB-015). So:
+- A reopen at `scaffold` / `impl` / `verify` would read a path that no longer exists; the pre-dispatch prereq check would warn on the missing file.
+- More importantly, the contract the code must now satisfy is no longer "the old delta" — it is the **current behavior truth** in `docs/specs/` (+ `docs/sdd.md` for architecture). The merged spec, not the historical change, is what re-entry should read.
+
+#### Design
+
+For a **reopened (merged) US**, re-entry reads the merged truth in place of the (absent) active delta:
+
+1. **Re-entry steps read `docs/specs/` + `docs/sdd.md` + the existing tests** instead of the active delta. The archived delta (`docs/deltas/archive/`) is available read-only for original change context, but the spec is the contract.
+2. **A reopen that changes behavior re-enters at `bdd`** and authors a **fresh active delta** covering only the fix. On its merge it archives with a new date prefix — FB-015's date prefix already anticipated this, so there is no archive collision.
+3. **A reopen that only fixes code to match the existing spec** (regression, flaky test, missed Error Case) re-enters at `scaffold` / `impl` / `verify` reading `docs/specs/` + tests; no new delta is needed.
+4. **Pre-dispatch prereq check:** active-delta absence for a completed US is expected, not an error (already stated by FB-015) — reopen must not be blocked by it.
+
+The reopen flow lives in two places: the legacy Protocol orchestrator (FB-017) and the skill's interactive Review → Triage → Re-entry. The skill (the live path) is the one that matters most; both are aligned here.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ Re-entry reads one merged spec instead of hunting a moved/absent delta |
+| **Quality** | ⭐⭐ Re-entry validates code against current truth, not a historical change; closes a correctness gap FB-015 opened |
+| **Autonomy** | ⭐ File-presence ambiguity on reopen removed; the agent knows where to read |
+
+**Verdict: Worth-Doing** (correctness fix; the gap was self-inflicted by FB-015)
+
+**Status:** ✅ Incorporated (2026-06-13) into Lifecycle v0.13 (Re-entry clause), Protocol v0.18 (reopen `claude_reads` substitution), and Skill (SKILL.md reopen note + workflow.md derivation). FB-015's open follow-up is resolved.
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -920,6 +1229,8 @@ Items identified as potential improvements but not yet prioritized for design or
 | FN-001 | **Metrics / Measurement** | Define KPIs for ACF effectiveness: token cost per US, retry rate, triage reopen ratio, regression rate across sprints. Data source: hook.log + STATE.json history. Purpose: continuous improvement of the framework itself | Low — need more field data first |
 | FN-002 | **Estimation** | Complexity estimation at BDD stage (S/M/L) based on scenario count, module coupling, and history of similar US. Could inform sprint planning and token budget prediction | Low — useful but not blocking |
 | FN-003 | **Cross-Project Learning** | Mechanism for patterns learned in one project (e.g. "WebRTC US needs deeper SDD") to transfer to new projects. Could be a shared knowledge base or agent memory that spans projects | Low — single-project workflow is solid first |
+| FN-004 | **Skill ↔ Framework derivation** | `Skills/agentic-coding/` is a hand-maintained condensed copy of `Framework/` (~25KB vs ~160KB, a real token-budget consumer — unlike `.feature`, it has a consumer, so it stays). But every feedback round (FB-012~016) re-edits both sides by hand: the same double-maintenance failure mode FB-012 removed for `.feature`. This is the one redundancy that *grows with every FB*. **Option (a) is now implemented**: `scripts/check-skill-derivation.py` is a version-drift lint that compares each skill `Derived from:` version against the latest changelog row of the doc it claims to derive from (zero false positives; exit 1 on drift). Remaining options if drift recurs: (b) **semi-automatic export** that regenerates the skill from tagged Framework regions; (c) a single source with build-time condensation. The lint catches version drift but not content drift within a version — that gap is what (b)/(c) would close | Low (was Medium) — the version-drift lint covers the common case; (b)/(c) only if content-drift-within-version becomes a real problem |
+| FN-005 | **Bespoke-path cost optimizations** | Only relevant if a project still runs the legacy headless orchestrator (FB-017 demoted it). Now that each `claude -p` dispatch is billed and cold-cached: coalesce `bdd`+`sdd-delta`+`contract` into one "spec" dispatch and `commit`+`update-memory` into one "finalize" dispatch (8→~4 dispatches/Story, at the cost of coarser rollback granularity); add a per-step `model:` key (Haiku for mechanical steps, Opus/Sonnet for impl/verify); push more pre-dispatch validation into hooks/`post_check` so retries don't pay cold-cache re-establishment; or run one warm long-lived session that advances internally instead of per-step fresh `-p` (biggest saving, trades away the hook-driven tool-agnostic state machine) | Low — most users move to native substrates (FB-017); these are for the legacy-path holdouts |
 
 ---
 
@@ -939,3 +1250,11 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.10 | 2026-02-26 | FB-009: ISSUES-Driven Triage — Review → Triage → Re-entry flow for turning unfixed ISSUES into pipeline work (reopen linked US or create new US), 6 design decisions confirmed, Review Session as on-demand health check and ACF on-ramp for existing projects |
 | v0.11 | 2026-02-27 | FB-010: Framework Migration — version tag in CLAUDE.md, gradual adoption at natural touchpoints, backward compatibility, CC backfills `linked` on ISSUES automatically. Future Notes section added: FN-001 (Metrics), FN-002 (Estimation), FN-003 (Cross-Project Learning) |
 | v0.12 | 2026-02-27 | FB-011: Security Principle — three-layer security integration: Constitution default security principle (Bootstrap), Verify fourth check dimension (per-US), Review Session security scan (cross-US). Default in all modes including Lite |
+| v0.13 | 2026-06-11 | FB-012~014 (field feedback from BDD requirement-writing practice + OpenSpec model review): FB-012 OpenSpec-style Behavior Specs replace `.feature` (Requirement/Scenario format with behavior-level IDs, Delta → merge lifecycle mirroring SDD, Gherkin demoted to opt-in, ID-based Completeness check); FB-013 requirement-semantics rules (Parameters table + Counter/Gauge typology, scenario exemption, answerable TBD-N, no API in scenarios, event trigger discipline, Scenario Outline retirement); FB-014 agent-first disclosure (mechanical+semantic self-check, Assumptions/Source Mapping/Conflict Scan in Review Checkpoint). Direction confirmed; incorporation pending |
+| v0.14 | 2026-06-11 | FB-012~014 incorporated: Framework v0.21, Lifecycle v0.10, Protocol v0.14, Templates v0.13, README project structure; Skill re-derived (SKILL.md, workflow.md, templates.md) with new derivation line. FB-012 status note: ACF stays self-contained — no upstream requirement-document dependency; OpenSpec-style format conventions only, no tool dependency |
+| v0.15 | 2026-06-12 | FB-015: delta disposition — archive-on-merge replaces "archive or delete"; Verify moves the active delta to `docs/deltas/archive/{date}-US-{id}.md` so path encodes in-flight vs merged state; rationale (Reason/Impact) preserved; delete remains project option; open follow-up recorded (post-merge reopen should read docs/specs/ instead of old delta). Incorporated into Lifecycle v0.11, Protocol v0.15, Templates v0.14, Skill |
+| v0.16 | 2026-06-13 | FB-016: Review Disclosure (Assumptions Made / Source Mapping / Cross-Story Conflict Scan) becomes a third top-level section of the delta file, built incrementally and finalized at Review Checkpoint; merge skips it (rides to archive with the delta, FB-015); the Review Checkpoint summary is an ephemeral assembled view, never written to a file (distinct from FB-009's `.ai/review-report.md`); Step 4 close-out convergence rules made explicit. Incorporated into Lifecycle v0.12, Protocol v0.16, Templates v0.15, Skill |
+| v0.17 | 2026-06-13 | FN-004 added: Skill ↔ Framework derivation is hand-maintained double-maintenance that grows with every FB (the one redundancy `.feature` removal did not eliminate); options recorded (derivation lint / semi-auto export / single-source build), starting with a lint keyed off the skill's `Derived from:` provenance line |
+| v0.18 | 2026-06-13 | FB-017: execution-substrate repositioning. Headless `-p` now separately billed + cold-cached, and native modes (Agent View / Channels / Routines / Agent Teams / Workflows) cover remote+unattended under subscription — both original justifications for the bespoke orchestrator are gone. Separate ACF methodology (durable, substrate-agnostic) from execution substrate; interactive single session is the default, native modes the recommended unattended substrate, bespoke orchestrator demoted to legacy/optional (provider-agnostic niche retained). FN-005 added (bespoke-path cost optimizations). Incorporated into Framework v0.22, Protocol v0.17, Protocol-Advanced, README, Skill |
+| v0.19 | 2026-06-13 | FN-004 option (a) implemented: `scripts/check-skill-derivation.py` version-drift lint (skill `Derived from:` provenance vs each doc's changelog tail; zero false positives, exit 1 on drift); documented in CONTRIBUTING.md Skill Reference Sync; FN-004 priority lowered to Low |
+| v0.20 | 2026-06-13 | FB-018: resolves FB-015's open follow-up — reopen of a merged US reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) in place of the archived active delta; behavior-changing reopen re-enters at `bdd` with a fresh delta; pre-dispatch active-delta absence is expected, not an error. Incorporated into Lifecycle v0.13, Protocol v0.18, Skill |

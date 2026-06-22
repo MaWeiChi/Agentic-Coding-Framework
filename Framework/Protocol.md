@@ -2,7 +2,9 @@
 
 **Orchestrator × Executor Communication Protocol and Automation Process**
 
-This document is the fourth core document of the [Agentic Coding Framework](Framework.md), defining how the orchestrator and executor communicate, how state is passed, and how steps advance automatically.
+> **Legacy / optional (FB-017).** This document describes a *bespoke external orchestrator* (STATE.json state machine + hooks + per-step `claude -p` dispatch). It was built when subscriptions did not permit OpenClaw-style automation. Two things have since changed: headless `-p` is now metered against a separate billed credit pool (and each fresh dispatch is a cold cache), and Claude Code ships native unattended/remote modes (Routines, Agent View, Channels, Agent Teams, Workflows). **Most users should run ACF in one interactive session (the default) or via a native mode — see "Execution Substrate" in [Framework.md](Framework.md).** Keep this orchestrator only for a genuine niche: provider-agnostic automation (native modes are unavailable on Bedrock/Vertex/Foundry) or a fully-custom external state machine. The methodology it sequences is unchanged; only the substrate is demoted.
+
+This document defines how the orchestrator and executor communicate, how state is passed, and how steps advance automatically.
 
 ---
 
@@ -64,19 +66,19 @@ Executor output:
 - `docs/sdd.md` (module division + data model skeleton)
 - `docs/constitution.md` (3-5 core architecture principles)
 - `PROJECT_MEMORY.md` (initial state)
-- Directory structure (`docs/bdd/`, `docs/deltas/`, `docs/api/`)
+- Directory structure (`docs/specs/`, `docs/deltas/`, `docs/api/`)
 
 #### Adding Features to Existing Project
 
 ```
 You: Add shopping cart feature to A project, start with BDD
 ```
-→ executor reads PROJECT_MEMORY.md + SDD, produces `docs/bdd/US-007.md`
+→ executor reads PROJECT_MEMORY.md + SDD, produces the Behavior Delta in `docs/deltas/US-007.md`
 
 ```
 You: OK, continue with SDD Delta and contract
 ```
-→ executor produces `docs/deltas/US-007.md` + updates `docs/api/openapi.yaml`
+→ executor appends the SDD Delta to `docs/deltas/US-007.md` + updates `docs/api/openapi.yaml`
 
 ```
 You: I reviewed it, continue with scaffold + impl
@@ -341,7 +343,7 @@ Executor output should follow the "minimal output, structure first" principle to
 
 | Output Category | Format | Output Strategy | Notes |
 |-----------------|--------|-----------------|-------|
-| **Documents** (BDD, Delta Spec, contracts) | Corresponding format (Gherkin / Markdown / YAML) | Write to path specified in `claude_writes` | git tracks diffs |
+| **Documents** (Behavior Delta, SDD Delta, contracts) | Corresponding format (Markdown / YAML) | Write to path specified in `claude_writes` | git tracks diffs |
 | **Code** | Source code | Write to path specified in `claude_writes` | git tracks diffs |
 | **Status Report** | HANDOFF.md YAML front matter or executor-result | Structured, hook parses | Zero LLM token parsing |
 | **Handoff Context** | HANDOFF.md markdown body | Freeform, next session reads | Describe what was done, what's stuck |
@@ -403,8 +405,8 @@ steps:
       - PROJECT_MEMORY.md       # NOW + NEXT
       - .ai/HANDOFF.md          # Previous handoff (if any)
     claude_writes:
-      - docs/bdd/US-{story}.md
-    post_check: null
+      - docs/deltas/US-{story}.md   # Behavior Delta section (ADDED/MODIFIED/REMOVED Requirements)
+    post_check: "grep -q '## Behavior Delta' docs/deltas/US-{story}.md"
 
   sdd-delta:
     next_on_pass: contract
@@ -415,11 +417,11 @@ steps:
     claude_reads:
       - PROJECT_CONTEXT.md
       - PROJECT_MEMORY.md
-      - docs/bdd/US-{story}.md   # Current BDD
+      - docs/deltas/US-{story}.md  # Current Behavior Delta
       - docs/sdd.md               # Existing SDD (affected modules)
       - .ai/HANDOFF.md
     claude_writes:
-      - docs/deltas/US-{story}.md
+      - docs/deltas/US-{story}.md  # Appends SDD Delta section alongside the Behavior Delta
 
   contract:
     next_on_pass: review
@@ -444,7 +446,7 @@ steps:
       scope_warning: sdd-delta         # Scope issue → adjust Delta
     requires_human: true          # orchestrator sends message, waits for human
     claude_reads: []              # executor doesn't participate
-    claude_writes: []
+    claude_writes: []             # summary is ephemeral (FB-016); disclosure already lives in the delta's ## Review Disclosure section
 
   scaffold:
     next_on_pass: impl
@@ -454,7 +456,7 @@ steps:
     requires_human: false
     treat_failing_as_pass: true  # RED stubs are expected; "failing" auto-normalizes to "pass"
     claude_reads:
-      - docs/bdd/US-{story}.md    # Current BDD (with tags)
+      - docs/deltas/US-{story}.md # Behavior Delta (scenarios with Test Level fields + Parameters tables)
       - docs/nfr.md               # NFR thresholds
       - docs/api/openapi.yaml     # Contracts
       - .ai/HANDOFF.md
@@ -489,12 +491,15 @@ steps:
     timeout_min: 5
     requires_human: false
     claude_reads:
-      - docs/bdd/US-{story}.md
-      - docs/deltas/US-{story}.md
+      - docs/deltas/US-{story}.md  # Behavior Delta + SDD Delta
+      - docs/specs/                # Current behavior truth (merge target)
       - docs/api/openapi.yaml
       - docs/constitution.md
       - .ai/HANDOFF.md
-    claude_writes: []
+    claude_writes:
+      - docs/specs/                # Behavior Delta merges in on pass
+      - docs/sdd.md                # SDD Delta merges in on pass
+      - docs/deltas/archive/       # Active delta moves here on pass (date-prefixed, FB-015)
 
   commit:
     next_on_pass: update-memory
@@ -646,12 +651,12 @@ After completion:
 
 | Step | Instruction |
 |------|-------------|
-| bdd | Based on MEMORY's NOW/NEXT, write BDD scenarios for this Story. Use RFC 2119 language, tag test levels. Mark unclear items `[NEEDS CLARIFICATION]` |
-| sdd-delta | Based on BDD scenarios, analyze affected modules, produce Delta Spec (ADDED/MODIFIED/REMOVED) |
-| contract | Based on Delta Spec, update affected endpoints/events in OpenAPI/AsyncAPI contracts |
-| scaffold | Based on BDD scenario tags and NFR table, produce corresponding test skeleton. All tests must fail (red) |
+| bdd | Based on MEMORY's NOW/NEXT, write the Behavior Delta for this Story (ADDED/MODIFIED/REMOVED Requirements with embedded scenarios, `Test Level` field per scenario, Parameters tables where applicable). Use RFC 2119 language. Mark unclear items `[NEEDS CLARIFICATION: TBD-N — <answerable question>]`. Seed the `## Review Disclosure` section with behavior-level assumptions |
+| sdd-delta | Based on the Behavior Delta, analyze affected modules, append the SDD Delta (ADDED/MODIFIED/REMOVED) to the Story's delta file. Add architecture assumptions and the Cross-Story Conflict Scan to `## Review Disclosure` |
+| contract | Based on the Story's delta file, update affected endpoints/events in OpenAPI/AsyncAPI contracts |
+| scaffold | Based on scenario `Test Level` fields, Parameters tables, and NFR table, produce corresponding test skeleton with machine-readable Spec/Scenario headers. All tests must fail (red) |
 | impl | Read failing tests, write minimal code to make tests pass, then refactor |
-| verify | Execute triple check: Completeness (all BDD has tests, all Delta implemented), Correctness (tests pass, NFR met), Coherence (SDD merged Delta, contracts consistent, Constitution not violated) |
+| verify | Execute four checks: Completeness (every Requirement ID touched has a test via `Spec:` headers, all Delta implemented), Correctness (tests pass, NFR met), Coherence (specs/SDD merged Deltas, contracts consistent, Constitution not violated), Security (no hardcoded secrets). On pass, merge `## Behavior Delta` → docs/specs/ and `## SDD Delta` → docs/sdd.md (skip `## Review Disclosure`), then move the delta file to `docs/deltas/archive/{YYYY-MM-DD}-US-{story}.md` |
 | commit | Stage and commit all code changes with conventional commit message including story ID. Do NOT commit PROJECT_MEMORY.md or .ai/history.md. Record commit hash in HANDOFF.md front-matter as `commit_hash: <hash>` |
 | update-memory | Read HANDOFF.md commit_hash + STATE.json test results, update MEMORY's NOW/TESTS/NEXT/ISSUES/SYNC. Append DONE + LOG entry to `.ai/history.md`. Overwrite HANDOFF.md with latest session state |
 
@@ -813,7 +818,8 @@ Before dispatching an executor, the orchestrator verifies that the files listed 
 - Checks all concrete paths in `claude_reads` (skips wildcards like `*.go`, `**/*.ts`)
 - Skips `HANDOFF.md` on first attempt (it may not exist yet for the story's first step)
 - **Warn-only**: does not block dispatch. Missing files are appended to the dispatch prompt as a WARNING section
-- Suggests a rollback target based on heuristic file-path matching (e.g., missing `docs/bdd/` → suggest rollback to `bdd`)
+- Suggests a rollback target based on heuristic file-path matching (e.g., missing `docs/deltas/US-{story}.md` → suggest rollback to `bdd`)
+- The active delta path is a reliable signal (FB-015): it exists only while a Story is in flight — on Verify pass it moves to `docs/deltas/archive/`. Its absence for a *completed* Story is expected, not an error; only a missing active delta during an in-flight Story's dispatch warrants the rollback suggestion
 
 ```bash
 orchestrator check-prereqs <project-root>
@@ -855,7 +861,7 @@ Dispatches a Review Session executor that autonomously audits the project. Works
 - Output: `review-report.md` in `.ai/` + updated ISSUES in PROJECT_MEMORY.md
 - Each new ISSUE includes: severity (`[High]`/`[Med]`/`[Low]`), description, `linked: US-XXX` (if identifiable)
 - Review is analysis-only — no state mutations, no file modifications beyond report and ISSUES
-- For non-ACF projects: produces standalone review-report.md + ISSUES list (no STATE.json required)
+- For non-ACF projects: produces standalone `.ai/review-report.md` + ISSUES list (no STATE.json required)
 
 ### reopen — Re-enter Pipeline for Completed US
 
@@ -869,8 +875,11 @@ Reopens a completed User Story at a specified pipeline step.
 - Validates that `story-id` matches a previously completed story (checks `.ai/history.md`)
 - Sets STATE.json: `story → story-id`, `step → target`, `status → pending`, `attempt → 1`
 - Appends to `.ai/history.md`: `US-XXX reopened — reason: [human_note or ISSUE description]`
-- Preserves existing BDD/SDD/test files — executor modifies incrementally, not rewrites
 - Step 0 Safety Net Check applies on re-entry
+
+**`claude_reads` substitution for a merged US (FB-018):** a completed US has no active `docs/deltas/US-{story}.md` — it was archived on merge (FB-015). For re-entry, each step's `claude_reads` substitutes the **merged truth** for the active delta: read `docs/specs/` (current behavior) + `docs/sdd.md` (current architecture) + the existing tests; `docs/deltas/archive/{date}-US-{story}.md` is available read-only for original context. The pre-dispatch prereq check treats active-delta absence for a completed US as expected, not a missing-file error.
+- **Behavior-changing reopen** → re-enter at `bdd`, author a **fresh** active delta covering only the fix (it archives with a new date prefix on merge — no collision).
+- **Code-only fix** (regression / flaky test / missed Error Case) → re-enter at `scaffold` / `impl` / `verify` against `docs/specs/` + tests; no new delta.
 
 **Guardrail — auto-escalation on repeated failure:**
 - If a reopened US fails Verify after fix → auto-escalate rollback one level deeper
@@ -1009,3 +1018,8 @@ Most projects do not need these advanced features. Start with single-executor mo
 | v0.11 | 2026-02-25 | Add `commit` step between verify and update-memory (solves commit hash chicken-and-egg problem); scaffold `treat_failing_as_pass` flag (RED stubs auto-normalize failing→pass, prevents infinite scaffold retry loop); Agent Teams structured spawn prompts from `DEFAULT_TEAM_ROLES` for parallel impl (backend/frontend/test teammates); pipeline now 10 steps: bdd→sdd-delta→contract→review→scaffold→impl→verify→commit→update-memory→done |
 | v0.12 | 2026-02-25 | Rollback system: `orchestrator rollback <target-step>` resets state to earlier step (validates target is before current, blocks bootstrap unless `--force`); Pre-dispatch prerequisite checks: verify `claude_reads` files exist before dispatching, warn-only (appended to prompt as WARNING section, not blocking), suggest rollback target based on missing files; Checklist system: `startStory()` auto-generates `.ai/CHECKLIST.md` with per-step checkbox items, `buildPrompt()` instructs executor to check off completed items; new CLI commands: `rollback`, `check-prereqs`; new exports: `rollback()`, `checkPrerequisites()`, `generateChecklist()`, `PrereqCheckResult` type |
 | v0.13 | 2026-02-26 | Review, Triage, and Re-entry (FB-009): `review` command dispatches on-demand Review Session (code review, spec-code coherence, regression, memory audit → review-report.md + ISSUES updates); `triage` command reads unfixed ISSUES and outputs triage-plan with CC recommendations (human-gated); `reopen` command reopens completed US at specified step (STATE overwrite + history.md entry, incremental BDD/SDD modification); guardrails: failed verify after reopen auto-escalates rollback one level deeper; cross-US issues create new US instead of reopening multiple; Review works on non-ACF projects (no .ai/STATE.json required) |
+| v0.14 | 2026-06-11 | FB-012: bdd step output changes from `docs/bdd/US-{story}.md` to the Behavior Delta section of `docs/deltas/US-{story}.md` (post_check greps for `## Behavior Delta`); sdd-delta appends the SDD Delta to the same file; scaffold reads the delta file (Test Level fields + Parameters tables) and emits machine-readable Spec/Scenario test headers; verify becomes ID-based Completeness + merges Behavior Delta → `docs/specs/` and SDD Delta → `docs/sdd.md` on pass; bootstrap creates `docs/specs/` instead of `docs/bdd/`; step instructions updated (TBD-N clarification phrasing, four-check verify); rollback heuristic example updated. Pipeline step IDs unchanged |
+| v0.15 | 2026-06-12 | FB-015: verify moves the merged delta to `docs/deltas/archive/{date}-US-{story}.md` (claude_writes + step instruction updated); active delta path becomes a reliable in-flight signal for pre-dispatch checks and rollback suggestions |
+| v0.16 | 2026-06-13 | FB-016: bdd/sdd-delta step instructions seed and extend the delta's `## Review Disclosure` section; verify merge explicitly skips it; `review` step `claude_writes: []` documented as intentional (ephemeral summary, disclosure lives in the delta) |
+| v0.17 | 2026-06-13 | FB-017: legacy/optional banner added — this bespoke external orchestrator is superseded for most users by the interactive single-session default and native unattended modes (Routines / Agent View / Channels / Agent Teams / Workflows); headless `-p` is now separately billed + cold-cached. Retained for provider-agnostic / fully-custom automation. See "Execution Substrate" in Framework.md. Protocol semantics unchanged |
+| v0.18 | 2026-06-13 | FB-018: `reopen` gains a `claude_reads` substitution for merged US — re-entry reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) since the active delta is archived (FB-015); behavior-changing reopen re-enters at `bdd` with a fresh delta, code-only fix at scaffold/impl/verify; active-delta absence on a completed US is expected (not a prereq-check error) |

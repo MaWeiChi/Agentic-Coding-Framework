@@ -35,6 +35,14 @@ Open a GitHub Issue with:
 
 The files in `Skills/agentic-coding/references/` are condensed copies of framework content. When updating framework documents, check if the corresponding reference file also needs updating. The `Derived from:` header in each reference file indicates the source version.
 
+A lint catches the common drift — a Framework changelog bump that the skill's provenance line hasn't caught up to:
+
+```sh
+python3 scripts/check-skill-derivation.py
+```
+
+It compares each `Derived from:` version against the latest `| vX.Y |` row in that doc's changelog. Exit 0 = in sync, 1 = drift (re-derive the skill and update its `Derived from:` line), 2 = lint error. Run it before committing changes that touch `Framework/` or the skill, and wire it into CI if you automate checks. (It only flags version drift — it does not judge content equivalence; FN-004 in `Framework/Refinement.md` tracks deeper options.)
+
 ## Field Feedback
 
 If you have used the framework on a real project and want to share observations, open an Issue tagged `field-feedback`. Include:
