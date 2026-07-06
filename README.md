@@ -154,8 +154,7 @@ your-project/
 ├── docs/
 │   ├── specs/                         # Layer 2: Behavior Specs (current behavior truth)
 │   │   └── cart.md
-│   ├── sdd/                           # Layer 3: Software Design Document
-│   │   └── sdd.md
+│   ├── sdd.md                         # Layer 3: Software Design Document (canonical path)
 │   ├── api/                           # Interface contracts
 │   │   └── openapi.yaml
 │   ├── deltas/                        # Per-story deltas: Behavior + SDD (archived)
@@ -184,12 +183,12 @@ This framework was designed through comparative analysis with established method
 
 | Document          | Version | Date       |
 | ----------------- | ------- | ---------- |
-| Framework         | v0.22   | 2026-06-13 |
-| Lifecycle         | v0.12   | 2026-06-13 |
-| Templates         | v0.15   | 2026-06-13 |
-| Protocol          | v0.17   | 2026-06-13 |
+| Framework         | v0.23   | 2026-06-13 |
+| Lifecycle         | v0.14   | 2026-06-13 |
+| Templates         | v0.16   | 2026-06-13 |
+| Protocol          | v0.19   | 2026-06-13 |
 | Protocol-Advanced | v0.8    | 2026-02-17 |
-| Refinement        | v0.18   | 2026-06-13 |
+| Refinement        | v0.21   | 2026-06-13 |
 
 ## License
 

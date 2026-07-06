@@ -48,11 +48,11 @@ Agents produce code that "looks right" but has gaps — untested paths, contract
 
 - BDD-first — behavior defined before code exists
 - Test scaffolding in RED — all tests must fail initially (TDD discipline)
-- Triple verification gate (Completeness / Correctness / Coherence) before declaring done
+- Four-check verification gate (Completeness / Correctness / Coherence / Security) before declaring done
 - Self-correction loop with hard limit (max 3-5 attempts) — prevents infinite fix loops, escalates to human when stuck
 - Step 0 characterization tests — safety net before modifying existing code
 
-**Effective?** Yes. The triple-check is the key mechanism. Without it, agents declare "done" when tests pass but contract mismatches or missing scenarios go undetected. The max_attempts limit is also pragmatically important — it recognizes that repeated failures indicate a design problem, not a code problem.
+**Effective?** Yes. The four-check gate is the key mechanism. Without it, agents declare "done" when tests pass but contract mismatches or missing scenarios go undetected. The max_attempts limit is also pragmatically important — it recognizes that repeated failures indicate a design problem, not a code problem.
 
 ---
 
@@ -77,4 +77,4 @@ Agents produce code that "looks right" but has gaps — untested paths, contract
 
 ## Verdict
 
-The skill is well-scoped and effective for its target use case: multi-session, structured software development with LLM agents. The Lite/Full mode split gives it range — from quick fixes to full project lifecycles. The core design decisions (hot/cold memory split, delta-only updates, mandatory review gate, triple verification, self-correction limits) each address a real and specific failure mode of agentic coding. No superfluous ceremony detected.
+The skill is well-scoped and effective for its target use case: multi-session, structured software development with LLM agents. The Lite/Full mode split gives it range — from quick fixes to full project lifecycles. The core design decisions (hot/cold memory split, delta-only updates, mandatory review gate, four-check verification, self-correction limits) each address a real and specific failure mode of agentic coding. No superfluous ceremony detected.

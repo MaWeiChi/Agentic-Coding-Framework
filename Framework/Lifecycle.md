@@ -60,7 +60,7 @@ Users can switch modes (Lite ↔ Full) by editing CLAUDE.md or by verbal instruc
 **Upgrade Checklist (Lite → Full):**
 1. Expand CLAUDE.md (add Why/Who/What, Project Structure, Development Conventions)
 2. Expand PROJECT_MEMORY.md (add TESTS/SYNC/ISSUES to existing NOW/NEXT)
-3. Create `docs/sdd/sdd.md` (scan codebase, reverse-engineer)
+3. Create `docs/sdd.md` (scan codebase, reverse-engineer)
 4. Create `docs/constitution.md` (3-5 core principles)
 5. Create `.ai/HANDOFF.md` + `.ai/history.md`
 6. Human confirms above outputs
@@ -86,7 +86,7 @@ After Bootstrap is complete, each User Story enters one independent micro-waterf
 | Implementation | Implementation to pass tests → Refactor (includes self-correction loop, see below) |
 | AST Linting | After each Implementation iteration, run syntax-level checks; failure does not enter Verify |
 | Component Test | Validate front-end component behavior (Playwright component testing) |
-| **Verify** | **Triple verification: completeness/correctness/coherence (see Verify step below)** |
+| **Verify** | **Four checks: completeness / correctness / coherence / security (see Verify step below)** |
 | **Commit** | **Stage and commit code changes, record commit hash in HANDOFF.md (do NOT commit Memory/history)** |
 | **Update Memory** | **Update PROJECT_MEMORY.md with correct commit hash from HANDOFF (see rules below)** |
 
@@ -108,7 +108,7 @@ Verify is the quality gate for each Story's micro-waterfall, executed after all 
 
 | Check Dimension | Content | Determination Method | Action on Failure |
 |-----------------|---------|---------------------|------------------|
-| **Completeness** | Does every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) have a corresponding test (matched via the `Spec:` header)? Have all ADDED items in the SDD Delta been implemented? Are there any unresolved `[NEEDS CLARIFICATION]` remaining? | **Semi-deterministic**: ID ↔ test matching can be confirmed by grep on `Spec:` headers; "all implemented" requires LLM judgment | Return to corresponding step to complete |
+| **Completeness** | Does every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) have a corresponding test (matched via the `Spec:` header)? Scenario-exempted Requirements count via their Parameters-derived table-driven tests (`assertion_type: parameter`); `Deferred — blocked by TBD-N` Requirements fail this check until resolved (FB-019). Have all ADDED items in the SDD Delta been implemented? Are there any unresolved `[NEEDS CLARIFICATION]` remaining? | **Semi-deterministic**: ID ↔ test matching can be confirmed by grep on `Spec:` headers; "all implemented" requires LLM judgment | Return to corresponding step to complete |
 | **Correctness** | Do all tests pass? Are NFR thresholds met? | **Deterministic**: `go test` / `npm test` exit code + numerical results from NFR tools | Return to Implementation to fix |
 | **Coherence** | Has the main SDD file merged Delta Spec? Does the API contract match the implementation? Are Constitution principles violated? | **LLM-dependent**: executor needs to read multiple documents and compare semantic consistency | Fix inconsistencies |
 | **Security** | No hardcoded secrets in committed files? `.gitignore` covers secret file patterns? Test fixtures use mock values, not real credentials? | **Semi-deterministic**: grep for common secret patterns (`password=`, `apikey=`, `token=`, `BEGIN RSA PRIVATE KEY`), check `.gitignore` entries | Return to Implementation to fix |
@@ -429,3 +429,4 @@ Different project types (Go container service, WordPress CMS, Astro + WordPress 
 | v0.11 | 2026-06-12 | FB-015: delta disposition — Verify moves the merged delta to `docs/deltas/archive/{date}-US-XXX.md`; active path exists only while a Story is in flight; date prefix prevents reopen-cycle collisions; delete remains a project-level option |
 | v0.12 | 2026-06-13 | FB-016: delta gains a `## Review Disclosure` section (Assumptions / Source Mapping / Conflict Scan); merge skips it but archive preserves it; Review Checkpoint summary is an ephemeral assembled view, never a file; close-out routes each item to its home (Templates convergence table) |
 | v0.13 | 2026-06-13 | FB-018: Re-entry clause — reopen of a merged US reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) since its active delta is archived (FB-015); behavior-changing reopen re-enters at `bdd` with a fresh delta, code-only fix re-enters at scaffold/impl/verify against the spec; active-delta absence is expected, not an error |
+| v0.14 | 2026-06-13 | FB-019: iteration-table Verify row corrected to four checks; canonical SDD path unified to `docs/sdd.md` (Upgrade Checklist); Completeness row defines scenario-exempted Requirements (parameter tests carry the ID; Deferred/TBD-blocked fail until resolved) |

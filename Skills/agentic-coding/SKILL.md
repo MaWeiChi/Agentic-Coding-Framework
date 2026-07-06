@@ -175,7 +175,7 @@ project-root/
 ├── PROJECT_MEMORY.md                  # Dynamic state (read every session)
 ├── docs/
 │   ├── specs/<capability>.md         # Layer 2: Behavior Specs (current behavior truth)
-│   ├── sdd/sdd.md                    # Layer 3: Software Design Document
+│   ├── sdd.md                        # Layer 3: Software Design Document (canonical path)
 │   ├── api/openapi.yaml              # Interface contracts
 │   ├── deltas/US-XXX.md              # Per-Story delta: Behavior + SDD (exists only while in flight)
 │   ├── deltas/archive/               # Merged deltas, date-prefixed (frozen history)

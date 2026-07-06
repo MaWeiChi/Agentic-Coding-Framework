@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.22, Lifecycle v0.13, Protocol v0.18, Templates v0.15 (2026-06-13)
+> Derived from: Framework v0.23, Lifecycle v0.14, Protocol v0.19, Templates v0.16 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -15,7 +15,7 @@ when you need specifics on what to read, produce, and check at each step.
 
 **Full Mode — Produce:**
 1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.9`
-2. `docs/sdd/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
+2. `docs/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
 3. `docs/constitution.md` — 3–5 inviolable architectural principles (RFC 2119 SHALL level). **Must include a "No Hardcoded Secrets" principle by default** (API keys, tokens, passwords in env vars, `.gitignore` covers secret files, test fixtures use mock values)
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
 5. `.ai/history.md` — Empty file (will hold DONE, LOG, and session history)
@@ -248,7 +248,7 @@ If any `[NEEDS CLARIFICATION]` items exist, the human clarifies them at this poi
 
 | Check | What to Verify | On Failure |
 |-------|---------------|-----------|
-| **Completeness** | Every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) has a corresponding test, matched via `Spec:` headers (grep-checkable)? All ADDED items in the SDD Delta implemented? No unresolved `[NEEDS CLARIFICATION]`? | Return to the step that's incomplete |
+| **Completeness** | Every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) has a corresponding test, matched via `Spec:` headers (grep-checkable)? Scenario-exempted Requirements count via their `assertion_type: parameter` tests; `Deferred — blocked by TBD-N` fails until resolved (FB-019). All ADDED items in the SDD Delta implemented? No unresolved `[NEEDS CLARIFICATION]`? | Return to the step that's incomplete |
 | **Correctness** | All tests pass? NFR thresholds met? | Return to Implementation |
 | **Coherence** | Specs and main SDD merged with their Deltas? API contract matches implementation? Constitution not violated? | Fix the inconsistency |
 | **Security** | No hardcoded secrets in committed files? `.gitignore` covers secret patterns (`.env`, `*.key`, `credentials.json`, `*.pem`)? Test fixtures use mock values? | Return to Implementation |
@@ -369,7 +369,7 @@ When the agent detects a mode change (reading CLAUDE.md or verbal instruction), 
 ```
 1. ☐ Expand CLAUDE.md (add Why/Who/What, Project Structure, Development Conventions)
 2. ☐ Expand PROJECT_MEMORY.md (add TESTS/SYNC/ISSUES to existing NOW/NEXT)
-3. ☐ Create docs/sdd/sdd.md (scan codebase, reverse-engineer)
+3. ☐ Create docs/sdd.md (scan codebase, reverse-engineer)
 4. ☐ Create docs/constitution.md (3-5 core principles)
 5. ☐ Create .ai/HANDOFF.md + .ai/history.md
 6. ☐ Human confirms above outputs

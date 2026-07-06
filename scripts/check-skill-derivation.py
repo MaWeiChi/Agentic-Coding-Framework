@@ -51,6 +51,79 @@ PROVENANCE_RE = re.compile(r"Derived from:\s*(.+)")
 PAIR_RE = re.compile(r"([A-Za-z][A-Za-z-]*)\s+v(\d+)\.(\d+)")
 CHANGELOG_ROW_RE = re.compile(r"^\|\s*v(\d+)\.(\d+)\s*\|")
 
+# --- FB-019 extensions ---------------------------------------------------
+
+# README "Versions" table rows: `| Framework | v0.23 | 2026-06-13 |`
+README_PATH_DEFAULT = "README.md"
+README_ROW_RE = re.compile(r"^\|\s*([A-Za-z][A-Za-z-]*)\s*\|\s*v(\d+)\.(\d+)\s*\|")
+# Docs the README table tracks that carry their own changelog.
+README_TRACKED = {"Framework", "Lifecycle", "Templates", "Protocol", "Refinement"}
+
+# Stale-phrase tripwire: phrases that were removed by contract repairs and
+# must never reappear in normative text. Refinement.md (history ledger) and
+# changelog rows (`| vX.Y |`) are excluded from the scan.
+STALE_PHRASES = [
+    "## Delta:",          # pre-FB-012 delta heading (breaks section-name merge)
+    "docs/sdd/sdd.md",    # pre-FB-019 SDD path (canonical is docs/sdd.md)
+    "Triple verification",
+    "triple check",
+    "triple-check",
+]
+SCAN_GLOBS = ["Framework/*.md", "Skills/**/*.md", "README.md", "CONTRIBUTING.md"]
+
+
+def check_readme_versions(drift: list[str], errors: list[str]) -> int:
+    """Compare README's Versions table against each doc's changelog tail."""
+    readme = REPO / README_PATH_DEFAULT
+    if not readme.exists():
+        errors.append("README.md not found")
+        return 0
+    checked = 0
+    for line in readme.read_text(encoding="utf-8").splitlines():
+        m = README_ROW_RE.match(line.strip())
+        if not m:
+            continue
+        doc, maj, minr = m.group(1), int(m.group(2)), int(m.group(3))
+        if doc not in README_TRACKED:
+            continue
+        doc_path = REPO / "Framework" / f"{doc}.md"
+        actual = latest_changelog_version(doc_path)
+        if actual is None:
+            errors.append(f"no changelog rows found in Framework/{doc}.md")
+            continue
+        checked += 1
+        declared = (maj, minr)
+        if actual != declared:
+            drift.append(
+                f"  README.md Versions table: {doc} listed as {fmt(declared)} "
+                f"but Framework/{doc}.md changelog is at {fmt(actual)}"
+            )
+    return checked
+
+
+def check_stale_phrases(drift: list[str]) -> int:
+    """Grep normative docs for phrases retired by contract repairs (FB-019)."""
+    checked = 0
+    seen: set[Path] = set()
+    for pattern in SCAN_GLOBS:
+        for path in sorted(REPO.glob(pattern)):
+            if path in seen or path.name == "Refinement.md":
+                continue
+            seen.add(path)
+            checked += 1
+            for lineno, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                if CHANGELOG_ROW_RE.match(line.strip()):
+                    continue  # changelog rows may quote history
+                for phrase in STALE_PHRASES:
+                    if phrase.lower() in line.lower():
+                        drift.append(
+                            f"  {path.relative_to(REPO)}:{lineno}: stale phrase "
+                            f"'{phrase}' — retired by FB-019"
+                        )
+    return checked
+
 
 def latest_changelog_version(doc_path: Path) -> tuple[int, int] | None:
     """Return the highest (major, minor) found in `| vX.Y |` changelog rows."""
@@ -123,6 +196,9 @@ def main(argv: list[str]) -> int:
                     f"which is AHEAD of {doc}.md ({fmt(actual)}) — fix provenance"
                 )
 
+    readme_checked = check_readme_versions(drift, errors)
+    files_scanned = check_stale_phrases(drift)
+
     if errors:
         print("skill-derivation lint: ERROR", file=sys.stderr)
         for e in errors:
@@ -130,17 +206,22 @@ def main(argv: list[str]) -> int:
         return 2
 
     if drift:
-        print("skill-derivation lint: DRIFT — the skill is out of sync with Framework/")
+        print("skill-derivation lint: DRIFT detected")
         for d in drift:
             print(d)
         print(
-            "\nFix: re-derive the affected Skills/agentic-coding/ files and "
-            "update their 'Derived from:' line. (FN-004)"
+            "\nFix: re-derive/re-sync the flagged files. Provenance drift → "
+            "update the skill + its 'Derived from:' line (FN-004); README "
+            "table / stale phrases → align with the current contracts (FB-019)."
         )
         return 1
 
     if not quiet:
-        print(f"skill-derivation lint: OK — {checked} provenance versions in sync")
+        print(
+            f"skill-derivation lint: OK — {checked} provenance versions, "
+            f"{readme_checked} README table rows in sync; "
+            f"{files_scanned} files free of stale phrases"
+        )
     return 0
 
 

@@ -88,7 +88,7 @@ You: I reviewed it, continue with scaffold + impl
 ```
 You: Continue with verify + update memory
 ```
-→ executor performs triple verification → updates PROJECT_MEMORY.md
+→ executor performs the four-check verification → updates PROJECT_MEMORY.md
 
 #### Supplementing Specifications or Tests in Ongoing Project
 
@@ -656,7 +656,7 @@ After completion:
 | contract | Based on the Story's delta file, update affected endpoints/events in OpenAPI/AsyncAPI contracts |
 | scaffold | Based on scenario `Test Level` fields, Parameters tables, and NFR table, produce corresponding test skeleton with machine-readable Spec/Scenario headers. All tests must fail (red) |
 | impl | Read failing tests, write minimal code to make tests pass, then refactor |
-| verify | Execute four checks: Completeness (every Requirement ID touched has a test via `Spec:` headers, all Delta implemented), Correctness (tests pass, NFR met), Coherence (specs/SDD merged Deltas, contracts consistent, Constitution not violated), Security (no hardcoded secrets). On pass, merge `## Behavior Delta` → docs/specs/ and `## SDD Delta` → docs/sdd.md (skip `## Review Disclosure`), then move the delta file to `docs/deltas/archive/{YYYY-MM-DD}-US-{story}.md` |
+| verify | Execute four checks: Completeness (every Requirement ID touched has a test via `Spec:` headers — scenario-exempted Requirements count via their `assertion_type: parameter` tests, Deferred/TBD-blocked ones fail until resolved; all Delta implemented), Correctness (tests pass, NFR met), Coherence (specs/SDD merged Deltas, contracts consistent, Constitution not violated), Security (no hardcoded secrets). On pass, merge `## Behavior Delta` → docs/specs/ and `## SDD Delta` → docs/sdd.md (skip `## Review Disclosure`), then move the delta file to `docs/deltas/archive/{YYYY-MM-DD}-US-{story}.md` |
 | commit | Stage and commit all code changes with conventional commit message including story ID. Do NOT commit PROJECT_MEMORY.md or .ai/history.md. Record commit hash in HANDOFF.md front-matter as `commit_hash: <hash>` |
 | update-memory | Read HANDOFF.md commit_hash + STATE.json test results, update MEMORY's NOW/TESTS/NEXT/ISSUES/SYNC. Append DONE + LOG entry to `.ai/history.md`. Overwrite HANDOFF.md with latest session state |
 
@@ -1023,3 +1023,4 @@ Most projects do not need these advanced features. Start with single-executor mo
 | v0.16 | 2026-06-13 | FB-016: bdd/sdd-delta step instructions seed and extend the delta's `## Review Disclosure` section; verify merge explicitly skips it; `review` step `claude_writes: []` documented as intentional (ephemeral summary, disclosure lives in the delta) |
 | v0.17 | 2026-06-13 | FB-017: legacy/optional banner added — this bespoke external orchestrator is superseded for most users by the interactive single-session default and native unattended modes (Routines / Agent View / Channels / Agent Teams / Workflows); headless `-p` is now separately billed + cold-cached. Retained for provider-agnostic / fully-custom automation. See "Execution Substrate" in Framework.md. Protocol semantics unchanged |
 | v0.18 | 2026-06-13 | FB-018: `reopen` gains a `claude_reads` substitution for merged US — re-entry reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) since the active delta is archived (FB-015); behavior-changing reopen re-enters at `bdd` with a fresh delta, code-only fix at scaffold/impl/verify; active-delta absence on a completed US is expected (not a prereq-check error) |
+| v0.19 | 2026-06-13 | FB-019: "triple verification" example corrected to four checks; verify step instruction defines Completeness for scenario-exempted Requirements (parameter tests carry the ID; Deferred/TBD-blocked fail until resolved) |

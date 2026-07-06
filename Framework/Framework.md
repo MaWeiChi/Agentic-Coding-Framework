@@ -164,7 +164,7 @@ Define upfront, proactively construct context for agents.
 | **Review Checkpoint** | **Human review confirms correct direction** |
 | Test Scaffolding | Produce test skeletons (all red lights) |
 | Implementation | Implement to pass tests → Refactor |
-| Verify | Triple check: completeness, correctness, coherence |
+| Verify | Four checks: completeness, correctness, coherence, security |
 | Commit | Stage and commit code, record commit hash |
 | Update Memory | Update PROJECT_MEMORY.md with commit hash |
 
@@ -293,3 +293,4 @@ The following topics can be explored more deeply in subsequent discussions:
 | v0.20 | 2026-02-25 | Checklist system: each story auto-generates `.ai/CHECKLIST.md` for progress tracking; aligned with Protocol v0.12. Rollback and pre-dispatch prerequisite checks added to orchestrator capabilities |
 | v0.21 | 2026-06-11 | FB-012~014: BDD layer redefined as Behavior Specs (`docs/specs/<capability>.md`, OpenSpec-style Requirement [R-<CAP>-NNN] + embedded Scenarios) with per-Story Behavior Delta merged on Verify pass; `.feature` files retired (Gherkin opt-in only); scenario `Test Level` field replaces test-level tags (unit-level GWT moves into code); Verify aligned to four-point including ID-based Completeness and Security (FB-011 catch-up); `[NEEDS CLARIFICATION]` upgraded to numbered answerable TBD-N with Assumptions Made disclosure |
 | v0.22 | 2026-06-13 | FB-017: add "Execution Substrate" section — ACF is substrate-agnostic; interactive single session is the default (subscription-covered, warm cache), native modes (Routines / Agent View / Channels / Agent Teams / Workflows) are the recommended unattended substrate, the bespoke external orchestrator (Protocol.md) is demoted to legacy/optional (provider-agnostic niche). Cost note: headless `-p` is separately billed + cold-cached. Related Documents entry for Protocol.md reframed |
+| v0.23 | 2026-06-13 | FB-019: New Project Flow Verify row corrected from "Triple check" to four checks (FB-011 residue) |

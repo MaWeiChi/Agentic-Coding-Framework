@@ -300,6 +300,8 @@ A third top-level section of the same delta file, built incrementally (behavior 
 
 **Scenario exemption rule**: Pure parameter/field/range requirements do not get forced GWT — the Parameters table + Error Cases suffice. Keep the scenario position present with an explicit reason: `Scenarios: Not needed — <reason>` or `Scenarios: Deferred — blocked by TBD-N`. Forcing GWT onto non-behavioral requirements produces scenarios with no test value.
 
+How exempted Requirements satisfy ID-based Completeness (FB-019): a `Not needed` Requirement is covered by the table-driven tests derived from its Parameters table / Error Cases — those tests carry `Spec: R-<CAP>-NNN | assertion_type: parameter`, so the Completeness grep still finds the ID. A `Deferred — blocked by TBD-N` Requirement has an open `[NEEDS CLARIFICATION]` and therefore cannot pass Verify's Completeness check until the TBD is resolved.
+
 **RFC 2119 keyword strength**: Use RFC 2119 keywords in requirement statements and scenarios to distinguish requirement strength. This lets agents judge which are non-negotiable hard requirements and which are advisory.
 
 | Keyword | Meaning | Agent Behavior |
@@ -375,7 +377,7 @@ For requirements with configurable or reported values, the Parameters table is a
 
 ### Positioning
 
-One SDD covers the entire project's architectural design, updated incrementally with each Story. Place in `docs/sdd.md` or `docs/design/` directory.
+One SDD covers the entire project's architectural design, updated incrementally with each Story. The canonical path is **`docs/sdd.md`** — the Verify merge and FB-018 reopen read exactly this file; do not fork it into subdirectories.
 
 ### Template
 
@@ -420,8 +422,10 @@ One SDD covers the entire project's architectural design, updated incrementally 
 
 When a Story causes SDD changes, use the Delta Spec format to record changes rather than directly overwriting. This lets humans quickly see "what changed this time" during Review Checkpoint, and helps agents communicate the scope of changes to each other.
 
+This section lives inside the Story's delta file `docs/deltas/US-{id}.md`, whose three top-level headings are a **machine contract** — the Verify merge and post_checks key on them by exact name: `## Behavior Delta` (merges → `docs/specs/`), `## SDD Delta` (merges → `docs/sdd.md`), `## Review Disclosure` (merge-skipped, archived). Do not vary these headings.
+
 ```markdown
-## Delta: US-007 Shopping Cart Discount Feature
+## SDD Delta — US-007: Shopping Cart Discount Feature
 
 ### Non-Goals (Optional but Recommended)
 - This story doesn't handle bulk import of coupons
@@ -1215,3 +1219,4 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.13 | 2026-06-11 | FB-012~014: BDD Scenario Template → Behavior Spec Template — OpenSpec-style `### Requirement:` [R-<CAP>-NNN] + `#### Scenario:` in `docs/specs/<capability>.md`, Behavior Delta (ADDED/MODIFIED/REMOVED) per Story merged on Verify pass, Gherkin/`.feature` demoted to opt-in, unit-level scenarios exit spec, Scenario Outline retired; add Parameters Table guide (8 columns, Counter/Gauge/UpDownCounter typology, `0 - (none)` notation, usage/limit separation, type abstraction, mechanical boundary expansion); scenario exemption rule; `[NEEDS CLARIFICATION]` upgraded to numbered answerable `TBD-N`; no API details in scenarios; event trigger discipline; Test Scaffolding headers → machine-readable Spec/Scenario/Test Level/assertion_type; Review Checkpoint adds Pre-Review Self-Check + Assumptions Made + Source Mapping + Cross-Story Conflict Scan |
 | v0.14 | 2026-06-12 | FB-015: Behavior Spec positioning — merged delta moves to `docs/deltas/archive/{date}-US-{id}.md`; active delta path exists only while the Story is in flight |
 | v0.15 | 2026-06-13 | FB-016: add Review Disclosure Template as a third delta section (Assumptions Made / Source Mapping / Cross-Story Conflict Scan), built incrementally, merge-skipped, archived with the delta; Review Checkpoint repositioned — summary is an ephemeral view assembled from the delta, never written to a file (distinct from `.ai/review-report.md`); add close-out convergence table |
+| v0.16 | 2026-06-13 | FB-019: SDD delta example heading corrected to `## SDD Delta — US-007: ...` and the three top-level headings stated as the machine contract; SDD canonical path fixed to `docs/sdd.md` (docs/design/ dropped); scenario exemption rule gains ID-based Completeness semantics (parameter tests carry the ID; Deferred ties to NEEDS CLARIFICATION) |

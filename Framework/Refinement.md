@@ -1220,6 +1220,41 @@ The reopen flow lives in two places: the legacy Protocol orchestrator (FB-017) a
 
 ---
 
+### FB-019: Contract Repair — Four Broken Mechanical Contracts from the FB-011~018 Rollout
+
+**Date:** 2026-06-13
+**Context:** A six-lens optimization sweep (multi-agent, post-FB-018) found four *contract-level* defects — places where the docs contradict the mechanical rules FB-011~016 established, so an agent following the letter of one page breaks the machinery defined on another. All four are rollout residue, not design flaws.
+
+#### The Four Defects
+
+**1. Stale SDD-delta heading breaks the section-name merge contract.** Templates.md's canonical SDD delta example was still headed `## Delta: US-007 ...` (pre-FB-012), while the merge/skip logic (FB-016), the verify step instruction, and every other template key on exactly `## Behavior Delta` / `## SDD Delta` / `## Review Disclosure`. A delta authored from that example fails the section-name-based merge. *Fix:* heading corrected; the three required top-level headings stated explicitly as the machine contract.
+
+**2. Canonical SDD path split three ways.** Bootstrap/upgrade-checklist/structure-trees created `docs/sdd/sdd.md`; the FB-012 merge target and FB-018 reopen reads said `docs/sdd.md`; Templates offered `docs/sdd.md or docs/design/`. An agent could fork architecture truth into a second file at merge or reopen. *Decision:* canonical path is **`docs/sdd.md`** (flat — matches `docs/nfr.md`/`docs/constitution.md` and the operational majority: all Protocol `claude_reads`, merge, reopen). Bootstrap/tree/checklist references corrected; `docs/design/` alternative dropped.
+
+**3. "Triple verification" residue post-FB-011.** The most-read summary tables (Framework New Project Flow, Lifecycle iteration table, a Protocol example, and three spots in the skill README) still said three checks — an agent skimming them would skip the Security check FB-011 made mandatory. *Fix:* all updated to the four-check wording.
+
+**4. Scenario-exempted Requirements were invisible to ID-based Completeness.** FB-013's exemption (`Scenarios: Not needed — <reason>`) yields Requirements with no scenarios; Test Scaffolding is scenario-driven, so nothing scaffolds, and FB-012's Completeness check ("every touched Requirement ID has a test via `Spec:` headers") had no defined answer. *Fix:* explicit rules — an exempted Requirement is covered by its Parameters-table-derived table-driven tests, which carry `Spec: R-<CAP>-NNN | assertion_type: parameter`, so the ID grep still finds it; `Scenarios: Deferred — blocked by TBD-N` ties to the existing "no unresolved `[NEEDS CLARIFICATION]`" Completeness clause (a Deferred Requirement cannot pass Verify).
+
+#### Lint Hardening (regression guard)
+
+`scripts/check-skill-derivation.py` extended with two deterministic checks, since two of these defects (and the README Versions table, which drifted *again* between FB-017 and FB-018) are exactly the class of drift hand-maintenance keeps reintroducing:
+- **README Versions table check:** each row is compared against that doc's changelog tail (same mechanism as the provenance check).
+- **Stale-phrase tripwire:** a small forbidden-phrase list (`## Delta:`, `docs/sdd/sdd.md`, `Triple verification`, `triple check`/`triple-check`) grepped across Framework/, Skills/, README.md — excluding Refinement.md (history) and changelog rows. Any hit = drift.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ Prevents re-exploration when paths/headings disagree |
+| **Quality** | ⭐⭐⭐ All four defects silently break mechanical guarantees (merge, Completeness, Security gate, single SDD truth) |
+| **Autonomy** | ⭐⭐ The contracts are machine-checkable again, and the lint keeps them that way |
+
+**Verdict: Must-Do** (bug-class; Quality ⭐⭐⭐)
+
+**Status:** ✅ Incorporated (2026-06-13) into Framework v0.23, Lifecycle v0.14, Protocol v0.19, Templates v0.16, README (Versions table + structure tree), Skill (re-derived incl. skill README), and scripts/check-skill-derivation.py.
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1258,3 +1293,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.18 | 2026-06-13 | FB-017: execution-substrate repositioning. Headless `-p` now separately billed + cold-cached, and native modes (Agent View / Channels / Routines / Agent Teams / Workflows) cover remote+unattended under subscription — both original justifications for the bespoke orchestrator are gone. Separate ACF methodology (durable, substrate-agnostic) from execution substrate; interactive single session is the default, native modes the recommended unattended substrate, bespoke orchestrator demoted to legacy/optional (provider-agnostic niche retained). FN-005 added (bespoke-path cost optimizations). Incorporated into Framework v0.22, Protocol v0.17, Protocol-Advanced, README, Skill |
 | v0.19 | 2026-06-13 | FN-004 option (a) implemented: `scripts/check-skill-derivation.py` version-drift lint (skill `Derived from:` provenance vs each doc's changelog tail; zero false positives, exit 1 on drift); documented in CONTRIBUTING.md Skill Reference Sync; FN-004 priority lowered to Low |
 | v0.20 | 2026-06-13 | FB-018: resolves FB-015's open follow-up — reopen of a merged US reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) in place of the archived active delta; behavior-changing reopen re-enters at `bdd` with a fresh delta; pre-dispatch active-delta absence is expected, not an error. Incorporated into Lifecycle v0.13, Protocol v0.18, Skill |
+| v0.21 | 2026-06-13 | FB-019: contract repair — SDD delta example heading fixed to `## SDD Delta` (section-name merge contract restated); canonical SDD path unified to `docs/sdd.md` (docs/sdd/sdd.md and docs/design/ dropped); "triple verification" residue → four checks everywhere; scenario-exempted Requirements defined for ID-based Completeness (parameter tests carry the ID; Deferred ties to the NEEDS CLARIFICATION clause). Lint extended: README Versions table check + stale-phrase tripwire. Incorporated into Framework v0.23, Lifecycle v0.14, Protocol v0.19, Templates v0.16, README, Skill, scripts |

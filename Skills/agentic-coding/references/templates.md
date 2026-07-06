@@ -1,6 +1,6 @@
 # Document Templates Reference
 
-> Derived from: Templates v0.15 (2026-06-13)
+> Derived from: Templates v0.16 (2026-06-13)
 
 Condensed templates and writing guidelines for each framework document type. Use this
 when producing any framework document.
@@ -235,7 +235,7 @@ The system SHALL <behavior>.
 - Specs hold externally observable behavior only — unit-level GWT is test names in code
 - `Test Level` mandatory per scenario (`integration`, `component`, `e2e`); NFR tags (`@perf(ID)`, `@secure(ID)`) attach to the Scenario label
 - One scenario verifies one thing (max 3 Thens); label scenarios by product-semantic branches, not boundary values
-- **Scenario exemption:** pure parameter/range requirements → Parameters table + Error Cases, write `Scenarios: Not needed — <reason>`
+- **Scenario exemption:** pure parameter/range requirements → Parameters table + Error Cases, write `Scenarios: Not needed — <reason>`. Completeness still holds: the ID is covered by the Parameters-derived table-driven tests (`assertion_type: parameter`); `Deferred — blocked by TBD-N` fails Verify until resolved (FB-019)
 - RFC 2119 keywords: SHALL/MUST = hard requirement, SHOULD = recommended, MAY = optional
 - `[NEEDS CLARIFICATION: TBD-N — <answerable question>]` when ambiguous — don't guess; if the source gives a defensible hint, extract a candidate and disclose it in Assumptions Made instead
 - No API details (endpoints, status codes, JSON fields) in scenarios — optional `API Reference: METHOD /path` line for traceability
