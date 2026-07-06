@@ -207,10 +207,14 @@ project-root/
 
 ## ACF Version
 
-CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.9`). If the project
-was bootstrapped under an older ACF version, propose adopting new features at natural
-touchpoints (session start, story completion) — never auto-upgrade. See Lifecycle.md for
-the full migration model.
+**Current ACF Version: 0.22** (= the `Framework/Refinement.md` changelog version — this
+skill's declaration is the comparand, FB-020).
+
+CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.22`). If the project's
+tag is older than the current version above, read the Refinement changelog rows in between
+to see what actually changed, then propose adopting new features at natural touchpoints
+(session start, story completion) — never auto-upgrade. See Lifecycle.md for the full
+migration model.
 
 ## Review → Triage → Re-entry
 

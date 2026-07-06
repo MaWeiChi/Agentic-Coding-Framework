@@ -59,6 +59,10 @@ README_ROW_RE = re.compile(r"^\|\s*([A-Za-z][A-Za-z-]*)\s*\|\s*v(\d+)\.(\d+)\s*\
 # Docs the README table tracks that carry their own changelog.
 README_TRACKED = {"Framework", "Lifecycle", "Templates", "Protocol", "Refinement"}
 
+# FB-020: every `ACF Version: X.Y` outside Refinement.md must equal the
+# umbrella version = the Refinement.md changelog tail.
+ACF_VERSION_RE = re.compile(r"ACF Version:?\*{0,2}\s*v?(\d+)\.(\d+)")
+
 # Stale-phrase tripwire: phrases that were removed by contract repairs and
 # must never reappear in normative text. Refinement.md (history ledger) and
 # changelog rows (`| vX.Y |`) are excluded from the scan.
@@ -98,6 +102,34 @@ def check_readme_versions(drift: list[str], errors: list[str]) -> int:
                 f"  README.md Versions table: {doc} listed as {fmt(declared)} "
                 f"but Framework/{doc}.md changelog is at {fmt(actual)}"
             )
+    return checked
+
+
+def check_acf_version(drift: list[str], errors: list[str]) -> int:
+    """FB-020: all `ACF Version: X.Y` sites must match the umbrella version."""
+    umbrella = latest_changelog_version(FRAMEWORK_DIR / "Refinement.md")
+    if umbrella is None:
+        errors.append("no changelog rows found in Refinement.md (umbrella version)")
+        return 0
+    checked = 0
+    seen: set[Path] = set()
+    for pattern in SCAN_GLOBS:
+        for path in sorted(REPO.glob(pattern)):
+            if path in seen or path.name == "Refinement.md":
+                continue
+            seen.add(path)
+            for lineno, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                for m in ACF_VERSION_RE.finditer(line):
+                    checked += 1
+                    declared = (int(m.group(1)), int(m.group(2)))
+                    if declared != umbrella:
+                        drift.append(
+                            f"  {path.relative_to(REPO)}:{lineno}: ACF Version "
+                            f"{fmt(declared)} but umbrella (Refinement changelog "
+                            f"tail) is {fmt(umbrella)} — sweep the example sites"
+                        )
     return checked
 
 
@@ -197,6 +229,7 @@ def main(argv: list[str]) -> int:
                 )
 
     readme_checked = check_readme_versions(drift, errors)
+    acf_sites = check_acf_version(drift, errors)
     files_scanned = check_stale_phrases(drift)
 
     if errors:
@@ -219,8 +252,8 @@ def main(argv: list[str]) -> int:
     if not quiet:
         print(
             f"skill-derivation lint: OK — {checked} provenance versions, "
-            f"{readme_checked} README table rows in sync; "
-            f"{files_scanned} files free of stale phrases"
+            f"{readme_checked} README table rows, {acf_sites} ACF Version "
+            f"sites in sync; {files_scanned} files free of stale phrases"
         )
     return 0
 

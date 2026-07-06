@@ -185,7 +185,7 @@ Place in the project root as the first document agents read for every conversati
 ## Agent Guidelines
 
 - Agentic Coding Mode: full
-- ACF Version: 0.8
+- ACF Version: 0.22
 - Read `PROJECT_MEMORY.md` before each session to understand the current project state
 - Follow the BDD → SDD → TDD development workflow (see Agentic Coding Framework for details)
 - Update `PROJECT_MEMORY.md` when each story ends
@@ -198,7 +198,7 @@ Place in the project root as the first document agents read for every conversati
 - **What**: <one-line description>
 - **Stack**: <language, framework>
 - Agentic Coding Mode: lite
-- ACF Version: 0.8
+- ACF Version: 0.22
 ```
 
 ### Writing Principles
@@ -1220,3 +1220,4 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.14 | 2026-06-12 | FB-015: Behavior Spec positioning — merged delta moves to `docs/deltas/archive/{date}-US-{id}.md`; active delta path exists only while the Story is in flight |
 | v0.15 | 2026-06-13 | FB-016: add Review Disclosure Template as a third delta section (Assumptions Made / Source Mapping / Cross-Story Conflict Scan), built incrementally, merge-skipped, archived with the delta; Review Checkpoint repositioned — summary is an ephemeral view assembled from the delta, never written to a file (distinct from `.ai/review-report.md`); add close-out convergence table |
 | v0.16 | 2026-06-13 | FB-019: SDD delta example heading corrected to `## SDD Delta — US-007: ...` and the three top-level headings stated as the machine contract; SDD canonical path fixed to `docs/sdd.md` (docs/design/ dropped); scenario exemption rule gains ID-based Completeness semantics (parameter tests carry the ID; Deferred ties to NEEDS CLARIFICATION) |
+| v0.17 | 2026-06-13 | FB-020: CLAUDE.md templates' `ACF Version` example values updated to the real current umbrella version (lint-enforced) |

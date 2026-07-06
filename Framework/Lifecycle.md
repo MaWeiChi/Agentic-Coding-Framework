@@ -305,7 +305,9 @@ Once the triage plan is approved:
 
 When ACF itself evolves, existing projects need a path to adopt new capabilities without disruption.
 
-**Version tracking:** CLAUDE.md records the ACF version the project was bootstrapped under (e.g. `ACF Version: 0.7`). CC compares this against the current spec version each session.
+**Version tracking:** CLAUDE.md records the ACF version the project was bootstrapped under (e.g. `ACF Version: 0.22`). CC compares this against the current version each session.
+
+**What the number is (FB-020):** ACF Version = the changelog version of `Framework/Refinement.md` — the ledger every capability change passes through. The **installed skill declares the current value** (SKILL.md's ACF Version section), so the comparison is: project CLAUDE.md tag vs skill declaration. On mismatch, CC reads the Refinement changelog rows between the two versions to see what actually changed before proposing adoption. (Refinement also bumps on FN-only records, so a delta does not always mean adoptable features — the rows tell.) All `ACF Version:` example sites are lint-enforced to match the current value (`scripts/check-skill-derivation.py`).
 
 **Adoption model:** CC does not auto-upgrade projects. It proposes new features at natural touchpoints — session start, story completion, Review Session, or Triage. Human approves which features to adopt.
 
@@ -430,3 +432,4 @@ Different project types (Go container service, WordPress CMS, Astro + WordPress 
 | v0.12 | 2026-06-13 | FB-016: delta gains a `## Review Disclosure` section (Assumptions / Source Mapping / Conflict Scan); merge skips it but archive preserves it; Review Checkpoint summary is an ephemeral assembled view, never a file; close-out routes each item to its home (Templates convergence table) |
 | v0.13 | 2026-06-13 | FB-018: Re-entry clause — reopen of a merged US reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) since its active delta is archived (FB-015); behavior-changing reopen re-enters at `bdd` with a fresh delta, code-only fix re-enters at scaffold/impl/verify against the spec; active-delta absence is expected, not an error |
 | v0.14 | 2026-06-13 | FB-019: iteration-table Verify row corrected to four checks; canonical SDD path unified to `docs/sdd.md` (Upgrade Checklist); Completeness row defines scenario-exempted Requirements (parameter tests carry the ID; Deferred/TBD-blocked fail until resolved) |
+| v0.15 | 2026-06-13 | FB-020: ACF Version scheme defined — umbrella = Refinement changelog version; installed skill declares the current value; comparison = project CLAUDE.md tag vs skill declaration; lint-enforced example sites |

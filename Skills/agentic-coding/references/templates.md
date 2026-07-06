@@ -1,6 +1,6 @@
 # Document Templates Reference
 
-> Derived from: Templates v0.16 (2026-06-13)
+> Derived from: Templates v0.17 (2026-06-13)
 
 Condensed templates and writing guidelines for each framework document type. Use this
 when producing any framework document.

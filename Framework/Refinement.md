@@ -1255,6 +1255,33 @@ The reopen flow lives in two places: the legacy Protocol orchestrator (FB-017) a
 
 ---
 
+### FB-020: ACF Version Defined — the Umbrella Scheme FB-010 Was Missing
+
+**Date:** 2026-06-13
+**Context:** FB-010's migration mechanism hinges on a project-level tag: CLAUDE.md records `ACF Version: X.Y`, and "CC compares this against the current spec version each session." But no document ever defined what that number tracks — example sites diverged (`0.7` in Lifecycle, `0.8` in the Templates CLAUDE.md templates, `0.9` in the skill), none of which corresponds to anything, and there was no "current spec version" to compare against. The comparison FB-010 relies on was not executable as written.
+
+#### Design
+
+**1. Definition: ACF Version = the `Framework/Refinement.md` changelog version.** Refinement is the ledger every capability change passes through (each FB incorporation bumps it), so its version is the natural umbrella. One number, one source. Nuance: Refinement also bumps on FN-only records (e.g. v0.17, v0.19), so a version delta does not always mean adoptable features — the changelog rows between the two versions tell what actually changed; CC reads them when proposing adoption.
+
+**2. The installed skill declares the current value.** A project does not vendor the ACF repo, so "current" must come from what the session actually has: SKILL.md's ACF Version section now states the current umbrella version. The FB-010 comparison becomes executable: *project CLAUDE.md's `ACF Version:` line vs the skill's declared current version*; on mismatch, CC reads the Refinement changelog rows in between and proposes adoption at natural touchpoints (unchanged FB-010 behavior, now with a defined comparand).
+
+**3. All example sites carry the real current value, kept honest by lint.** The CLAUDE.md templates (Templates.md Full/Lite), the Bootstrap instructions (workflow.md), SKILL.md, and a new "ACF Version" line above README's Versions table all state the current value. `scripts/check-skill-derivation.py` gains a check: every `ACF Version: X.Y` occurrence outside Refinement.md must equal the Refinement changelog tail. Known cost: each future FB bump requires a mechanical sweep of ~5 sites — the lint turns forgetting into a failed check instead of silent drift (the exact failure mode that produced 0.7/0.8/0.9).
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ No re-derivation of "which version am I on" from changelog archaeology |
+| **Quality** | ⭐⭐ Bootstrap stops stamping projects with three different meaningless numbers |
+| **Autonomy** | ⭐⭐⭐ FB-010's migration proposal loop becomes mechanically executable (compare two defined numbers, read the rows between) |
+
+**Verdict: Must-Do** (Autonomy ⭐⭐⭐; it un-breaks FB-010)
+
+**Status:** ✅ Incorporated (2026-06-13) into Lifecycle v0.15 (scheme definition), Templates v0.17 (CLAUDE.md templates → current value), SKILL.md (declares current), workflow.md (Bootstrap lines), README (ACF Version line), and scripts/check-skill-derivation.py (umbrella-version check). Current ACF Version after this entry: **0.22**.
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1294,3 +1321,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.19 | 2026-06-13 | FN-004 option (a) implemented: `scripts/check-skill-derivation.py` version-drift lint (skill `Derived from:` provenance vs each doc's changelog tail; zero false positives, exit 1 on drift); documented in CONTRIBUTING.md Skill Reference Sync; FN-004 priority lowered to Low |
 | v0.20 | 2026-06-13 | FB-018: resolves FB-015's open follow-up — reopen of a merged US reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) in place of the archived active delta; behavior-changing reopen re-enters at `bdd` with a fresh delta; pre-dispatch active-delta absence is expected, not an error. Incorporated into Lifecycle v0.13, Protocol v0.18, Skill |
 | v0.21 | 2026-06-13 | FB-019: contract repair — SDD delta example heading fixed to `## SDD Delta` (section-name merge contract restated); canonical SDD path unified to `docs/sdd.md` (docs/sdd/sdd.md and docs/design/ dropped); "triple verification" residue → four checks everywhere; scenario-exempted Requirements defined for ID-based Completeness (parameter tests carry the ID; Deferred ties to the NEEDS CLARIFICATION clause). Lint extended: README Versions table check + stale-phrase tripwire. Incorporated into Framework v0.23, Lifecycle v0.14, Protocol v0.19, Templates v0.16, README, Skill, scripts |
+| v0.22 | 2026-06-13 | FB-020: ACF Version defined — umbrella version = this file's changelog version; the installed skill declares the current value (making FB-010's compare-and-propose executable: project CLAUDE.md tag vs skill declaration, read the rows between); all example sites updated to the real current value and lint-enforced (`ACF Version:` occurrences outside Refinement must equal the changelog tail). Incorporated into Lifecycle v0.15, Templates v0.17, SKILL.md, workflow.md, README, scripts |
