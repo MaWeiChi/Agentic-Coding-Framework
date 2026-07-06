@@ -1365,6 +1365,33 @@ The reopen flow lives in two places: the legacy Protocol orchestrator (FB-017) a
 
 ---
 
+### FB-024: Token Diet — Skill Tiering, Template De-Dup, Ceremony Collapse
+
+**Date:** 2026-06-13
+**Context:** ACF's own principle is "keep auto-resent files minimal" (FB-R02), but the skill grew against it: SKILL.md (always loaded on activation) carried execution detail duplicated from references/ (HANDOFF YAML enums verbatim, full Verify criteria, mode-switch procedure); workflow.md restated templates.md's templates nearly verbatim (Behavior Delta, Review Disclosure stub, SDD Delta, history blocks) — double-loaded when both are read and already diverging; every delta carried two mandatory empty tables even when a Story has zero assumptions; SYNC is append-only in the per-turn auto-resent file, so `[deprecated]` entries accumulate forever; and the skill's frontmatter description (~110 tokens in every session's system prompt machine-wide) enumerated all ten step names.
+
+#### Changes
+
+1. **SKILL.md tiers down to orientation + principles + pointers:** the HANDOFF YAML enum block, exact Verify criteria, and the mode-switch procedure become one-line pointers to references/workflow.md (loaded on demand). SKILL.md keeps the *what and when*; references keep the *how*.
+2. **templates.md is the single home of document formats:** workflow.md's inline template blocks are replaced with pointers; procedures (Read/Produce/Rules) stay in workflow.md. Ends the intra-skill double maintenance FN-004 flagged.
+3. **Empty-subsection collapse for the Review Disclosure:** a subsection with no content is one line (`Assumptions Made: None — <why>`; `Cross-Story Conflict Scan: None found`), never an empty table. Mirrors FB-013's scenario exemption: ceremony must earn its tokens.
+4. **SYNC gets a retirement path:** at Step 9's staleness scan, propose moving `[deprecated]` SYNC entries to `.ai/history.md` under "Retired SYNC"; on human approval, remove from PROJECT_MEMORY. Append-only still holds for *live* knowledge; the auto-resent file stops accumulating dead lines.
+5. **Frontmatter description compressed** (~9 → ~5 lines) keeping only trigger-bearing phrases — it is injected into every session on the machine, ACF or not.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐⭐⭐ Every tier pays less: per-session (description), per-activation (SKILL.md), per-step (single-template loading), per-turn (SYNC retirement), per-Story (no empty tables) |
+| **Quality** | ⭐ Single-home templates stop the workflow/templates divergence |
+| **Autonomy** | — Neutral: pointers add one hop when detail is needed |
+
+**Verdict: Must-Do** (Token ⭐⭐⭐ on the framework's own stated metric)
+
+**Status:** ✅ Incorporated (2026-06-13) into SKILL.md (tiering + description), workflow.md (template pointers; SYNC retirement in Step 9), skill templates.md (canonical templates + collapse rule + SYNC retirement), and Templates v0.19 (collapse rule + SYNC retirement in the canonical doc).
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1408,3 +1435,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.23 | 2026-06-13 | FB-021: spec ledger integrity — capability = SDD-module-aligned functional area (split guidance ~15 Requirements/~400 lines, split = dedicated Story with tombstone+Supersedes); NNN allocation = 1 + max over merged spec + active deltas + tombstones, IDs never reused; REMOVED → body delete + `## Removed` tombstone; test deprecation = delete-in-removing-Story (defines the mechanical "deprecate"); Completeness gains orphan-test reverse check; parallel-Story MODIFIED conflicts surface at Review, later merger re-bases; split = MODIFIED + ADDED (never REMOVE+re-ADD); merge-target-missing = stop + ISSUE + return to bdd. Incorporated into Templates v0.18, Lifecycle v0.16, Protocol v0.20, Skill |
 | v0.24 | 2026-06-13 | FB-022: interactive driving model — run Steps 0–3 continuously, stop at Review, run 5–9 continuously (two human touchpoints); NOW `phase:` becomes the interactive resume register (minimal-Edit on entering each step); Story proposal from NEXT allowed, starting gated on human confirmation; HANDOFF YAML enums conditional on orchestrator presence; session boundaries defined (one Story per session, break at step boundaries); `.ai/` semantics split (STATE/CHECKLIST = orchestrator-only vs HANDOFF/history/review-report = methodology memory). Incorporated into SKILL.md, workflow.md, Lifecycle v0.17, README |
 | v0.25 | 2026-06-13 | FB-023: lifecycle path gaps — "touch it, spec it" (never bulk reverse-engineer specs; baseline Requirement added in post-change form with a prior-behavior note when modifying unspecced behavior); Upgrade Checklist creates docs/specs/+docs/deltas/ (empty); legacy `.feature` migration is lazy (fold into baseline Requirements on first touch, archive consumed files to docs/bdd/archive/); Downgrade first finishes-or-abandons the in-flight delta (archive as -abandoned, preserving FB-015) and stamps `Specs/SDD frozen at: <commit>` in CLAUDE.md. Incorporated into Lifecycle v0.18, workflow.md, SKILL.md |
+| v0.26 | 2026-06-13 | FB-024: token diet — SKILL.md tiers down to orientation+principles+pointers (HANDOFF enums, Verify criteria, mode-switch procedure → workflow.md pointers); templates.md becomes the single home of document formats (workflow.md template blocks → pointers); Review Disclosure empty subsections collapse to one line (never empty tables); SYNC `[deprecated]` entries retire to `.ai/history.md` at Step 9 on approval; skill frontmatter description compressed. Incorporated into Skill + Templates v0.19 |

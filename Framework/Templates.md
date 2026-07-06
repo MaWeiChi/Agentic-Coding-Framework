@@ -146,6 +146,8 @@ Key rules: Append-only. Never delete or rewrite entries. Each Story completion a
 
 **Human-machine co-authoring**: Agents automatically update routine changes; humans manually edit priority adjustments, strategy changes, and other decisions agents cannot make. When conflicts occur, distinguish the authoritative source by "fact vs. intent": factual sections (git status, test status, change records) defer to git/tests; intent sections (current task, next steps, sync reminders) defer to humans. Agents can always "add" but never "override" or "delete" human edits. The complete conflict resolution strategy is defined in the [Lifecycle document](Lifecycle.md)'s Memory update rules.
 
+**SYNC retirement (FB-024)**: SYNC stays append-only for live knowledge, but the auto-resent file must not accumulate dead lines — at the Update Memory staleness scan, `[deprecated]` SYNC entries are proposed for retirement to `.ai/history.md` (a "Retired SYNC" block) and removed from PROJECT_MEMORY on human approval.
+
 ---
 
 ## CLAUDE.md / Project Entry Document Template
@@ -185,7 +187,7 @@ Place in the project root as the first document agents read for every conversati
 ## Agent Guidelines
 
 - Agentic Coding Mode: full
-- ACF Version: 0.25
+- ACF Version: 0.26
 - Read `PROJECT_MEMORY.md` before each session to understand the current project state
 - Follow the BDD → SDD → TDD development workflow (see Agentic Coding Framework for details)
 - Update `PROJECT_MEMORY.md` when each story ends
@@ -198,7 +200,7 @@ Place in the project root as the first document agents read for every conversati
 - **What**: <one-line description>
 - **Stack**: <language, framework>
 - Agentic Coding Mode: lite
-- ACF Version: 0.25
+- ACF Version: 0.26
 ```
 
 ### Writing Principles
@@ -290,6 +292,8 @@ A third top-level section of the same delta file, built incrementally (behavior 
 ### Cross-Story Conflict Scan
 - <redundancy / contradiction / undeclared dependency vs existing specs — or "None found">
 ```
+
+**Empty-subsection collapse (FB-024):** a subsection with no content is written as a single line — `Assumptions Made: None — <why obvious>`, `Source Mapping: 1:1 — story converted to R-<CAP>-NNN`, `Cross-Story Conflict Scan: None found` — never an empty table. Ceremony must earn its tokens.
 
 ### Writing Principles
 
@@ -1237,3 +1241,4 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.16 | 2026-06-13 | FB-019: SDD delta example heading corrected to `## SDD Delta — US-007: ...` and the three top-level headings stated as the machine contract; SDD canonical path fixed to `docs/sdd.md` (docs/design/ dropped); scenario exemption rule gains ID-based Completeness semantics (parameter tests carry the ID; Deferred ties to NEEDS CLARIFICATION) |
 | v0.17 | 2026-06-13 | FB-020: CLAUDE.md templates' `ACF Version` example values updated to the real current umbrella version (lint-enforced) |
 | v0.18 | 2026-06-13 | FB-021: Spec Ledger Rules subsection (capability granularity + split procedure, NNN allocation, REMOVED tombstones + never-reuse, test deprecation = delete-in-removing-Story, parallel-Story conflicts, Requirement split, merge-failure handling); `## Removed` section added to the Spec Template |
+| v0.19 | 2026-06-13 | FB-024: Review Disclosure empty-subsection collapse rule (one line, never an empty table); SYNC retirement path (`[deprecated]` entries → `.ai/history.md` "Retired SYNC" on approval) |

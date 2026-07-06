@@ -1,6 +1,6 @@
 # Document Templates Reference
 
-> Derived from: Templates v0.18 (2026-06-13)
+> Derived from: Templates v0.19 (2026-06-13)
 
 Condensed templates and writing guidelines for each framework document type. Use this
 when producing any framework document.
@@ -40,7 +40,9 @@ unit:42/42 ✅ | intg:18/18 ✅ | comp:12/12 ✅ | e2e:⏸ | perf:⏸
 can always append, never overwrite or delete human edits. Use minimal Edit (replace
 only the changed section), not full-file Write. SYNC is **append-only** — never modify
 or delete existing entries, only add new ones. When a sync relationship becomes obsolete
-(e.g., module deleted), mark the entry with `[deprecated]` rather than removing it.
+(e.g., module deleted), mark the entry with `[deprecated]` rather than removing it — then
+at Step 9's staleness scan, propose retiring `[deprecated]` entries to `.ai/history.md`
+under a "Retired SYNC" block; remove from Memory on human approval (FB-024).
 
 ---
 
@@ -233,6 +235,7 @@ The system SHALL <behavior>.
 - One Requirement ID = one independently verifiable behavior = one test; IDs stable across Stories
 - **Ledger rules (FB-021):** capability ≈ one SDD module (split guidance ~15 Requirements/~400 lines; a split is a dedicated Story with tombstone + `Supersedes:`); next NNN = 1 + max over merged spec + active deltas + `## Removed` tombstones, never reused; REMOVED merges as body-delete + tombstone and its tests are deleted in the same Story; split = MODIFIED + ADDED, never REMOVE+re-ADD
 - The `## Review Disclosure` section is built incrementally (behavior assumptions at bdd, architecture assumptions + conflict scan at sdd-delta, finalized at Review) and is merge-skipped but archived with the delta (FB-016)
+- **Empty-subsection collapse (FB-024):** a Review Disclosure subsection with no content is one line — `Assumptions Made: None — <why>`, `Source Mapping: 1:1 — story converted to R-<CAP>-NNN`, `Cross-Story Conflict Scan: None found` — never an empty table
 - Specs hold externally observable behavior only — unit-level GWT is test names in code
 - `Test Level` mandatory per scenario (`integration`, `component`, `e2e`); NFR tags (`@perf(ID)`, `@secure(ID)`) attach to the Scenario label
 - One scenario verifies one thing (max 3 Thens); label scenarios by product-semantic branches, not boundary values
@@ -277,12 +280,16 @@ Appended to the same `docs/deltas/US-{id}.md` file as the Behavior Delta.
 - <What this story explicitly doesn't do>
 
 ### ADDED
-- Module: `NewModule` (Responsibility: ...)
-- Data Model: `NewTable` (fields...)
+#### Module: <NewModule>
+- **Purpose:** ...
+- **Interface:** ...
+- **Data model:** ...
 
 ### MODIFIED
-- Module `ExistingModule`: add `newMethod()` method
-- Data Model `ExistingTable`: add `new_field`
+#### Module: <ExistingModule>
+- **Change:** ...
+- **Reason:** ...
+- **Impact:** ...
 
 ### REMOVED
 - (None)

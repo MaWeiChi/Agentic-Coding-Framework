@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.23, Lifecycle v0.18, Protocol v0.20, Templates v0.18 (2026-06-13)
+> Derived from: Framework v0.23, Lifecycle v0.18, Protocol v0.20, Templates v0.19 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -14,7 +14,7 @@ when you need specifics on what to read, produce, and check at each step.
 **Read:** Nothing yet (you're starting fresh)
 
 **Full Mode — Produce:**
-1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.25`
+1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.26`
 2. `docs/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
 3. `docs/constitution.md` — 3–5 inviolable architectural principles (RFC 2119 SHALL level). **Must include a "No Hardcoded Secrets" principle by default** (API keys, tokens, passwords in env vars, `.gitignore` covers secret files, test fixtures use mock values)
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
@@ -23,7 +23,7 @@ when you need specifics on what to read, produce, and check at each step.
 7. Directory structure: `docs/specs/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
 
 **Lite Mode — Produce:**
-1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.25`
+1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.26`
 2. `PROJECT_MEMORY.md` — Minimal: NOW + NEXT only (~5 lines). Even one-off tasks
    benefit from this in case follow-up sessions occur.
 3. Do NOT create `.ai/` files (HANDOFF.md, history.md) — these are Full Mode only.
@@ -91,57 +91,12 @@ if tests are already written. Constitution and NFR checks are also skipped in Li
 - Mark unclear requirements with `[NEEDS CLARIFICATION: TBD-N — <answerable question>]`; when the source gives a defensible hint, extract a candidate and disclose it as an assumption at Step 4 instead of asking
 - Seed the `## Review Disclosure` section of the delta file with behavior-level Assumptions Made — this section is finalized at Step 4 and is merge-skipped at Step 7 (FB-016)
 
-**Template:**
-```markdown
-## Behavior Delta — US-{id}: {Story Title}
-
-### ADDED Requirements
-
-### Requirement: {short behavior statement} [R-{CAP}-{NNN}]
-The system SHALL {behavior}.
-
-#### Scenario: {branch label} (Test Level: integration)
-- Given {precondition}
-- When {action}
-- Then {expected result}
-
-#### Scenario: {other branch} (Test Level: e2e) @perf(PERF-01)
-- Given {precondition}
-- When {action}
-- Then {expected result}
-
-**Parameters**: (only if configurable values exist)
-| Parameter | Type | Unit | Range | Default | Example | R/W | Notes |
-|-----------|------|------|-------|---------|---------|-----|-------|
-
-**Error Cases**: {invalid input / permission / missing resource / concurrency}
-
-### MODIFIED Requirements
-{Restate the full updated Requirement block; note previous behavior in one line}
-
-### REMOVED Requirements
-- [R-{CAP}-{NNN}] {reason}
-```
-
-After the Behavior Delta, append the Review Disclosure stub to the same file (finalized at Step 4):
-
-```markdown
-## Review Disclosure — US-{id}: {Story Title}
-
-### Assumptions Made
-| # | Assumption | Basis |
-|---|-----------|-------|
-
-### Source Mapping
-| Source Item | Handling | Note |
-|-------------|----------|------|
-
-### Cross-Story Conflict Scan
-- (filled at sdd-delta / Step 4)
-```
-
-See `references/templates.md` for the Parameters table rules (Counter/Gauge typology,
-`0 - (none)` notation, usage/limit separation).
+**Template:** see `references/templates.md` § *Behavior Spec / Behavior Delta* — the
+canonical three-section delta format (Behavior Delta / SDD Delta / Review Disclosure),
+Parameters table rules, and the empty-subsection collapse rule (FB-024: a Review
+Disclosure subsection with no content is one line, e.g. `Assumptions Made: None — <why>`,
+never an empty table). Seed the Review Disclosure with behavior-level assumptions
+(one-liners fine); it is finalized at Step 4.
 
 ### Step 2: SDD Delta
 
@@ -157,28 +112,9 @@ See `references/templates.md` for the Parameters table rules (Counter/Gauge typo
 - Include Non-Goals / Out of Scope section
 - Extend the `## Review Disclosure` section: add architecture-level assumptions and run the Cross-Story Conflict Scan against existing specs (FB-016)
 
-**Template:**
-```markdown
-## SDD Delta — US-{id}: {Story Title}
-
-### ADDED
-#### Module: {ModuleName}
-- **Purpose:** ...
-- **Interface:** ...
-- **Data model:** ...
-
-### MODIFIED
-#### Module: {ExistingModuleName}
-- **Change:** ...
-- **Reason:** ...
-- **Impact:** ...
-
-### REMOVED
-(Nothing removed in this Story)
-
-### Non-Goals / Out of Scope
-- ...
-```
+**Template:** see `references/templates.md` § *SDD Delta Spec* — appended to the same
+delta file as the Behavior Delta; `#### Module:` blocks carry Purpose/Interface/Data
+model (ADDED) and Change/Reason/Impact (MODIFIED); include Non-Goals / Out of Scope.
 
 ### Step 3: API Contract
 
@@ -315,26 +251,8 @@ After all four pass:
 
 **`.ai/history.md` append (DONE + LOG go here, not in Memory):**
 
-Append one block. Format depends on whether the Story completed or the session was interrupted:
-
-**Story completed:**
-```markdown
-## US-{id} {title} — {date}
-status: complete
-tests: unit:N intg:N comp:N
-commit: {hash}
-changes: [short list of files]
-```
-
-**Session interrupted (mid-Story):**
-```markdown
-## Session: US-{id} ({date})
-status: in-progress
-step: {current step}
-summary: {what was accomplished}
-unresolved: {what's stuck or incomplete}
-next: {what the next session should pick up}
-```
+Append one block — Story-completed or Session-interrupted format: see
+`references/templates.md` § *.ai/history.md* for both block shapes.
 
 **HANDOFF.md (overwrite, latest-entry-only):**
 
@@ -352,6 +270,7 @@ After completing the Story, scan Memory for stale content and warn the human:
 - ISSUES that reference the just-completed Story → suggest removal: "US-{id} is done, these ISSUES may be resolved: ..."
 - NEXT items that are now complete → suggest removal
 - SYNC entries pointing to files/modules deleted or renamed during this Story → suggest update
+- SYNC entries marked `[deprecated]` → propose moving them to `.ai/history.md` under a "Retired SYNC" block; on human approval, remove from PROJECT_MEMORY (FB-024 — the auto-resent file must not accumulate dead lines)
 
 This is the best moment for staleness detection — the agent has full context about what
 changed. As always, **do not auto-modify** intent-based sections; only warn.

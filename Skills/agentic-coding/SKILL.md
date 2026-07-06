@@ -1,14 +1,11 @@
 ---
 name: agentic-coding
 description: >
-  Agentic Coding Framework executor skill. Guides the agent through
-  the layered micro-waterfall workflow: Bootstrap → BDD → SDD Delta → API Contract →
-  Review Checkpoint → Test Scaffolding → Implementation → Verify → Commit → Update Memory.
-  Use this skill whenever you are working on a project that follows the Agentic Coding
-  Framework, or when the user asks to set up a new project with structured context
-  infrastructure. Also trigger when you see PROJECT_MEMORY.md, Delta Spec, Behavior Specs
-  or BDD scenarios with Given/When/Then, or references to the agentic coding framework in
-  CLAUDE.md or PROJECT_CONTEXT.md.
+  Executor skill for the Agentic Coding Framework micro-waterfall (Behavior Delta →
+  SDD Delta → contract → review → tests → implement → verify → commit). Use when a
+  project follows the framework or the user asks to bootstrap structured context
+  infrastructure. Trigger on PROJECT_MEMORY.md, Delta Spec, Behavior Specs, BDD
+  Given/When/Then scenarios, or framework references in CLAUDE.md / PROJECT_CONTEXT.md.
 ---
 
 # Agentic Coding Framework — Executor Skill
@@ -112,11 +109,9 @@ Solo + Full mode is for projects that need the memory infrastructure (PROJECT_ME
 SYNC, history) but not the inter-person coordination artifacts. If `Team Size` is not
 specified, default to Team behavior (safer).
 
-**Mode switching:** Users can switch by editing CLAUDE.md or by verbal instruction
-(e.g., "switch to Full mode"). When a mode switch occurs, the agent MUST:
-1. Confirm the switch direction
-2. Explain which scenario fits (see `references/workflow.md` for the scenario table)
-3. Execute the transition (Upgrade Checklist for Lite→Full, stop maintenance for Full→Lite)
+**Mode switching:** Users switch by editing CLAUDE.md or verbally. Confirm the direction,
+explain which scenario fits, execute the transition — scenario table, Upgrade Checklist,
+and Downgrade procedure are in `references/workflow.md` (Mode Switching).
 
 ## Key Principles
 
@@ -154,12 +149,9 @@ is not a question — phrase something the owner can actually answer. When the s
 gives a defensible hint, extract a candidate value and disclose it in the Review
 Checkpoint's Assumptions Made section instead of asking. Don't invent requirements.
 
-**Verify before declaring done.** After Implementation, run four checks —
-Completeness (every Requirement ID touched by the Story has a test, matched via `Spec:`
-headers; all Delta items implemented), Correctness (tests pass, NFR thresholds met),
-Coherence (specs and SDD merged with Deltas, API matches implementation, Constitution
-not violated), Security (no hardcoded secrets, `.gitignore` covers secret patterns,
-test fixtures use mock values). All four must pass before updating Memory.
+**Verify before declaring done.** After Implementation, run the four checks —
+Completeness, Correctness, Coherence, Security. All four must pass before updating
+Memory. Exact criteria and the on-pass merge procedure: `references/workflow.md` Step 7.
 
 **Self-correction has limits.** The implement → test → fix loop runs at most 3–5 times
 (check `max_attempts` if configured). If exceeded, record the blocker in HANDOFF.md and
@@ -182,13 +174,9 @@ When your work session ends, overwrite HANDOFF.md with:
 - **YAML front matter**: story, step, attempt, status, reason, files_changed, tests
 - **Markdown body**: what you did, what's unresolved, what the next session should know
 
-**YAML front matter field values** (strictly validated only when an orchestrator is
-present — `.ai/STATE.json` exists; on the interactive default they are conventions, FB-022):
-
-- `status` must be exactly one of: `pass` / `failing` / `needs_human`
-  - **NOT** `passing`, `passed`, `failed`, or `fail` — an orchestrator will reject these
-- `reason` must be `null` or one of: `constitution_violation` / `needs_clarification` / `nfr_missing` / `scope_warning` / `test_timeout`
-  - **Do NOT** put freeform text or task summaries in `reason` — use the markdown body for that
+**Field values:** exact valid `status`/`reason` values are in `references/workflow.md`
+Step 9 — strictly validated when an orchestrator is present (`.ai/STATE.json` exists),
+conventions otherwise (FB-022).
 
 Then append a summary entry to `.ai/history.md` for archival.
 
@@ -238,10 +226,10 @@ project-root/
 
 ## ACF Version
 
-**Current ACF Version: 0.25** (= the `Framework/Refinement.md` changelog version — this
+**Current ACF Version: 0.26** (= the `Framework/Refinement.md` changelog version — this
 skill's declaration is the comparand, FB-020).
 
-CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.25`). If the project's
+CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.26`). If the project's
 tag is older than the current version above, read the Refinement changelog rows in between
 to see what actually changed, then propose adopting new features at natural touchpoints
 (session start, story completion) — never auto-upgrade. See Lifecycle.md for the full
