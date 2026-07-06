@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.23, Lifecycle v0.17, Protocol v0.20, Templates v0.18 (2026-06-13)
+> Derived from: Framework v0.23, Lifecycle v0.18, Protocol v0.20, Templates v0.18 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -14,7 +14,7 @@ when you need specifics on what to read, produce, and check at each step.
 **Read:** Nothing yet (you're starting fresh)
 
 **Full Mode — Produce:**
-1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.24`
+1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.25`
 2. `docs/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
 3. `docs/constitution.md` — 3–5 inviolable architectural principles (RFC 2119 SHALL level). **Must include a "No Hardcoded Secrets" principle by default** (API keys, tokens, passwords in env vars, `.gitignore` covers secret files, test fixtures use mock values)
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
@@ -23,7 +23,7 @@ when you need specifics on what to read, produce, and check at each step.
 7. Directory structure: `docs/specs/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
 
 **Lite Mode — Produce:**
-1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.24`
+1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.25`
 2. `PROJECT_MEMORY.md` — Minimal: NOW + NEXT only (~5 lines). Even one-off tasks
    benefit from this in case follow-up sessions occur.
 3. Do NOT create `.ai/` files (HANDOFF.md, history.md) — these are Full Mode only.
@@ -31,6 +31,10 @@ when you need specifics on what to read, produce, and check at each step.
 **For existing projects** (Full Mode), Bootstrap = scan codebase → reverse-engineer
 Project Summary + SDD → human corrects. Do NOT write characterization tests for all
 existing code at this stage — use the Step 0 "touch it, test it" approach per Story instead.
+Likewise do NOT bulk reverse-engineer `docs/specs/` (FB-023) — create it empty; specs
+accumulate via "touch it, spec it" (see Step 1). Legacy `docs/bdd/*.feature` projects
+migrate lazily: fold covered scenarios into baseline Requirements on first touch, then
+move the consumed files to `docs/bdd/archive/`.
 
 ---
 
@@ -74,6 +78,7 @@ if tests are already written. Constitution and NFR checks are also skipped in Li
 
 **Rules:**
 - Write Requirements **only** for the current Story; specs collect **externally observable behavior** — unit-level GWT lives as test names in code, not here
+- **Touch it, spec it (FB-023):** if the Story modifies pre-existing behavior with no baseline Requirement in `docs/specs/`, ADD the Requirement in its new (post-change) form with a one-line note `Baseline: previously unspecced; prior behavior: <reverse-engineered from code/tests>`. If that capability still has legacy `docs/bdd/*.feature` coverage, fold those scenarios into the baseline and move the consumed files to `docs/bdd/archive/`
 - One Requirement ID (`[R-<CAP>-NNN]`) = one independently verifiable behavior = one test; IDs are stable across Stories
 - **NNN allocation (FB-021):** next NNN = 1 + max(NNN) across the merged capability spec, that capability's Requirements in all active deltas (`docs/deltas/US-*.md`), and its `## Removed` tombstones; IDs are never reused. Splitting a merged Requirement = MODIFIED on the original ID (narrowed) + ADDED for extracted behaviors — never REMOVE+re-ADD
 - Use RFC 2119 language (SHALL / MUST / SHOULD / MAY)
@@ -383,17 +388,21 @@ When the agent detects a mode change (reading CLAUDE.md or verbal instruction), 
 1. ☐ Expand CLAUDE.md (add Why/Who/What, Project Structure, Development Conventions)
 2. ☐ Expand PROJECT_MEMORY.md (add TESTS/SYNC/ISSUES to existing NOW/NEXT)
 3. ☐ Create docs/sdd.md (scan codebase, reverse-engineer)
-4. ☐ Create docs/constitution.md (3-5 core principles)
-5. ☐ Create .ai/HANDOFF.md + .ai/history.md
-6. ☐ Human confirms above outputs
+4. ☐ Create docs/specs/ + docs/deltas/ (empty — fill via touch-it-spec-it, FB-023)
+5. ☐ Create docs/constitution.md (3-5 core principles)
+6. ☐ Create .ai/HANDOFF.md + .ai/history.md
+7. ☐ Human confirms above outputs
 ```
 
 ### Downgrade (Full → Lite)
 
+0. Finish the in-flight Story, or explicitly abandon it: archive the active delta as
+   `docs/deltas/archive/{date}-US-XXX-abandoned.md` (preserves FB-015's invariant)
 1. Update CLAUDE.md mode line to `lite`
 2. Slim PROJECT_MEMORY to NOW + NEXT only (remove TESTS/SYNC/ISSUES)
 3. Stop maintaining SDD, HANDOFF, Delta Spec, Behavior Specs
 4. Existing docs remain (not deleted), just no longer actively maintained
+5. Stamp CLAUDE.md: `Specs/SDD frozen at: <commit hash> (<date>)` — re-upgrade reads this (FB-023)
 
 ---
 

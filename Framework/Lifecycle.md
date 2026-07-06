@@ -39,7 +39,7 @@ Bootstrap differs by mode:
 
 **Lite Mode:** CLAUDE.md (≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite`) and a minimal PROJECT_MEMORY (NOW + NEXT only, ~5 lines). That's it — no SDD, no HANDOFF, no Constitution.
 
-For existing projects (Full Mode), Bootstrap corresponds to the "scan Codebase → reverse-generate documents → manual correction" workflow. **Do NOT write characterization tests for all existing code at this stage** — use the Step 0 "touch it, test it" approach per Story instead (see below).
+For existing projects (Full Mode), Bootstrap corresponds to the "scan Codebase → reverse-generate documents → manual correction" workflow. **Do NOT write characterization tests for all existing code at this stage** — use the Step 0 "touch it, test it" approach per Story instead (see below). The same economics apply to behavior specs (FB-023): **do NOT bulk reverse-engineer `docs/specs/`** — create it empty and let it accumulate via "touch it, spec it": when a Story modifies pre-existing behavior with no baseline Requirement, ADD it in its post-change form with a one-line `Baseline: previously unspecced; prior behavior: <...>` note. Projects with legacy `docs/bdd/*.feature` migrate lazily: on first touch of a covered capability, fold those scenarios into the baseline Requirements, then move the consumed files to `docs/bdd/archive/`.
 
 ### Step 0: Safety Net Check (Full Mode, Existing Codebases Only)
 
@@ -61,15 +61,18 @@ Users can switch modes (Lite ↔ Full) by editing CLAUDE.md or by verbal instruc
 1. Expand CLAUDE.md (add Why/Who/What, Project Structure, Development Conventions)
 2. Expand PROJECT_MEMORY.md (add TESTS/SYNC/ISSUES to existing NOW/NEXT)
 3. Create `docs/sdd.md` (scan codebase, reverse-engineer)
-4. Create `docs/constitution.md` (3-5 core principles)
-5. Create `.ai/HANDOFF.md` + `.ai/history.md`
-6. Human confirms above outputs
+4. Create `docs/specs/` + `docs/deltas/` (empty — specs accumulate via "touch it, spec it", never bulk reverse-engineering; FB-023)
+5. Create `docs/constitution.md` (3-5 core principles)
+6. Create `.ai/HANDOFF.md` + `.ai/history.md`
+7. Human confirms above outputs
 
 **Downgrade (Full → Lite):**
+0. Finish the in-flight Story first, or explicitly abandon it: archive the active delta as `docs/deltas/archive/{date}-US-XXX-abandoned.md` (preserves the FB-015 path-encodes-state invariant; FB-023)
 1. Update CLAUDE.md mode line to `lite`
 2. Slim PROJECT_MEMORY to NOW + NEXT only
 3. Stop maintaining SDD, HANDOFF, Delta Spec, Behavior Specs
 4. Existing docs remain (not deleted), just no longer actively maintained
+5. Stamp CLAUDE.md: `Specs/SDD frozen at: <commit hash> (<date>)` — a later re-upgrade reads this to know how stale the frozen docs are (FB-023)
 
 ### Iterative Execution (One Cycle per User Story)
 
@@ -305,7 +308,7 @@ Once the triage plan is approved:
 
 When ACF itself evolves, existing projects need a path to adopt new capabilities without disruption.
 
-**Version tracking:** CLAUDE.md records the ACF version the project was bootstrapped under (e.g. `ACF Version: 0.24`). CC compares this against the current version each session.
+**Version tracking:** CLAUDE.md records the ACF version the project was bootstrapped under (e.g. `ACF Version: 0.25`). CC compares this against the current version each session.
 
 **What the number is (FB-020):** ACF Version = the changelog version of `Framework/Refinement.md` — the ledger every capability change passes through. The **installed skill declares the current value** (SKILL.md's ACF Version section), so the comparison is: project CLAUDE.md tag vs skill declaration. On mismatch, CC reads the Refinement changelog rows between the two versions to see what actually changed before proposing adoption. (Refinement also bumps on FN-only records, so a delta does not always mean adoptable features — the rows tell.) All `ACF Version:` example sites are lint-enforced to match the current value (`scripts/check-skill-derivation.py`).
 
@@ -435,3 +438,4 @@ Different project types (Go container service, WordPress CMS, Astro + WordPress 
 | v0.15 | 2026-06-13 | FB-020: ACF Version scheme defined — umbrella = Refinement changelog version; installed skill declares the current value; comparison = project CLAUDE.md tag vs skill declaration; lint-enforced example sites |
 | v0.16 | 2026-06-13 | FB-021: Completeness gains the orphan-test reverse check (no `Spec:` ID absent from specs + active deltas); functional-dependency rule extended to Behavior Specs (allocation counts active deltas; same-Requirement MODIFIED conflicts surface at Review; later merger re-bases) |
 | v0.17 | 2026-06-13 | FB-022: HANDOFF YAML enums conditional on orchestrator presence; NOW `phase:` field is the interactive resume register |
+| v0.18 | 2026-06-13 | FB-023: touch-it-spec-it for existing projects (no bulk spec reverse-engineering; baseline note on first touch); lazy `.feature` migration to docs/bdd/archive/; Upgrade Checklist creates docs/specs/+docs/deltas/; Downgrade step 0 (finish/abandon in-flight delta) + freeze stamp |

@@ -143,6 +143,11 @@ modules at once. When a Story touches a function that has no test coverage, add 
 characterization test for that function first — then proceed with the Story. Only test
 what you're about to change.
 
+**Touch it, spec it.** The same economics for behavior specs (FB-023): never bulk
+reverse-engineer `docs/specs/`. When a Story modifies pre-existing behavior with no
+baseline Requirement, ADD it in its post-change form with a one-line
+`Baseline: previously unspecced; prior behavior: <...>` note. Specs accumulate per Story.
+
 **Don't guess, mark uncertainties.** When requirements are ambiguous, write
 `[NEEDS CLARIFICATION: TBD-N — <answerable question>]` and move on. "To be confirmed"
 is not a question — phrase something the owner can actually answer. When the source
@@ -233,10 +238,10 @@ project-root/
 
 ## ACF Version
 
-**Current ACF Version: 0.24** (= the `Framework/Refinement.md` changelog version — this
+**Current ACF Version: 0.25** (= the `Framework/Refinement.md` changelog version — this
 skill's declaration is the comparand, FB-020).
 
-CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.24`). If the project's
+CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.25`). If the project's
 tag is older than the current version above, read the Refinement changelog rows in between
 to see what actually changed, then propose adopting new features at natural touchpoints
 (session start, story completion) — never auto-upgrade. See Lifecycle.md for the full

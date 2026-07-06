@@ -1339,6 +1339,32 @@ The reopen flow lives in two places: the legacy Protocol orchestrator (FB-017) a
 
 ---
 
+### FB-023: Lifecycle Path Gaps — Specs in Upgrade/Downgrade/Adoption
+
+**Date:** 2026-06-13
+**Context:** The mode-transition and adoption procedures predate FB-012: the Lite→Full Upgrade Checklist never creates `docs/specs/`/`docs/deltas/`; existing-project Bootstrap reverse-engineers Summary + SDD but leaves specs undefined (so MODIFIED against unspecced behavior had no meaning); pre-FB-012 projects with `docs/bdd/*.feature` had no concrete migration procedure; and Full→Lite downgrade neither handles an in-flight delta (breaking FB-015's path-encodes-state invariant) nor marks spec freshness for a later re-upgrade.
+
+#### Rules
+
+1. **Touch it, spec it** (mirrors touch-it-test-it, FB-R03 economics): never bulk reverse-engineer specs at Bootstrap or upgrade. When a Story modifies pre-existing behavior with no baseline Requirement, ADD the Requirement in its new (post-change) form with a one-line note — `Baseline: previously unspecced; prior behavior: <reverse-engineered from code/tests>`. Specs accumulate per Story.
+2. **Upgrade Checklist gains a step:** create `docs/specs/` + `docs/deltas/` (empty), with the explicit note that they fill via touch-it-spec-it.
+3. **Legacy `.feature` migration is lazy:** when a Story or reopen touches a capability that still has `docs/bdd/*.feature` coverage, fold those scenarios into the baseline Requirements being created, then move the consumed `.feature` files to `docs/bdd/archive/` — they stop being inputs to anything.
+4. **Downgrade handles the in-flight delta first:** finish the Story, or explicitly abandon it by archiving the active delta as `docs/deltas/archive/{date}-US-XXX-abandoned.md` (preserves FB-015's invariant). Downgrade ends by stamping CLAUDE.md with `Specs/SDD frozen at: <commit> (<date>)` so a later re-upgrade knows exactly how stale the frozen docs are.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐⭐ Bulk spec reverse-engineering avoided (the FB-R03 lesson, applied to specs) |
+| **Quality** | ⭐⭐ MODIFIED-without-baseline gets defined semantics; FB-015 invariant survives downgrade |
+| **Autonomy** | ⭐ Adoption/migration/transition paths are procedures, not judgment calls |
+
+**Verdict: Must-Do**
+
+**Status:** ✅ Incorporated (2026-06-13) into Lifecycle v0.18 (Upgrade/Downgrade/existing-project Bootstrap), workflow.md (Step 1 rules; Bootstrap note; checklists), and SKILL.md (Key Principles: touch it, spec it).
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1381,3 +1407,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.22 | 2026-06-13 | FB-020: ACF Version defined — umbrella version = this file's changelog version; the installed skill declares the current value (making FB-010's compare-and-propose executable: project CLAUDE.md tag vs skill declaration, read the rows between); all example sites updated to the real current value and lint-enforced (`ACF Version:` occurrences outside Refinement must equal the changelog tail). Incorporated into Lifecycle v0.15, Templates v0.17, SKILL.md, workflow.md, README, scripts |
 | v0.23 | 2026-06-13 | FB-021: spec ledger integrity — capability = SDD-module-aligned functional area (split guidance ~15 Requirements/~400 lines, split = dedicated Story with tombstone+Supersedes); NNN allocation = 1 + max over merged spec + active deltas + tombstones, IDs never reused; REMOVED → body delete + `## Removed` tombstone; test deprecation = delete-in-removing-Story (defines the mechanical "deprecate"); Completeness gains orphan-test reverse check; parallel-Story MODIFIED conflicts surface at Review, later merger re-bases; split = MODIFIED + ADDED (never REMOVE+re-ADD); merge-target-missing = stop + ISSUE + return to bdd. Incorporated into Templates v0.18, Lifecycle v0.16, Protocol v0.20, Skill |
 | v0.24 | 2026-06-13 | FB-022: interactive driving model — run Steps 0–3 continuously, stop at Review, run 5–9 continuously (two human touchpoints); NOW `phase:` becomes the interactive resume register (minimal-Edit on entering each step); Story proposal from NEXT allowed, starting gated on human confirmation; HANDOFF YAML enums conditional on orchestrator presence; session boundaries defined (one Story per session, break at step boundaries); `.ai/` semantics split (STATE/CHECKLIST = orchestrator-only vs HANDOFF/history/review-report = methodology memory). Incorporated into SKILL.md, workflow.md, Lifecycle v0.17, README |
+| v0.25 | 2026-06-13 | FB-023: lifecycle path gaps — "touch it, spec it" (never bulk reverse-engineer specs; baseline Requirement added in post-change form with a prior-behavior note when modifying unspecced behavior); Upgrade Checklist creates docs/specs/+docs/deltas/ (empty); legacy `.feature` migration is lazy (fold into baseline Requirements on first touch, archive consumed files to docs/bdd/archive/); Downgrade first finishes-or-abandons the in-flight delta (archive as -abandoned, preserving FB-015) and stamps `Specs/SDD frozen at: <commit>` in CLAUDE.md. Incorporated into Lifecycle v0.18, workflow.md, SKILL.md |

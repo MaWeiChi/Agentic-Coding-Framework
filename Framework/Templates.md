@@ -185,7 +185,7 @@ Place in the project root as the first document agents read for every conversati
 ## Agent Guidelines
 
 - Agentic Coding Mode: full
-- ACF Version: 0.24
+- ACF Version: 0.25
 - Read `PROJECT_MEMORY.md` before each session to understand the current project state
 - Follow the BDD → SDD → TDD development workflow (see Agentic Coding Framework for details)
 - Update `PROJECT_MEMORY.md` when each story ends
@@ -198,7 +198,7 @@ Place in the project root as the first document agents read for every conversati
 - **What**: <one-line description>
 - **Stack**: <language, framework>
 - Agentic Coding Mode: lite
-- ACF Version: 0.24
+- ACF Version: 0.25
 ```
 
 ### Writing Principles
