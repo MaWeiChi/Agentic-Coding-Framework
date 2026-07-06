@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.23, Lifecycle v0.15, Protocol v0.19, Templates v0.17 (2026-06-13)
+> Derived from: Framework v0.23, Lifecycle v0.16, Protocol v0.20, Templates v0.18 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -14,7 +14,7 @@ when you need specifics on what to read, produce, and check at each step.
 **Read:** Nothing yet (you're starting fresh)
 
 **Full Mode — Produce:**
-1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.22`
+1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.23`
 2. `docs/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
 3. `docs/constitution.md` — 3–5 inviolable architectural principles (RFC 2119 SHALL level). **Must include a "No Hardcoded Secrets" principle by default** (API keys, tokens, passwords in env vars, `.gitignore` covers secret files, test fixtures use mock values)
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
@@ -23,7 +23,7 @@ when you need specifics on what to read, produce, and check at each step.
 7. Directory structure: `docs/specs/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
 
 **Lite Mode — Produce:**
-1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.22`
+1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.23`
 2. `PROJECT_MEMORY.md` — Minimal: NOW + NEXT only (~5 lines). Even one-off tasks
    benefit from this in case follow-up sessions occur.
 3. Do NOT create `.ai/` files (HANDOFF.md, history.md) — these are Full Mode only.
@@ -70,6 +70,7 @@ if tests are already written. Constitution and NFR checks are also skipped in Li
 **Rules:**
 - Write Requirements **only** for the current Story; specs collect **externally observable behavior** — unit-level GWT lives as test names in code, not here
 - One Requirement ID (`[R-<CAP>-NNN]`) = one independently verifiable behavior = one test; IDs are stable across Stories
+- **NNN allocation (FB-021):** next NNN = 1 + max(NNN) across the merged capability spec, that capability's Requirements in all active deltas (`docs/deltas/US-*.md`), and its `## Removed` tombstones; IDs are never reused. Splitting a merged Requirement = MODIFIED on the original ID (narrowed) + ADDED for extracted behaviors — never REMOVE+re-ADD
 - Use RFC 2119 language (SHALL / MUST / SHOULD / MAY)
 - Every scenario carries a `Test Level` field: `integration`, `component`, or `e2e` (no `unit` at spec scope)
 - For NFR-related scenarios, attach ID-bearing tags to the Scenario label: `@perf(PERF-01)`, `@secure(SEC-01)`
@@ -248,7 +249,7 @@ If any `[NEEDS CLARIFICATION]` items exist, the human clarifies them at this poi
 
 | Check | What to Verify | On Failure |
 |-------|---------------|-----------|
-| **Completeness** | Every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) has a corresponding test, matched via `Spec:` headers (grep-checkable)? Scenario-exempted Requirements count via their `assertion_type: parameter` tests; `Deferred — blocked by TBD-N` fails until resolved (FB-019). All ADDED items in the SDD Delta implemented? No unresolved `[NEEDS CLARIFICATION]`? | Return to the step that's incomplete |
+| **Completeness** | Every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) has a corresponding test, matched via `Spec:` headers (grep-checkable)? Scenario-exempted Requirements count via their `assertion_type: parameter` tests; `Deferred — blocked by TBD-N` fails until resolved (FB-019). Orphan reverse check: no test carries a `Spec:` ID absent from specs + active deltas (FB-021). All ADDED items in the SDD Delta implemented? No unresolved `[NEEDS CLARIFICATION]`? | Return to the step that's incomplete |
 | **Correctness** | All tests pass? NFR thresholds met? | Return to Implementation |
 | **Coherence** | Specs and main SDD merged with their Deltas? API contract matches implementation? Constitution not violated? | Fix the inconsistency |
 | **Security** | No hardcoded secrets in committed files? `.gitignore` covers secret patterns (`.env`, `*.key`, `credentials.json`, `*.pem`)? Test fixtures use mock values? | Return to Implementation |
@@ -257,6 +258,13 @@ After all four pass:
 
 1. **Merge Behavior Delta into specs** — Apply ADDED/MODIFIED/REMOVED Requirements into
    `docs/specs/<capability>.md`. Specs become the current behavior truth again.
+   Merge rules (FB-021): REMOVED = delete the Requirement block + append a one-line
+   tombstone to the file's `## Removed` section (`- [R-<CAP>-NNN] <statement> — removed by
+   US-{id} ({date}): <reason>`) and delete the tests carrying that `Spec:` ID in this Story;
+   MODIFIED/REMOVED target missing from the spec (drift) = stop the merge, log a `[High]`
+   ISSUE, return to bdd for that requirement — never guess-create the target; when a
+   parallel Story merged first, re-base MODIFIED text against the now-current spec and
+   re-run Coherence before merging.
 2. **Merge SDD Delta into SDD** — Apply ADDED/MODIFIED/REMOVED into the main `docs/sdd.md`.
    Both merges happen at the same moment (FB-012). **Skip the `## Review Disclosure` section** —
    it is meta-rationale, not behavior/architecture; it stays in the delta file (FB-016).

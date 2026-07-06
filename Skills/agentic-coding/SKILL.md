@@ -207,10 +207,10 @@ project-root/
 
 ## ACF Version
 
-**Current ACF Version: 0.22** (= the `Framework/Refinement.md` changelog version — this
+**Current ACF Version: 0.23** (= the `Framework/Refinement.md` changelog version — this
 skill's declaration is the comparand, FB-020).
 
-CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.22`). If the project's
+CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.23`). If the project's
 tag is older than the current version above, read the Refinement changelog rows in between
 to see what actually changed, then propose adopting new features at natural touchpoints
 (session start, story completion) — never auto-upgrade. See Lifecycle.md for the full

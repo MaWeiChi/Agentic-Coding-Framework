@@ -1,6 +1,6 @@
 # Document Templates Reference
 
-> Derived from: Templates v0.17 (2026-06-13)
+> Derived from: Templates v0.18 (2026-06-13)
 
 Condensed templates and writing guidelines for each framework document type. Use this
 when producing any framework document.
@@ -231,6 +231,7 @@ The system SHALL <behavior>.
 **Key rules:**
 
 - One Requirement ID = one independently verifiable behavior = one test; IDs stable across Stories
+- **Ledger rules (FB-021):** capability ≈ one SDD module (split guidance ~15 Requirements/~400 lines; a split is a dedicated Story with tombstone + `Supersedes:`); next NNN = 1 + max over merged spec + active deltas + `## Removed` tombstones, never reused; REMOVED merges as body-delete + tombstone and its tests are deleted in the same Story; split = MODIFIED + ADDED, never REMOVE+re-ADD
 - The `## Review Disclosure` section is built incrementally (behavior assumptions at bdd, architecture assumptions + conflict scan at sdd-delta, finalized at Review) and is merge-skipped but archived with the delta (FB-016)
 - Specs hold externally observable behavior only — unit-level GWT is test names in code
 - `Test Level` mandatory per scenario (`integration`, `component`, `e2e`); NFR tags (`@perf(ID)`, `@secure(ID)`) attach to the Scenario label

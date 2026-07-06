@@ -185,7 +185,7 @@ Place in the project root as the first document agents read for every conversati
 ## Agent Guidelines
 
 - Agentic Coding Mode: full
-- ACF Version: 0.22
+- ACF Version: 0.23
 - Read `PROJECT_MEMORY.md` before each session to understand the current project state
 - Follow the BDD → SDD → TDD development workflow (see Agentic Coding Framework for details)
 - Update `PROJECT_MEMORY.md` when each story ends
@@ -198,7 +198,7 @@ Place in the project root as the first document agents read for every conversati
 - **What**: <one-line description>
 - **Stack**: <language, framework>
 - Agentic Coding Mode: lite
-- ACF Version: 0.22
+- ACF Version: 0.23
 ```
 
 ### Writing Principles
@@ -248,6 +248,9 @@ The system SHALL <behavior>.
 | timeout   | integer | s | 1-300 | 30 | 60 | RW | Takes effect on next request |
 
 **Error Cases**: <invalid input / permission denied / missing resource / concurrency>
+
+## Removed
+- [R-<CAP>-NNN] <statement> — removed by US-{id} ({date}): <reason>
 ```
 
 ### Behavior Delta Template (per Story, inside docs/deltas/US-{id}.md)
@@ -370,6 +373,18 @@ For requirements with configurable or reported values, the Parameters table is a
 **Type abstraction**: Use requirement-level categories only (`integer`, `number`, `string`, `boolean`, `enum<...>`). OpenAPI `format` modifiers (int32, int64, float) belong to the API contract, never the spec.
 
 **Boundary tests derive mechanically**: Range and Error Cases expand into table-driven tests (see Test Scaffolding Template). This replaces the former Scenario Outline + Examples pattern — hand-filling boundary permutations into a behavior document is test-plan work, not requirement writing.
+
+### Spec Ledger Rules (FB-021)
+
+The specs directory is a ledger; these rules keep it mechanically consistent:
+
+- **Capability granularity**: a capability is an externally observable functional area, normally 1:1 with an SDD module (or DDD Bounded Context when DDD is active); `CAP` = short uppercase token (CART, AUTH). Split guidance: reconsider granularity past ~15 Requirements or ~400 lines. A true split is a dedicated Story — moved Requirements are REMOVED (tombstone notes `moved → R-<NEW>-NNN`) and re-ADDED under the new capability with a `Supersedes: R-<OLD>-NNN` line; tests re-point in the same Story. Prefer capabilities small enough that splits stay rare.
+- **NNN allocation**: next NNN = 1 + max(NNN) across the merged capability spec, that capability's Requirements in **all active deltas** (`docs/deltas/US-*.md`), and its `## Removed` tombstones. **IDs are never reused.**
+- **REMOVED merge semantics**: delete the Requirement block from the spec body and append a one-line tombstone to the capability file's `## Removed` section. The tombstone is what makes never-reuse and allocation checkable.
+- **Test deprecation = deletion in the removing Story**: grep tests for `Spec: R-<CAP>-NNN` and delete them in the same Story (specs are current truth; git + the tombstone preserve history). This is the mechanical "deprecate" of keep/update/add/deprecate.
+- **Parallel Stories**: the allocation rule prevents ADDED collisions; two in-flight Stories MODIFYing the same Requirement is a conflict to surface at Review Checkpoint; the later merger re-bases its MODIFIED text against the now-current spec and re-runs Coherence before merging.
+- **Splitting a merged Requirement**: MODIFIED on the original ID (narrowed; keeps the ID and still-applicable tests) + ADDED for extracted behaviors (new IDs). Never REMOVED+re-ADD for a pure split.
+- **Merge failure**: if a MODIFIED/REMOVED target ID is absent from the spec (drift), stop the merge, log a `[High]` ISSUE, return to `bdd` for that requirement — never guess-create the target.
 
 ---
 
@@ -1221,3 +1236,4 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.15 | 2026-06-13 | FB-016: add Review Disclosure Template as a third delta section (Assumptions Made / Source Mapping / Cross-Story Conflict Scan), built incrementally, merge-skipped, archived with the delta; Review Checkpoint repositioned — summary is an ephemeral view assembled from the delta, never written to a file (distinct from `.ai/review-report.md`); add close-out convergence table |
 | v0.16 | 2026-06-13 | FB-019: SDD delta example heading corrected to `## SDD Delta — US-007: ...` and the three top-level headings stated as the machine contract; SDD canonical path fixed to `docs/sdd.md` (docs/design/ dropped); scenario exemption rule gains ID-based Completeness semantics (parameter tests carry the ID; Deferred ties to NEEDS CLARIFICATION) |
 | v0.17 | 2026-06-13 | FB-020: CLAUDE.md templates' `ACF Version` example values updated to the real current umbrella version (lint-enforced) |
+| v0.18 | 2026-06-13 | FB-021: Spec Ledger Rules subsection (capability granularity + split procedure, NNN allocation, REMOVED tombstones + never-reuse, test deprecation = delete-in-removing-Story, parallel-Story conflicts, Requirement split, merge-failure handling); `## Removed` section added to the Spec Template |

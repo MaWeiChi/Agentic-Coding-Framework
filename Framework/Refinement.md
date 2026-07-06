@@ -1282,6 +1282,35 @@ The reopen flow lives in two places: the legacy Protocol orchestrator (FB-017) a
 
 ---
 
+### FB-021: Spec Ledger Integrity — Capability Granularity, NNN Allocation, REMOVED Semantics, Parallel Stories
+
+**Date:** 2026-06-13
+**Context:** `docs/specs/` is now the behavior ledger, but four ledger-integrity rules were missing: what a capability is (spec files grow unboundedly), who allocates `NNN` (parallel Stories collide), what REMOVED does to the spec (delete vs tombstone; ID reuse unbanned; test disposition undefined despite the "keep/update/add/deprecate is mechanical" promise), and how a merged Requirement splits.
+
+#### Rules (all mechanical)
+
+1. **Capability granularity:** a capability = an externally observable functional area, normally 1:1 with an SDD module (or DDD Bounded Context when DDD is active). `CAP` token = short uppercase name. Guidance thresholds: split consideration at ~15 Requirements or ~400 lines. A true split is a dedicated Story: moved Requirements are REMOVED (tombstoned with `moved → R-<NEW>`) and re-ADDED under the new capability with a `Supersedes:` note; their tests re-point in the same Story. Prefer choosing capabilities small enough that splits stay rare.
+2. **NNN allocation:** next NNN = 1 + max(NNN) across (a) the merged capability spec, (b) that capability's Requirements in **all active deltas** (`docs/deltas/US-*.md`), and (c) the capability's `## Removed` tombstones. **IDs are never reused.**
+3. **REMOVED merge semantics:** delete the Requirement block from the spec body; append a one-line tombstone to a `## Removed` section at the bottom of the capability file: `- [R-<CAP>-NNN] <statement> — removed by US-{id} ({date}): <reason>`. Tombstones are what make the never-reuse rule and allocation rule checkable.
+4. **Test deprecation is deletion-with-a-tombstone:** in the removing Story, grep tests for `Spec: R-<CAP>-NNN` and delete them (specs are current truth; git + the tombstone preserve history — same rationale as FB-015). This *defines* the "deprecate" operation the framework promised was mechanical. Verify Completeness gains the reverse (orphan) check: no test may carry a `Spec:` ID absent from the merged specs + active deltas.
+5. **Parallel Stories on one capability:** the allocation rule prevents ADDED collisions. Two in-flight Stories MODIFYing the same Requirement is a conflict to surface at Review Checkpoint (extends the existing SDD-module conflict rule); at merge time the later Story re-bases its MODIFIED text against the now-current spec and re-runs Coherence before merging.
+6. **Splitting a merged Requirement:** MODIFIED on the original ID (narrowed statement — keeps the ID and the tests that still apply) + ADDED for each extracted behavior (new IDs); never REMOVED+re-ADD for a pure split. Re-point affected tests in the same Story.
+7. **Merge failure handling:** if a MODIFIED/REMOVED target ID does not exist in the spec (spec drift), stop the merge, log a `[High]` ISSUE, and return to `bdd` for that requirement — never guess-create the target.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ No archaeology to find a free NNN or a vanished Requirement |
+| **Quality** | ⭐⭐⭐ Prevents ID collisions, resurrected-behavior orphan tests, and silent spec forks |
+| **Autonomy** | ⭐⭐ Allocation, tombstoning, deprecation, and the orphan check are all grep-mechanical |
+
+**Verdict: Must-Do**
+
+**Status:** ✅ Incorporated (2026-06-13) into Templates v0.18 (Spec Ledger Rules + `## Removed` in the spec template), Lifecycle v0.16 (Completeness orphan check; parallel-Story conflict), Protocol v0.20 (verify instruction), and Skill.
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1322,3 +1351,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.20 | 2026-06-13 | FB-018: resolves FB-015's open follow-up — reopen of a merged US reads merged truth (`docs/specs/` + `docs/sdd.md` + tests) in place of the archived active delta; behavior-changing reopen re-enters at `bdd` with a fresh delta; pre-dispatch active-delta absence is expected, not an error. Incorporated into Lifecycle v0.13, Protocol v0.18, Skill |
 | v0.21 | 2026-06-13 | FB-019: contract repair — SDD delta example heading fixed to `## SDD Delta` (section-name merge contract restated); canonical SDD path unified to `docs/sdd.md` (docs/sdd/sdd.md and docs/design/ dropped); "triple verification" residue → four checks everywhere; scenario-exempted Requirements defined for ID-based Completeness (parameter tests carry the ID; Deferred ties to the NEEDS CLARIFICATION clause). Lint extended: README Versions table check + stale-phrase tripwire. Incorporated into Framework v0.23, Lifecycle v0.14, Protocol v0.19, Templates v0.16, README, Skill, scripts |
 | v0.22 | 2026-06-13 | FB-020: ACF Version defined — umbrella version = this file's changelog version; the installed skill declares the current value (making FB-010's compare-and-propose executable: project CLAUDE.md tag vs skill declaration, read the rows between); all example sites updated to the real current value and lint-enforced (`ACF Version:` occurrences outside Refinement must equal the changelog tail). Incorporated into Lifecycle v0.15, Templates v0.17, SKILL.md, workflow.md, README, scripts |
+| v0.23 | 2026-06-13 | FB-021: spec ledger integrity — capability = SDD-module-aligned functional area (split guidance ~15 Requirements/~400 lines, split = dedicated Story with tombstone+Supersedes); NNN allocation = 1 + max over merged spec + active deltas + tombstones, IDs never reused; REMOVED → body delete + `## Removed` tombstone; test deprecation = delete-in-removing-Story (defines the mechanical "deprecate"); Completeness gains orphan-test reverse check; parallel-Story MODIFIED conflicts surface at Review, later merger re-bases; split = MODIFIED + ADDED (never REMOVE+re-ADD); merge-target-missing = stop + ISSUE + return to bdd. Incorporated into Templates v0.18, Lifecycle v0.16, Protocol v0.20, Skill |
