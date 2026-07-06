@@ -1311,6 +1311,34 @@ The reopen flow lives in two places: the legacy Protocol orchestrator (FB-017) a
 
 ---
 
+### FB-022: Interactive Driving Model — Operationalizing the FB-017 Default
+
+**Date:** 2026-06-13
+**Context:** FB-017 made "one interactive session driven by the skill" the default substrate, but the skill still spoke only executor-under-orchestrator: no guidance on how a human actually drives a Story, no mid-Story resume register (the Startup Checklist says "check what step you're on" with no way to derive it without STATE.json), HANDOFF instructions carried orchestrator-era mandates ("the orchestrator will reject these") that are noise on the default substrate, no session-boundary guidance, and FB-017's README sweep mislabeled the whole `.ai/` directory as orchestrator/legacy when HANDOFF/history are methodology memory.
+
+#### Design
+
+1. **Driving model (new SKILL.md section):** on "start US-{id}" run Steps 0–3 continuously without pausing; **stop at the Review Checkpoint** and present the ephemeral summary; on the human's verdict run Steps 5–9 continuously; report at Commit. The human's vocabulary is small: start a Story, answer the review, interrupt anytime.
+2. **NOW `phase:` is the interactive resume register:** on entering each per-Story step (Full Mode), minimal-Edit PROJECT_MEMORY NOW's `phase:` field to the step name (~10-token Edit; auto-resend cost unchanged — the line already exists). Mid-Story resume = Startup Checklist reads NOW's phase and continues from that step. This replaces STATE.json on the default substrate.
+3. **Proposal allowed, starting gated:** "Never decide which Story to work on" is amended — at session start, if NOW is empty, propose the top of NEXT; never *start* without the human's confirmation.
+4. **HANDOFF de-orchestrated:** when no orchestrator is present (`.ai/STATE.json` absent), the YAML front-matter enums are conventions, not validated gates — keep the fields for cross-session context, but the "orchestrator will reject" warnings apply only when STATE.json exists. HANDOFF remains the Full-Mode cross-session baton either way.
+5. **Session boundaries:** default one Story per session (several Lite stories may share one); break at step boundaries, never mid-Implementation if avoidable; when context bloats mid-Story, finish the current step, update NOW/HANDOFF, then compact or start a fresh session — the resume register makes this safe.
+6. **`.ai/` semantics split:** `STATE.json` + `CHECKLIST.md` = orchestrator-only (legacy); `HANDOFF.md`, `history.md`, `review-report.md` = methodology memory, present on the default substrate. README/SKILL structure trees relabeled.
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ One ~10-token Edit per step buys mid-Story resume without a state machine |
+| **Quality** | ⭐⭐ The default substrate finally has defined driving, resume, and session-boundary semantics |
+| **Autonomy** | ⭐⭐ Agent runs 0–3 and 5–9 unattended between two human touchpoints; resume is mechanical |
+
+**Verdict: Must-Do** (FB-017 is incomplete without it)
+
+**Status:** ✅ Incorporated (2026-06-13) into SKILL.md (Driving the Pipeline Interactively; What You Never Do amendment; structure tree), workflow.md (phase register rule; Startup Checklist; HANDOFF conditional; Step 9 note), Lifecycle v0.17 (HANDOFF conditional note), and README (`.ai/` tree relabel).
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1352,3 +1380,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.21 | 2026-06-13 | FB-019: contract repair — SDD delta example heading fixed to `## SDD Delta` (section-name merge contract restated); canonical SDD path unified to `docs/sdd.md` (docs/sdd/sdd.md and docs/design/ dropped); "triple verification" residue → four checks everywhere; scenario-exempted Requirements defined for ID-based Completeness (parameter tests carry the ID; Deferred ties to the NEEDS CLARIFICATION clause). Lint extended: README Versions table check + stale-phrase tripwire. Incorporated into Framework v0.23, Lifecycle v0.14, Protocol v0.19, Templates v0.16, README, Skill, scripts |
 | v0.22 | 2026-06-13 | FB-020: ACF Version defined — umbrella version = this file's changelog version; the installed skill declares the current value (making FB-010's compare-and-propose executable: project CLAUDE.md tag vs skill declaration, read the rows between); all example sites updated to the real current value and lint-enforced (`ACF Version:` occurrences outside Refinement must equal the changelog tail). Incorporated into Lifecycle v0.15, Templates v0.17, SKILL.md, workflow.md, README, scripts |
 | v0.23 | 2026-06-13 | FB-021: spec ledger integrity — capability = SDD-module-aligned functional area (split guidance ~15 Requirements/~400 lines, split = dedicated Story with tombstone+Supersedes); NNN allocation = 1 + max over merged spec + active deltas + tombstones, IDs never reused; REMOVED → body delete + `## Removed` tombstone; test deprecation = delete-in-removing-Story (defines the mechanical "deprecate"); Completeness gains orphan-test reverse check; parallel-Story MODIFIED conflicts surface at Review, later merger re-bases; split = MODIFIED + ADDED (never REMOVE+re-ADD); merge-target-missing = stop + ISSUE + return to bdd. Incorporated into Templates v0.18, Lifecycle v0.16, Protocol v0.20, Skill |
+| v0.24 | 2026-06-13 | FB-022: interactive driving model — run Steps 0–3 continuously, stop at Review, run 5–9 continuously (two human touchpoints); NOW `phase:` becomes the interactive resume register (minimal-Edit on entering each step); Story proposal from NEXT allowed, starting gated on human confirmation; HANDOFF YAML enums conditional on orchestrator presence; session boundaries defined (one Story per session, break at step boundaries); `.ai/` semantics split (STATE/CHECKLIST = orchestrator-only vs HANDOFF/history/review-report = methodology memory). Incorporated into SKILL.md, workflow.md, Lifecycle v0.17, README |

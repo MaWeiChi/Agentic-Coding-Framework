@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.23, Lifecycle v0.16, Protocol v0.20, Templates v0.18 (2026-06-13)
+> Derived from: Framework v0.23, Lifecycle v0.17, Protocol v0.20, Templates v0.18 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -14,7 +14,7 @@ when you need specifics on what to read, produce, and check at each step.
 **Read:** Nothing yet (you're starting fresh)
 
 **Full Mode — Produce:**
-1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.23`
+1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.24`
 2. `docs/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
 3. `docs/constitution.md` — 3–5 inviolable architectural principles (RFC 2119 SHALL level). **Must include a "No Hardcoded Secrets" principle by default** (API keys, tokens, passwords in env vars, `.gitignore` covers secret files, test fixtures use mock values)
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
@@ -23,7 +23,7 @@ when you need specifics on what to read, produce, and check at each step.
 7. Directory structure: `docs/specs/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
 
 **Lite Mode — Produce:**
-1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.23`
+1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.24`
 2. `PROJECT_MEMORY.md` — Minimal: NOW + NEXT only (~5 lines). Even one-off tasks
    benefit from this in case follow-up sessions occur.
 3. Do NOT create `.ai/` files (HANDOFF.md, history.md) — these are Full Mode only.
@@ -35,6 +35,11 @@ existing code at this stage — use the Step 0 "touch it, test it" approach per 
 ---
 
 ## Per-Story Steps
+
+> **Resume register (FB-022, Full Mode):** on entering each step below, minimal-Edit
+> PROJECT_MEMORY NOW's `phase:` field to that step's name. This is the interactive
+> path's step register — mid-Story resume reads it and continues from the right step
+> without STATE.json.
 
 ### Step 0: Safety Net Check (Full Mode, Existing Codebases Only)
 
@@ -331,7 +336,7 @@ next: {what the next session should pick up}
 Overwrite with YAML front matter (story, step, attempt, status, reason, files_changed,
 tests) + markdown body (what was done, what's unresolved, what next session should note).
 
-**Valid values (orchestrator strictly validates — wrong values break the auto pipeline):**
+**Valid values (strictly validated only when an orchestrator is present — `.ai/STATE.json` exists; conventions otherwise, FB-022):**
 
 - `status`: `pass` / `failing` / `needs_human` (NOT `passing`, `passed`, `failed`, `fail`)
 - `reason`: `null` / `constitution_violation` / `needs_clarification` / `nfr_missing` / `scope_warning` / `test_timeout` (NOT freeform text — put details in markdown body)
@@ -405,7 +410,8 @@ Every time you start a new session:
    - If SYNC references modules/files that no longer exist in codebase → warn human: "SYNC entry may be stale: ..."
    - **Do not auto-modify** intent-based sections — only warn. Human decides what to clean up.
 5. Read HANDOFF.md (if exists) for previous session context
-6. Check what step you're on and continue from there
+6. Read NOW's `phase:` field — that is the step you're on (FB-022); continue from there.
+   If NOW is empty, propose the top of NEXT — but never start without human confirmation
 
 ---
 

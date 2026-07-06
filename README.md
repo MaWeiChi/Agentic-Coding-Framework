@@ -164,9 +164,10 @@ your-project/
 │   └── ddd/                           # DDD strategic design (if needed)
 │       ├── context-map.md
 │       └── glossary.md
-├── .ai/                               # Orchestrator files (legacy/optional — see Execution Substrate)
-│   ├── STATE.json
-│   └── HANDOFF.md
+├── .ai/                               # Memory + (optional) orchestrator files
+│   ├── HANDOFF.md                     # Methodology memory (Full Mode)
+│   ├── history.md                     # Methodology memory (append-only archive)
+│   └── STATE.json                     # Orchestrator-only (legacy)
 └── tests/                             # Layer 4: Test files
 ```
 
@@ -181,16 +182,16 @@ This framework was designed through comparative analysis with established method
 
 ## Versions
 
-**Current ACF Version: 0.23** — the umbrella version = the Refinement changelog version (FB-020). Projects record this in CLAUDE.md's `ACF Version:` line; the installed skill declares the current value.
+**Current ACF Version: 0.24** — the umbrella version = the Refinement changelog version (FB-020). Projects record this in CLAUDE.md's `ACF Version:` line; the installed skill declares the current value.
 
 | Document          | Version | Date       |
 | ----------------- | ------- | ---------- |
 | Framework         | v0.23   | 2026-06-13 |
-| Lifecycle         | v0.16   | 2026-06-13 |
+| Lifecycle         | v0.17   | 2026-06-13 |
 | Templates         | v0.18   | 2026-06-13 |
 | Protocol          | v0.20   | 2026-06-13 |
 | Protocol-Advanced | v0.8    | 2026-02-17 |
-| Refinement        | v0.23   | 2026-06-13 |
+| Refinement        | v0.24   | 2026-06-13 |
 
 ## License
 

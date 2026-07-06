@@ -184,7 +184,7 @@ commit: {hash}
 changes: [short list of files]
 ```
 
-HANDOFF.md is overwritten with the latest session state (latest-entry-only). Historical session records are preserved in `.ai/history.md`.
+HANDOFF.md is overwritten with the latest session state (latest-entry-only). Historical session records are preserved in `.ai/history.md`. HANDOFF's YAML front-matter enums are strictly validated only when an orchestrator is present (`.ai/STATE.json` exists); on the interactive default substrate they are conventions, and PROJECT_MEMORY NOW's `phase:` field serves as the mid-Story resume register (FB-022).
 
 Lite Mode: skip Memory update. Commit message serves as the record.
 
@@ -305,7 +305,7 @@ Once the triage plan is approved:
 
 When ACF itself evolves, existing projects need a path to adopt new capabilities without disruption.
 
-**Version tracking:** CLAUDE.md records the ACF version the project was bootstrapped under (e.g. `ACF Version: 0.23`). CC compares this against the current version each session.
+**Version tracking:** CLAUDE.md records the ACF version the project was bootstrapped under (e.g. `ACF Version: 0.24`). CC compares this against the current version each session.
 
 **What the number is (FB-020):** ACF Version = the changelog version of `Framework/Refinement.md` — the ledger every capability change passes through. The **installed skill declares the current value** (SKILL.md's ACF Version section), so the comparison is: project CLAUDE.md tag vs skill declaration. On mismatch, CC reads the Refinement changelog rows between the two versions to see what actually changed before proposing adoption. (Refinement also bumps on FN-only records, so a delta does not always mean adoptable features — the rows tell.) All `ACF Version:` example sites are lint-enforced to match the current value (`scripts/check-skill-derivation.py`).
 
@@ -434,3 +434,4 @@ Different project types (Go container service, WordPress CMS, Astro + WordPress 
 | v0.14 | 2026-06-13 | FB-019: iteration-table Verify row corrected to four checks; canonical SDD path unified to `docs/sdd.md` (Upgrade Checklist); Completeness row defines scenario-exempted Requirements (parameter tests carry the ID; Deferred/TBD-blocked fail until resolved) |
 | v0.15 | 2026-06-13 | FB-020: ACF Version scheme defined — umbrella = Refinement changelog version; installed skill declares the current value; comparison = project CLAUDE.md tag vs skill declaration; lint-enforced example sites |
 | v0.16 | 2026-06-13 | FB-021: Completeness gains the orphan-test reverse check (no `Spec:` ID absent from specs + active deltas); functional-dependency rule extended to Behavior Specs (allocation counts active deltas; same-Requirement MODIFIED conflicts surface at Review; later merger re-bases) |
+| v0.17 | 2026-06-13 | FB-022: HANDOFF YAML enums conditional on orchestrator presence; NOW `phase:` field is the interactive resume register |

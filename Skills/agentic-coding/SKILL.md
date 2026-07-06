@@ -51,6 +51,28 @@ Bootstrap (one-time) → [per Story: BDD → SDD Delta → API Contract → Revi
 Read `references/workflow.md` for the detailed step-by-step procedure, including what
 to read, what to produce, and what to check at each step.
 
+## Driving the Pipeline Interactively (Default, FB-022)
+
+On the default substrate the human's vocabulary is small — start a Story, answer the
+review, interrupt anytime. Your rhythm:
+
+1. **On "start US-{id}"** (or the human confirming your proposal): run Steps 0–3
+   continuously (Safety Net → Behavior Delta → SDD Delta → Contract) without pausing.
+2. **Stop at the Review Checkpoint.** Present the ephemeral summary; wait for the verdict.
+3. **On approval:** run Steps 5–9 continuously (Scaffold → Implement → Verify → Commit →
+   Update Memory); report at Commit. Only stop early for `max_attempts`, a `[SCOPE WARNING]`,
+   or something only the human can decide.
+4. **Resume register:** on entering each step, minimal-Edit PROJECT_MEMORY NOW's `phase:`
+   field to the step name. Mid-Story resume (new session, interruption, compaction) =
+   read NOW's phase and continue from that step — no STATE.json needed.
+5. **Proposal allowed, starting gated:** at session start, if NOW is empty, you may propose
+   the top of NEXT ("NOW is clear; NEXT #1 is US-006 — start it?"). Never *start* a Story
+   the human hasn't confirmed.
+6. **Session boundaries:** default one Story per session (several Lite-mode stories may
+   share one). Break at step boundaries — never mid-Implementation if avoidable. When
+   context bloats mid-Story: finish the current step, update NOW + HANDOFF, then compact
+   or start fresh — the resume register makes this safe.
+
 ## Full / Lite Mode
 
 The framework supports two modes. **The user specifies the mode** in CLAUDE.md's Agent
@@ -155,10 +177,11 @@ When your work session ends, overwrite HANDOFF.md with:
 - **YAML front matter**: story, step, attempt, status, reason, files_changed, tests
 - **Markdown body**: what you did, what's unresolved, what the next session should know
 
-**CRITICAL — YAML front matter field values:**
+**YAML front matter field values** (strictly validated only when an orchestrator is
+present — `.ai/STATE.json` exists; on the interactive default they are conventions, FB-022):
 
 - `status` must be exactly one of: `pass` / `failing` / `needs_human`
-  - **NOT** `passing`, `passed`, `failed`, or `fail` — the orchestrator will reject these
+  - **NOT** `passing`, `passed`, `failed`, or `fail` — an orchestrator will reject these
 - `reason` must be `null` or one of: `constitution_violation` / `needs_clarification` / `nfr_missing` / `scope_warning` / `test_timeout`
   - **Do NOT** put freeform text or task summaries in `reason` — use the markdown body for that
 
@@ -184,17 +207,20 @@ project-root/
 │   └── ddd/                          # DDD (if multi-domain)
 │       ├── context-map.md
 │       └── glossary.md
-├── .ai/                              # Orchestrator protocol files (if present)
-│   ├── STATE.json                    # DO NOT modify — orchestrator only
-│   ├── HANDOFF.md                    # Read on start, write on end (Full Mode Only)
-│   └── history.md                    # Append-only archive (DONE, LOG, sessions)
+├── .ai/                              # Memory + (optional) orchestrator files (FB-022)
+│   ├── HANDOFF.md                    # Methodology memory: read on start, write on end (Full Mode)
+│   ├── history.md                    # Methodology memory: append-only archive (DONE, LOG, sessions)
+│   ├── review-report.md              # Methodology memory: Review Session output (when run)
+│   ├── STATE.json                    # Orchestrator-only (legacy) — DO NOT modify
+│   └── CHECKLIST.md                  # Orchestrator-only (legacy)
 └── tests/
 ```
 
 ## What You Never Do
 
 - **Never modify STATE.json** — that's the orchestrator's file
-- **Never decide which Story to work on next** — the human or orchestrator decides
+- **Never *start* a Story the human hasn't confirmed** — proposing the top of NEXT when
+  NOW is empty is fine (FB-022); starting without confirmation is not
 - **Never skip the Review Checkpoint** — if the human hasn't reviewed, ask them to
 - **Never rewrite the entire SDD** — use Delta Spec format
 - **Never loop more than max_attempts** — stop, record blocker, wait for help
@@ -207,10 +233,10 @@ project-root/
 
 ## ACF Version
 
-**Current ACF Version: 0.23** (= the `Framework/Refinement.md` changelog version — this
+**Current ACF Version: 0.24** (= the `Framework/Refinement.md` changelog version — this
 skill's declaration is the comparand, FB-020).
 
-CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.23`). If the project's
+CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.24`). If the project's
 tag is older than the current version above, read the Refinement changelog rows in between
 to see what actually changed, then propose adopting new features at natural touchpoints
 (session start, story completion) — never auto-upgrade. See Lifecycle.md for the full
