@@ -1,0 +1,23 @@
+name: derivation-lint
+
+on:
+  push:
+    paths:
+      - "Framework/**"
+      - "Skills/**"
+      - "README.md"
+      - "scripts/check-skill-derivation.py"
+  pull_request:
+    paths:
+      - "Framework/**"
+      - "Skills/**"
+      - "README.md"
+      - "scripts/check-skill-derivation.py"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skill derivation / version / stale-phrase lint
+        run: python3 scripts/check-skill-derivation.py

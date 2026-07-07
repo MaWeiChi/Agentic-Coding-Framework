@@ -35,6 +35,7 @@ Each User Story runs through Layers 2–4 as an independent micro-waterfall cycl
 | [Templates](Framework/Templates.md)                 | Concrete templates: BDD, SDD, API contract, Memory, DDD                          | When writing any framework document                      |
 | [Protocol](Framework/Protocol.md)                   | Bespoke external orchestrator (legacy/optional — prefer the interactive default or native modes; see Execution Substrate) | Only for provider-agnostic / fully-custom automation     |
 | [Protocol-Advanced](Framework/Protocol-Advanced.md) | Multi-executor collaboration + reference implementations (legacy/optional — prefer native Agent Teams / Workflows)        | Only for provider-agnostic / fully-custom automation     |
+| [Examples](Framework/Examples.md)                   | Complete worked example: three-section delta, spec after two merges, traceability | When writing your first delta or spec                    |
 | [Refinement](Framework/Refinement.md)               | Refinement tracking: what was evaluated, what was incorporated                   | Reference only                                           |
 
 ## Key Design Decisions
@@ -114,7 +115,7 @@ Agents update this file at the end of each session so the next session starts wi
 
 ### Step 4 — Run Your First Story
 
-**Full Mode:** Write BDD scenarios → Design SDD delta → Review with human → Write tests → Implement → Verify.
+**Full Mode:** Write the Behavior Delta + SDD Delta (one delta file, three sections) → Review with human → Write tests → Implement → Verify (merges the deltas into `docs/specs/` + `docs/sdd.md`, archives the delta).
 
 **Lite Mode:** Describe the story in one sentence → Let the agent propose approach → Approve → Implement → Verify.
 
@@ -182,16 +183,16 @@ This framework was designed through comparative analysis with established method
 
 ## Versions
 
-**Current ACF Version: 0.26** — the umbrella version = the Refinement changelog version (FB-020). Projects record this in CLAUDE.md's `ACF Version:` line; the installed skill declares the current value.
+**Current ACF Version: 0.27** — the umbrella version = the Refinement changelog version (FB-020). Projects record this in CLAUDE.md's `ACF Version:` line; the installed skill declares the current value.
 
 | Document          | Version | Date       |
 | ----------------- | ------- | ---------- |
 | Framework         | v0.23   | 2026-06-13 |
 | Lifecycle         | v0.18   | 2026-06-13 |
-| Templates         | v0.19   | 2026-06-13 |
+| Templates         | v0.20   | 2026-06-13 |
 | Protocol          | v0.20   | 2026-06-13 |
 | Protocol-Advanced | v0.8    | 2026-02-17 |
-| Refinement        | v0.26   | 2026-06-13 |
+| Refinement        | v0.27   | 2026-06-13 |
 
 ## License
 

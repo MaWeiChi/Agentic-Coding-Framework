@@ -41,7 +41,13 @@ A lint catches the common drift — a Framework changelog bump that the skill's 
 python3 scripts/check-skill-derivation.py
 ```
 
-It compares each `Derived from:` version against the latest `| vX.Y |` row in that doc's changelog. Exit 0 = in sync, 1 = drift (re-derive the skill and update its `Derived from:` line), 2 = lint error. Run it before committing changes that touch `Framework/` or the skill, and wire it into CI if you automate checks. (It only flags version drift — it does not judge content equivalence; FN-004 in `Framework/Refinement.md` tracks deeper options.)
+It compares each `Derived from:` version against the latest `| vX.Y |` row in that doc's changelog, checks the README Versions table and every `ACF Version:` site against the same tails, and greps for retired stale phrases. Exit 0 = in sync, 1 = drift (re-derive/re-sync the flagged files), 2 = lint error. Run it before committing changes that touch `Framework/` or the skill. CI runs it automatically on push/PR (`.github/workflows/derivation-lint.yml`, FB-025). Optional local pre-commit hook:
+
+```sh
+printf '#!/bin/sh\npython3 scripts/check-skill-derivation.py\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```
+
+(It only flags version drift and retired phrases — it does not judge content equivalence; FN-004 in `Framework/Refinement.md` tracks deeper options.)
 
 ## Field Feedback
 

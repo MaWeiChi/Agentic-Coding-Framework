@@ -308,7 +308,7 @@ Once the triage plan is approved:
 
 When ACF itself evolves, existing projects need a path to adopt new capabilities without disruption.
 
-**Version tracking:** CLAUDE.md records the ACF version the project was bootstrapped under (e.g. `ACF Version: 0.26`). CC compares this against the current version each session.
+**Version tracking:** CLAUDE.md records the ACF version the project was bootstrapped under (e.g. `ACF Version: 0.27`). CC compares this against the current version each session.
 
 **What the number is (FB-020):** ACF Version = the changelog version of `Framework/Refinement.md` — the ledger every capability change passes through. The **installed skill declares the current value** (SKILL.md's ACF Version section), so the comparison is: project CLAUDE.md tag vs skill declaration. On mismatch, CC reads the Refinement changelog rows between the two versions to see what actually changed before proposing adoption. (Refinement also bumps on FN-only records, so a delta does not always mean adoptable features — the rows tell.) All `ACF Version:` example sites are lint-enforced to match the current value (`scripts/check-skill-derivation.py`).
 

@@ -1392,6 +1392,31 @@ The reopen flow lives in two places: the legacy Protocol orchestrator (FB-017) a
 
 ---
 
+### FB-025: Worked Example Pack + Lint Automation
+
+**Date:** 2026-06-13
+**Context:** Templates showed only fragments with placeholders — no artifact anywhere demonstrated a finished three-section delta, a capability spec after multiple merges, the exempted-Requirement form in situ, or the traceability chain end-to-end. Agents improvise exactly where examples are missing. Separately, the derivation lint existed but nothing ran it automatically, and the README Quick Start still described the pre-FB-012 pipeline.
+
+#### Changes
+
+1. **New `Framework/Examples.md`:** one capability (CART) followed through two Stories — a complete `docs/deltas/US-012.md` as it looks at Review (all three sections, Review Disclosure filled, one FB-024 collapsed subsection shown), the `docs/specs/cart.md` after both merges (accumulated Requirements, a `## Removed` tombstone, an exempted Requirement in situ), and the scaffolded-test `Spec:` headers closing the traceability chain. Referenced from Templates.md, the skill's templates.md, and the README Documents table.
+2. **Lint automation:** `.github/workflows/derivation-lint.yml` runs `check-skill-derivation.py` on push/PR touching `Framework/**`, `Skills/**`, `README.md`, or the script; CONTRIBUTING.md documents a one-line local pre-commit hook.
+3. **README Quick Start Step 4** updated to the current pipeline shape (Behavior Delta + SDD Delta in one delta file; Verify merges and archives).
+
+#### Impact Assessment (Token / Quality / Autonomy)
+
+| Dimension | Impact |
+|-----------|--------|
+| **Token** | ⭐ One canonical example beats re-deriving format decisions per Story |
+| **Quality** | ⭐⭐ The example encodes FB-012~024 rules in one coherent artifact; CI stops drift at the PR gate |
+| **Autonomy** | ⭐ Agents copy a working shape instead of improvising from fragments |
+
+**Verdict: Worth-Doing**
+
+**Status:** ✅ Incorporated (2026-06-13): Framework/Examples.md v0.1 (new), .github/workflows/derivation-lint.yml (new), CONTRIBUTING.md, Templates v0.20 (Examples pointer), README (Documents table + Quick Start).
+
+---
+
 ## Future Notes
 
 Items identified as potential improvements but not yet prioritized for design or implementation.
@@ -1436,3 +1461,4 @@ Items identified as potential improvements but not yet prioritized for design or
 | v0.24 | 2026-06-13 | FB-022: interactive driving model — run Steps 0–3 continuously, stop at Review, run 5–9 continuously (two human touchpoints); NOW `phase:` becomes the interactive resume register (minimal-Edit on entering each step); Story proposal from NEXT allowed, starting gated on human confirmation; HANDOFF YAML enums conditional on orchestrator presence; session boundaries defined (one Story per session, break at step boundaries); `.ai/` semantics split (STATE/CHECKLIST = orchestrator-only vs HANDOFF/history/review-report = methodology memory). Incorporated into SKILL.md, workflow.md, Lifecycle v0.17, README |
 | v0.25 | 2026-06-13 | FB-023: lifecycle path gaps — "touch it, spec it" (never bulk reverse-engineer specs; baseline Requirement added in post-change form with a prior-behavior note when modifying unspecced behavior); Upgrade Checklist creates docs/specs/+docs/deltas/ (empty); legacy `.feature` migration is lazy (fold into baseline Requirements on first touch, archive consumed files to docs/bdd/archive/); Downgrade first finishes-or-abandons the in-flight delta (archive as -abandoned, preserving FB-015) and stamps `Specs/SDD frozen at: <commit>` in CLAUDE.md. Incorporated into Lifecycle v0.18, workflow.md, SKILL.md |
 | v0.26 | 2026-06-13 | FB-024: token diet — SKILL.md tiers down to orientation+principles+pointers (HANDOFF enums, Verify criteria, mode-switch procedure → workflow.md pointers); templates.md becomes the single home of document formats (workflow.md template blocks → pointers); Review Disclosure empty subsections collapse to one line (never empty tables); SYNC `[deprecated]` entries retire to `.ai/history.md` at Step 9 on approval; skill frontmatter description compressed. Incorporated into Skill + Templates v0.19 |
+| v0.27 | 2026-06-13 | FB-025: worked example pack — new Framework/Examples.md (complete three-section US-012 delta at Review, cart.md spec after two merges with tombstone + exempted Requirement in situ, `Spec:` header traceability chain), referenced from Templates/skill/README; lint automation (.github/workflows/derivation-lint.yml on push/PR + pre-commit sample in CONTRIBUTING); README Quick Start Step 4 updated to the current pipeline shape. Templates v0.20 |

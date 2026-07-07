@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.23, Lifecycle v0.18, Protocol v0.20, Templates v0.19 (2026-06-13)
+> Derived from: Framework v0.23, Lifecycle v0.18, Protocol v0.20, Templates v0.20 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -14,7 +14,7 @@ when you need specifics on what to read, produce, and check at each step.
 **Read:** Nothing yet (you're starting fresh)
 
 **Full Mode — Produce:**
-1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.26`
+1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.27`
 2. `docs/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
 3. `docs/constitution.md` — 3–5 inviolable architectural principles (RFC 2119 SHALL level). **Must include a "No Hardcoded Secrets" principle by default** (API keys, tokens, passwords in env vars, `.gitignore` covers secret files, test fixtures use mock values)
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
@@ -23,7 +23,7 @@ when you need specifics on what to read, produce, and check at each step.
 7. Directory structure: `docs/specs/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
 
 **Lite Mode — Produce:**
-1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.26`
+1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.27`
 2. `PROJECT_MEMORY.md` — Minimal: NOW + NEXT only (~5 lines). Even one-off tasks
    benefit from this in case follow-up sessions occur.
 3. Do NOT create `.ai/` files (HANDOFF.md, history.md) — these are Full Mode only.

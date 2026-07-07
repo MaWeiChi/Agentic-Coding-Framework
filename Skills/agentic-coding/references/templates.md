@@ -1,11 +1,13 @@
 # Document Templates Reference
 
-> Derived from: Templates v0.19 (2026-06-13)
+> Derived from: Templates v0.20 (2026-06-13)
 
 Condensed templates and writing guidelines for each framework document type. Use this
 when producing any framework document.
 
-For extended examples, see the full framework documentation at the project repository.
+For a complete worked example (finished three-section delta, capability spec after two
+merges with tombstone + exempted Requirement, test traceability chain), see
+`Framework/Examples.md` in the framework repository (FB-025).
 
 ---
 

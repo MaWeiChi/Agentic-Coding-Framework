@@ -187,7 +187,7 @@ Place in the project root as the first document agents read for every conversati
 ## Agent Guidelines
 
 - Agentic Coding Mode: full
-- ACF Version: 0.26
+- ACF Version: 0.27
 - Read `PROJECT_MEMORY.md` before each session to understand the current project state
 - Follow the BDD → SDD → TDD development workflow (see Agentic Coding Framework for details)
 - Update `PROJECT_MEMORY.md` when each story ends
@@ -200,7 +200,7 @@ Place in the project root as the first document agents read for every conversati
 - **What**: <one-line description>
 - **Stack**: <language, framework>
 - Agentic Coding Mode: lite
-- ACF Version: 0.26
+- ACF Version: 0.27
 ```
 
 ### Writing Principles
@@ -220,6 +220,8 @@ Behavior specs are the **current behavior truth** of the system: the externally 
 Behavior changes arrive per Story as a **Behavior Delta** (ADDED / MODIFIED / REMOVED Requirements) inside the Story's delta file `docs/deltas/US-{id}.md`, alongside the SDD delta. When Verify passes, the Behavior Delta merges into `docs/specs/` at the same moment the SDD delta merges into the SDD — specs stay the single current truth — and the delta file moves to `docs/deltas/archive/{YYYY-MM-DD}-US-{id}.md`. The active delta path exists only while a Story is in flight. (FB-012, FB-015)
 
 > **Legacy note:** earlier versions produced Gherkin `.feature` files in `docs/bdd/`. These are retired — see "Gherkin opt-in" below. Existing `.feature` files are archived, not deleted.
+
+For a **complete worked example** — a finished three-section delta file, the capability spec after two merges (tombstone + exempted Requirement in situ), and the test traceability chain — see [Examples.md](Examples.md) (FB-025).
 
 ### Spec Template
 
@@ -1242,3 +1244,4 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.17 | 2026-06-13 | FB-020: CLAUDE.md templates' `ACF Version` example values updated to the real current umbrella version (lint-enforced) |
 | v0.18 | 2026-06-13 | FB-021: Spec Ledger Rules subsection (capability granularity + split procedure, NNN allocation, REMOVED tombstones + never-reuse, test deprecation = delete-in-removing-Story, parallel-Story conflicts, Requirement split, merge-failure handling); `## Removed` section added to the Spec Template |
 | v0.19 | 2026-06-13 | FB-024: Review Disclosure empty-subsection collapse rule (one line, never an empty table); SYNC retirement path (`[deprecated]` entries → `.ai/history.md` "Retired SYNC" on approval) |
+| v0.20 | 2026-06-13 | FB-025: pointer to the new Framework/Examples.md worked-example pack (complete delta + spec after two merges + traceability chain) |
