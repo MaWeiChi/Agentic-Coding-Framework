@@ -57,11 +57,13 @@ CHANGELOG_ROW_RE = re.compile(r"^\|\s*v(\d+)\.(\d+)\s*\|")
 README_PATH_DEFAULT = "README.md"
 README_ROW_RE = re.compile(r"^\|\s*([A-Za-z][A-Za-z-]*)\s*\|\s*v(\d+)\.(\d+)\s*\|")
 # Docs the README table tracks that carry their own changelog.
-README_TRACKED = {"Framework", "Lifecycle", "Templates", "Protocol", "Refinement"}
+# (Protocol-Advanced has no changelog — its README row is untracked by design.)
+README_TRACKED = {"Framework", "Lifecycle", "Templates", "Protocol", "Refinement", "Examples"}
 
 # FB-020: every `ACF Version: X.Y` outside Refinement.md must equal the
 # umbrella version = the Refinement.md changelog tail.
-ACF_VERSION_RE = re.compile(r"ACF Version:?\*{0,2}\s*v?(\d+)\.(\d+)")
+# Asterisks allowed on either side of the colon (bold variants).
+ACF_VERSION_RE = re.compile(r"ACF Version\*{0,2}:?\*{0,2}\s*v?(\d+)\.(\d+)")
 
 # Stale-phrase tripwire: phrases that were removed by contract repairs and
 # must never reappear in normative text. Refinement.md (history ledger) and
@@ -83,6 +85,7 @@ def check_readme_versions(drift: list[str], errors: list[str]) -> int:
         errors.append("README.md not found")
         return 0
     checked = 0
+    seen_docs: set[str] = set()
     for line in readme.read_text(encoding="utf-8").splitlines():
         m = README_ROW_RE.match(line.strip())
         if not m:
@@ -90,6 +93,7 @@ def check_readme_versions(drift: list[str], errors: list[str]) -> int:
         doc, maj, minr = m.group(1), int(m.group(2)), int(m.group(3))
         if doc not in README_TRACKED:
             continue
+        seen_docs.add(doc)
         doc_path = REPO / "Framework" / f"{doc}.md"
         actual = latest_changelog_version(doc_path)
         if actual is None:
@@ -102,6 +106,10 @@ def check_readme_versions(drift: list[str], errors: list[str]) -> int:
                 f"  README.md Versions table: {doc} listed as {fmt(declared)} "
                 f"but Framework/{doc}.md changelog is at {fmt(actual)}"
             )
+    # A tracked doc with no README row is drift too — a deleted/renamed row
+    # must not pass green (batch-verify mutation finding).
+    for doc in sorted(README_TRACKED - seen_docs):
+        drift.append(f"  README.md Versions table: missing row for {doc}")
     return checked
 
 
@@ -121,6 +129,8 @@ def check_acf_version(drift: list[str], errors: list[str]) -> int:
             for lineno, line in enumerate(
                 path.read_text(encoding="utf-8").splitlines(), start=1
             ):
+                if CHANGELOG_ROW_RE.match(line.strip()):
+                    continue  # changelog rows may quote historical values
                 for m in ACF_VERSION_RE.finditer(line):
                     checked += 1
                     declared = (int(m.group(1)), int(m.group(2)))

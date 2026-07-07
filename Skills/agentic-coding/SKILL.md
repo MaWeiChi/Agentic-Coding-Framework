@@ -32,8 +32,8 @@ This skill applies when any of these are true:
 - The project contains `PROJECT_MEMORY.md` or `PROJECT_CONTEXT.md` referencing the framework
 - The user asks you to "bootstrap a project," "write BDD scenarios," "produce a Delta Spec,"
   "do Test Scaffolding," or any framework step
-- You see `.ai/HANDOFF.md` or `.ai/STATE.json` in the project (these are orchestrator files —
-  you read HANDOFF.md for context but never modify STATE.json)
+- You see `.ai/HANDOFF.md` (methodology memory — read it for context) or `.ai/STATE.json`
+  (orchestrator-only legacy — never modify it) in the project
 
 ## Core Workflow
 
@@ -226,10 +226,10 @@ project-root/
 
 ## ACF Version
 
-**Current ACF Version: 0.27** (= the `Framework/Refinement.md` changelog version — this
+**Current ACF Version: 0.28** (= the `Framework/Refinement.md` changelog version — this
 skill's declaration is the comparand, FB-020).
 
-CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.27`). If the project's
+CLAUDE.md should include an `ACF Version` line (e.g. `ACF Version: 0.28`). If the project's
 tag is older than the current version above, read the Refinement changelog rows in between
 to see what actually changed, then propose adopting new features at natural touchpoints
 (session start, story completion) — never auto-upgrade. See Lifecycle.md for the full

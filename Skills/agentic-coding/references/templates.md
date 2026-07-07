@@ -1,13 +1,14 @@
 # Document Templates Reference
 
-> Derived from: Templates v0.20 (2026-06-13)
+> Derived from: Templates v0.21 (2026-06-13)
 
 Condensed templates and writing guidelines for each framework document type. Use this
 when producing any framework document.
 
 For a complete worked example (finished three-section delta, capability spec after two
 merges with tombstone + exempted Requirement, test traceability chain), see
-`Framework/Examples.md` in the framework repository (FB-025).
+`Framework/Examples.md` in the framework repository (FB-025) — applies when the framework
+repo is available; the skill package itself ships templates only.
 
 ---
 
@@ -218,6 +219,9 @@ The system SHALL <behavior>.
 ### REMOVED Requirements
 - [R-<CAP>-NNN] <reason>
 
+## SDD Delta — US-XXX <Story Title>
+<second top-level section — full template below at § SDD Delta Spec>
+
 ## Review Disclosure — US-XXX <Story Title>
 
 ### Assumptions Made
@@ -229,7 +233,7 @@ The system SHALL <behavior>.
 |-------------|----------|------|
 
 ### Cross-Story Conflict Scan
-- <conflict vs existing specs — or "None found">
+- <conflict vs existing specs + other active deltas (docs/deltas/US-*.md) — or "None found">
 ```
 
 **Key rules:**
@@ -237,7 +241,7 @@ The system SHALL <behavior>.
 - One Requirement ID = one independently verifiable behavior = one test; IDs stable across Stories
 - **Ledger rules (FB-021):** capability ≈ one SDD module (split guidance ~15 Requirements/~400 lines; a split is a dedicated Story with tombstone + `Supersedes:`); next NNN = 1 + max over merged spec + active deltas + `## Removed` tombstones, never reused; REMOVED merges as body-delete + tombstone and its tests are deleted in the same Story; split = MODIFIED + ADDED, never REMOVE+re-ADD
 - The `## Review Disclosure` section is built incrementally (behavior assumptions at bdd, architecture assumptions + conflict scan at sdd-delta, finalized at Review) and is merge-skipped but archived with the delta (FB-016)
-- **Empty-subsection collapse (FB-024):** a Review Disclosure subsection with no content is one line — `Assumptions Made: None — <why>`, `Source Mapping: 1:1 — story converted to R-<CAP>-NNN`, `Cross-Story Conflict Scan: None found` — never an empty table
+- **Empty-subsection collapse (FB-024):** a Review Disclosure subsection with no content collapses to its `###` heading line with the value inline — `### Assumptions Made: None — <why>`, `### Cross-Story Conflict Scan: None found` — never an empty table
 - Specs hold externally observable behavior only — unit-level GWT is test names in code
 - `Test Level` mandatory per scenario (`integration`, `component`, `e2e`); NFR tags (`@perf(ID)`, `@secure(ID)`) attach to the Scenario label
 - One scenario verifies one thing (max 3 Thens); label scenarios by product-semantic branches, not boundary values
@@ -382,7 +386,7 @@ for _, tt := range tests {
 ### Playwright Component Test
 
 ```typescript
-// Spec: R-CART-002 — <Requirement statement>
+// Spec: R-CART-004 — <Requirement statement>
 // Scenario: <branch label> | Test Level: component | assertion_type: behavior
 test('<scenario description>', async ({ mount }) => {
   const component = await mount(<Component />);

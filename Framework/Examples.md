@@ -3,8 +3,8 @@
 **One small capability, followed through two Stories — every artifact shown complete (FB-025)**
 
 Templates show fragments; this document shows the real thing. One capability (`CART`)
-across two Stories: US-007 introduces discount codes; US-012 replaces the flat discount
-with tiered rates and removes gift-wrap. You see (1) a finished three-section delta file
+across two Stories: US-007 introduces discount codes and gift-wrap; US-012 replaces the
+flat discount with tiered rates and removes gift-wrap. You see (1) a finished three-section delta file
 exactly as it looks at the Review Checkpoint, and (2) the capability spec exactly as it
 looks after both deltas have merged — including a tombstone and an exempted Requirement.
 
@@ -24,10 +24,10 @@ On Verify pass, sections 1–2 merge, section 3 is skipped, and the file moves t
 ### Requirement: Discount rate scales with cart subtotal [R-CART-004]
 The system SHALL apply the highest tier whose threshold the cart subtotal meets.
 
-#### Scenario: subtotal crosses a tier boundary (Test Level: integration)
-- Given tiers are {50: 5%, 100: 10%} and the cart subtotal is 99.00
-- When the customer adds an item priced 1.00
-- Then the applied discount rate SHALL change from 5% to 10%
+#### Scenario: highest qualifying tier applies (Test Level: integration)
+- Given tiers are {50: 5%, 100: 10%} and the cart subtotal is 150.00
+- When the order total is calculated
+- Then the 10% tier SHALL apply (not the 5% tier)
 
 #### Scenario: no tier met (Test Level: integration)
 - Given tiers are {50: 5%, 100: 10%} and the cart subtotal is 30.00
@@ -48,14 +48,21 @@ The system SHALL apply the highest tier whose threshold the cart subtotal meets.
 The system SHALL apply a valid discount code's rate after tier discounts are applied.
 (Previous behavior: code rate applied to the raw subtotal — tiering did not exist.)
 
+#### Scenario: valid code reduces the total (Test Level: integration)
+- Given a cart with subtotal 100.00 and a valid code SAVE5 (5%)
+- When the order total is calculated
+- Then the total SHALL be reduced by the code rate
+
 #### Scenario: code stacks on tier discount (Test Level: integration)
 - Given the cart qualifies for a 10% tier discount and a valid code SAVE5 (5%)
 - When the order total is calculated
 - Then the code SHALL apply to the tier-discounted amount (not the raw subtotal)
 
+**Error Cases**: expired code → reject with reason; unknown code → reject with reason
+
 ### REMOVED Requirements
-- [R-CART-002] Gift-wrap option — product decision 2026-06: gift-wrap moves to the
-  fulfilment service; cart no longer owns it
+- [R-CART-002] Gift-wrap can be added to an order — product decision 2026-06: gift-wrap
+  moves to the fulfilment service; cart no longer owns it
 
 ## SDD Delta — US-012: Tiered Discounts
 
@@ -96,8 +103,10 @@ The system SHALL apply a valid discount code's rate after tier discounts are app
 ### Cross-Story Conflict Scan: None found
 ```
 
-Note the last line: an empty subsection collapses to one line (FB-024) — never an
-empty table.
+Note the last line: an empty subsection collapses to its heading line with the value
+inline (FB-024) — never an empty table. Also note the MODIFIED block restates the
+**full** updated Requirement (both scenarios + Error Cases), not just the changed part —
+MODIFIED is a whole-block replacement at merge; the delta and the merged spec must match.
 
 ---
 
@@ -146,10 +155,10 @@ below fully define it, and its tests derive from them (`assertion_type: paramete
 ### Requirement: Discount rate scales with cart subtotal [R-CART-004]
 The system SHALL apply the highest tier whose threshold the cart subtotal meets.
 
-#### Scenario: subtotal crosses a tier boundary (Test Level: integration)
-- Given tiers are {50: 5%, 100: 10%} and the cart subtotal is 99.00
-- When the customer adds an item priced 1.00
-- Then the applied discount rate SHALL change from 5% to 10%
+#### Scenario: highest qualifying tier applies (Test Level: integration)
+- Given tiers are {50: 5%, 100: 10%} and the cart subtotal is 150.00
+- When the order total is calculated
+- Then the 10% tier SHALL apply (not the 5% tier)
 
 #### Scenario: no tier met (Test Level: integration)
 - Given tiers are {50: 5%, 100: 10%} and the cart subtotal is 30.00
@@ -165,14 +174,14 @@ The system SHALL apply the highest tier whose threshold the cart subtotal meets.
 **Error Cases**: thresholds not ascending → reject config; rate > 90 → reject config
 
 ## Removed
-- [R-CART-002] Gift-wrap option — removed by US-012 (2026-06-13): fulfilment service owns gift-wrap
+- [R-CART-002] Gift-wrap can be added to an order — removed by US-012 (2026-06-13): fulfilment service owns gift-wrap
 ```
 
 Things to notice:
 
 - **R-CART-002 is gone from the body but tombstoned** — the ID is never reused, and the
-  next NNN for CART is 5 (max over body + tombstones + active deltas, FB-021). Its tests
-  (`Spec: R-CART-002`) were deleted in US-012.
+  next NNN for CART is 5 (1 + max over body + tombstones + active deltas, FB-021). Its
+  tests (`Spec: R-CART-002`) were deleted in US-012.
 - **R-CART-003 shows the exempted form in situ** (FB-013/019): no `#### Scenario:` blocks;
   the `Scenarios: Not needed — <reason>` line sits where they would be; its Completeness
   coverage comes from parameter-derived table-driven tests.
@@ -188,8 +197,8 @@ A test scaffolded for R-CART-004's first scenario:
 ```go
 // cart_tier_test.go
 // Spec: R-CART-004 — Discount rate scales with cart subtotal
-// Scenario: subtotal crosses a tier boundary | Test Level: integration | assertion_type: behavior
-func TestCart_GivenSubtotal99_WhenItemAdded_ThenTierRateBecomes10(t *testing.T) { ... }
+// Scenario: highest qualifying tier applies | Test Level: integration | assertion_type: behavior
+func TestCart_GivenSubtotal150_WhenTotalCalculated_ThenHighestTierApplies(t *testing.T) { ... }
 ```
 
 And R-CART-003's parameter expansion:
@@ -203,7 +212,8 @@ func TestCartCodeLength(t *testing.T) { /* table-driven: 3,4,32,33 from Range 4-
 
 Verify's Completeness check greps these `Spec:` headers: every touched ID must have one
 (exempted IDs via their parameter tests), and no test may carry an ID absent from the
-spec + active deltas (orphan check, FB-021).
+spec bodies + active deltas — IDs appearing only in `## Removed` tombstones count as
+absent (orphan check, FB-021).
 
 ---
 
@@ -212,3 +222,4 @@ spec + active deltas (orphan check, FB-021).
 | Version | Date | Changes |
 |---------|------|---------|
 | v0.1 | 2026-06-13 | Initial (FB-025): complete US-012 delta file (three sections, collapse rule shown), cart.md spec after two merges (tombstone + exempted Requirement in situ), traceability chain with Spec: headers |
+| v0.2 | 2026-06-13 | Batch-verification fixes: MODIFIED block restates the full Requirement (whole-block replacement — delta and spec now coherent); boundary-flavored scenario relabeled to the product-semantic branch "highest qualifying tier applies"; tombstone statements use behavior phrasing; NNN note corrected to "1 + max"; orphan-check note adds the tombstones-count-as-absent clause; intro narrative fixed |

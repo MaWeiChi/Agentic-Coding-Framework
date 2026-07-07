@@ -1,6 +1,6 @@
 # Executor Workflow Reference
 
-> Derived from: Framework v0.23, Lifecycle v0.18, Protocol v0.20, Templates v0.20 (2026-06-13)
+> Derived from: Framework v0.23, Lifecycle v0.19, Protocol v0.21, Templates v0.21 (2026-06-13)
 
 Detailed step-by-step procedure for each phase of the micro-waterfall cycle. Read this
 when you need specifics on what to read, produce, and check at each step.
@@ -14,7 +14,7 @@ when you need specifics on what to read, produce, and check at each step.
 **Read:** Nothing yet (you're starting fresh)
 
 **Full Mode — Produce:**
-1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.27`
+1. `PROJECT_CONTEXT.md` (or `CLAUDE.md`) — Why / Who / What + tech stack + project structure + `Agentic Coding Mode: full` + `ACF Version: 0.28`
 2. `docs/sdd.md` — Module division + data model skeleton + inter-module interfaces (at least function signatures and data structures)
 3. `docs/constitution.md` — 3–5 inviolable architectural principles (RFC 2119 SHALL level). **Must include a "No Hardcoded Secrets" principle by default** (API keys, tokens, passwords in env vars, `.gitignore` covers secret files, test fixtures use mock values)
 4. `PROJECT_MEMORY.md` — Initial state (see Memory template — only hot sections: NOW/NEXT/TESTS/SYNC/ISSUES)
@@ -23,7 +23,7 @@ when you need specifics on what to read, produce, and check at each step.
 7. Directory structure: `docs/specs/`, `docs/deltas/`, `docs/api/`, `docs/ddd/` (if multi-domain)
 
 **Lite Mode — Produce:**
-1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.27`
+1. `CLAUDE.md` — ≤10 lines: Why/What + tech stack + `Agentic Coding Mode: lite` + `ACF Version: 0.28`
 2. `PROJECT_MEMORY.md` — Minimal: NOW + NEXT only (~5 lines). Even one-off tasks
    benefit from this in case follow-up sessions occur.
 3. Do NOT create `.ai/` files (HANDOFF.md, history.md) — these are Full Mode only.
@@ -131,7 +131,7 @@ model (ADDED) and Change/Reason/Impact (MODIFIED); include Non-Goals / Out of Sc
 
 **Before requesting review, run the pre-review self-check** (FB-014):
 - **Mechanical pass:** Requirement ID format and placement, Behavior/SDD Delta template compliance, `Test Level` present on every scenario, no API details in scenarios
-- **Semantic pass:** scenario executability (each Given/When/Then can become a test assertion), boundary sanity (Ranges/Defaults make sense semantically), Error Case coverage (permission / invalid input / missing resource / concurrency), cross-Story conflict against existing specs, full coverage of the source Story
+- **Semantic pass:** scenario executability (each Given/When/Then can become a test assertion), boundary sanity (Ranges/Defaults make sense semantically), Error Case coverage (permission / invalid input / missing resource / concurrency), cross-Story conflict against existing specs **and other active deltas** (`docs/deltas/US-*.md` — two in-flight Stories MODIFYing the same Requirement is a Review conflict, FB-021), full coverage of the source Story
 
 **Finalize the `## Review Disclosure` section** in the delta (Assumptions Made / Source Mapping / Cross-Story Conflict Scan) — this is the durable record; it rides to `docs/deltas/archive/` on merge (FB-016).
 
@@ -195,7 +195,7 @@ If any `[NEEDS CLARIFICATION]` items exist, the human clarifies them at this poi
 
 | Check | What to Verify | On Failure |
 |-------|---------------|-----------|
-| **Completeness** | Every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) has a corresponding test, matched via `Spec:` headers (grep-checkable)? Scenario-exempted Requirements count via their `assertion_type: parameter` tests; `Deferred — blocked by TBD-N` fails until resolved (FB-019). Orphan reverse check: no test carries a `Spec:` ID absent from specs + active deltas (FB-021). All ADDED items in the SDD Delta implemented? No unresolved `[NEEDS CLARIFICATION]`? | Return to the step that's incomplete |
+| **Completeness** | Every Requirement ID touched by the Story (Behavior Delta ADDED/MODIFIED) has a corresponding test, matched via `Spec:` headers (grep-checkable)? Scenario-exempted Requirements count via their `assertion_type: parameter` tests; `Deferred — blocked by TBD-N` fails until resolved (FB-019). Orphan reverse check: no test carries a `Spec:` ID absent from spec bodies + active deltas — IDs only in `## Removed` tombstones count as absent (FB-021). All ADDED items in the SDD Delta implemented? No unresolved `[NEEDS CLARIFICATION]`? | Return to the step that's incomplete |
 | **Correctness** | All tests pass? NFR thresholds met? | Return to Implementation |
 | **Coherence** | Specs and main SDD merged with their Deltas? API contract matches implementation? Constitution not violated? | Fix the inconsistency |
 | **Security** | No hardcoded secrets in committed files? `.gitignore` covers secret patterns (`.env`, `*.key`, `credentials.json`, `*.pem`)? Test fixtures use mock values? | Return to Implementation |

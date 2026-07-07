@@ -187,7 +187,7 @@ Place in the project root as the first document agents read for every conversati
 ## Agent Guidelines
 
 - Agentic Coding Mode: full
-- ACF Version: 0.27
+- ACF Version: 0.28
 - Read `PROJECT_MEMORY.md` before each session to understand the current project state
 - Follow the BDD → SDD → TDD development workflow (see Agentic Coding Framework for details)
 - Update `PROJECT_MEMORY.md` when each story ends
@@ -200,7 +200,7 @@ Place in the project root as the first document agents read for every conversati
 - **What**: <one-line description>
 - **Stack**: <language, framework>
 - Agentic Coding Mode: lite
-- ACF Version: 0.27
+- ACF Version: 0.28
 ```
 
 ### Writing Principles
@@ -295,7 +295,7 @@ A third top-level section of the same delta file, built incrementally (behavior 
 - <redundancy / contradiction / undeclared dependency vs existing specs — or "None found">
 ```
 
-**Empty-subsection collapse (FB-024):** a subsection with no content is written as a single line — `Assumptions Made: None — <why obvious>`, `Source Mapping: 1:1 — story converted to R-<CAP>-NNN`, `Cross-Story Conflict Scan: None found` — never an empty table. Ceremony must earn its tokens.
+**Empty-subsection collapse (FB-024):** a subsection with no content collapses to its `###` heading line with the value inline — `### Assumptions Made: None — <why obvious>`, `### Source Mapping: 1:1 — story converted to R-<CAP>-NNN`, `### Cross-Story Conflict Scan: None found` — never an empty table. (Keeping the `###` marker preserves heading-based scanning.) Ceremony must earn its tokens.
 
 ### Writing Principles
 
@@ -385,9 +385,9 @@ For requirements with configurable or reported values, the Parameters table is a
 The specs directory is a ledger; these rules keep it mechanically consistent:
 
 - **Capability granularity**: a capability is an externally observable functional area, normally 1:1 with an SDD module (or DDD Bounded Context when DDD is active); `CAP` = short uppercase token (CART, AUTH). Split guidance: reconsider granularity past ~15 Requirements or ~400 lines. A true split is a dedicated Story — moved Requirements are REMOVED (tombstone notes `moved → R-<NEW>-NNN`) and re-ADDED under the new capability with a `Supersedes: R-<OLD>-NNN` line; tests re-point in the same Story. Prefer capabilities small enough that splits stay rare.
-- **NNN allocation**: next NNN = 1 + max(NNN) across the merged capability spec, that capability's Requirements in **all active deltas** (`docs/deltas/US-*.md`), and its `## Removed` tombstones. **IDs are never reused.**
+- **NNN allocation**: next NNN = 1 + max(NNN) across the merged capability spec, that capability's Requirements in **all active deltas** (`docs/deltas/US-*.md`), and its `## Removed` tombstones. **IDs are never reused.** (Never-reuse applies to IDs that ever reached the spec — body or tombstone; IDs that existed only in an abandoned, never-merged delta (FB-023) may be reallocated.)
 - **REMOVED merge semantics**: delete the Requirement block from the spec body and append a one-line tombstone to the capability file's `## Removed` section. The tombstone is what makes never-reuse and allocation checkable.
-- **Test deprecation = deletion in the removing Story**: grep tests for `Spec: R-<CAP>-NNN` and delete them in the same Story (specs are current truth; git + the tombstone preserve history). This is the mechanical "deprecate" of keep/update/add/deprecate.
+- **Test deprecation = deletion in the removing Story**: grep tests for `Spec: R-<CAP>-NNN` and delete them in the same Story (specs are current truth; git + the tombstone preserve history). This is the mechanical "deprecate" of keep/update/add/deprecate. The orphan check matches against spec Requirement **bodies** and active deltas — an ID appearing only in a `## Removed` tombstone counts as absent, so an undeleted test for a removed Requirement fails Verify.
 - **Parallel Stories**: the allocation rule prevents ADDED collisions; two in-flight Stories MODIFYing the same Requirement is a conflict to surface at Review Checkpoint; the later merger re-bases its MODIFIED text against the now-current spec and re-runs Coherence before merging.
 - **Splitting a merged Requirement**: MODIFIED on the original ID (narrowed; keeps the ID and still-applicable tests) + ADDED for extracted behaviors (new IDs). Never REMOVED+re-ADD for a pure split.
 - **Merge failure**: if a MODIFIED/REMOVED target ID is absent from the spec (drift), stop the merge, log a `[High]` ISSUE, return to `bdd` for that requirement — never guess-create the target.
@@ -1076,7 +1076,7 @@ The template below is the *shape of that view*. The Assumptions / Source Mapping
 Before producing the Review summary, the agent runs two checklist passes on its own output — review requests that fail the mechanical pass should not reach the human:
 
 - **Mechanical pass:** Requirement ID format and placement (`[R-<CAP>-NNN]` in headings), template compliance (Behavior Delta sections, Parameters table columns), `Test Level` present on every scenario, no API details in scenarios.
-- **Semantic pass:** scenario executability (can each Given/When/Then become a test assertion?), boundary sanity (Ranges/Defaults make sense semantically, not just schema-complete), Error Case coverage (permission / invalid input / missing resource / concurrency), cross-Story conflict and redundancy against existing specs, full coverage of the source Story.
+- **Semantic pass:** scenario executability (can each Given/When/Then become a test assertion?), boundary sanity (Ranges/Defaults make sense semantically, not just schema-complete), Error Case coverage (permission / invalid input / missing resource / concurrency), cross-Story conflict and redundancy against existing specs **and other active deltas** (`docs/deltas/US-*.md` — two in-flight Stories MODIFYing the same Requirement is a Review conflict, FB-021), full coverage of the source Story.
 
 ### Template
 
@@ -1245,3 +1245,4 @@ Reverse generate documents required by the framework from existing codebase, let
 | v0.18 | 2026-06-13 | FB-021: Spec Ledger Rules subsection (capability granularity + split procedure, NNN allocation, REMOVED tombstones + never-reuse, test deprecation = delete-in-removing-Story, parallel-Story conflicts, Requirement split, merge-failure handling); `## Removed` section added to the Spec Template |
 | v0.19 | 2026-06-13 | FB-024: Review Disclosure empty-subsection collapse rule (one line, never an empty table); SYNC retirement path (`[deprecated]` entries → `.ai/history.md` "Retired SYNC" on approval) |
 | v0.20 | 2026-06-13 | FB-025: pointer to the new Framework/Examples.md worked-example pack (complete delta + spec after two merges + traceability chain) |
+| v0.21 | 2026-06-13 | Batch-verification fixes: collapse rule pinned to the `###`-heading-inline form; pre-review conflict scan scope extended to other active deltas (same-Requirement MODIFIED = Review conflict); orphan check clarified (tombstoned IDs count as absent); NNN never-reuse scoped to IDs that reached the spec (abandoned-delta IDs may be reallocated) |

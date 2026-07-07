@@ -183,16 +183,19 @@ This framework was designed through comparative analysis with established method
 
 ## Versions
 
-**Current ACF Version: 0.27** — the umbrella version = the Refinement changelog version (FB-020). Projects record this in CLAUDE.md's `ACF Version:` line; the installed skill declares the current value.
+**Current ACF Version: 0.28** — the umbrella version = the Refinement changelog version (FB-020). Projects record this in CLAUDE.md's `ACF Version:` line; the installed skill declares the current value.
 
 | Document          | Version | Date       |
 | ----------------- | ------- | ---------- |
 | Framework         | v0.23   | 2026-06-13 |
-| Lifecycle         | v0.18   | 2026-06-13 |
-| Templates         | v0.20   | 2026-06-13 |
-| Protocol          | v0.20   | 2026-06-13 |
+| Lifecycle         | v0.19   | 2026-06-13 |
+| Templates         | v0.21   | 2026-06-13 |
+| Protocol          | v0.21   | 2026-06-13 |
 | Protocol-Advanced | v0.8    | 2026-02-17 |
-| Refinement        | v0.27   | 2026-06-13 |
+| Examples          | v0.2    | 2026-06-13 |
+| Refinement        | v0.28   | 2026-06-13 |
+
+(Protocol-Advanced carries no changelog of its own; its row is untracked by the lint.)
 
 ## License
 
